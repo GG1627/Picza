@@ -24,33 +24,40 @@ export default function Auth() {
   }
 
   return (
-    <View className="flex-1 gap-4 bg-white p-4">
-      <Text className="text-xl font-bold">Login to Lokd 🔒</Text>
+    <View className="flex-1 items-center justify-center bg-[#fea390]">
+      <View className="w-[16rem] items-center gap-3">
+        <Text className="text-xl font-bold">Login to Lokd</Text>
 
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        className="rounded border border-gray-400 px-3 py-2"
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
+        <TextInput
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          className="w-full rounded border border-black px-3 py-2"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          placeholderTextColor="#6b7280"
+        />
 
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        className="rounded border border-gray-400 px-3 py-2"
-        secureTextEntry
-      />
+        <TextInput
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          className="w-full rounded border border-black px-3 py-2"
+          placeholderTextColor="#6b7280"
+          secureTextEntry
+        />
 
-      <Pressable className="mt-2 rounded bg-black py-3" onPress={handleSignIn} disabled={loading}>
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text className="text-center font-bold text-white">Sign In</Text>
-        )}
-      </Pressable>
+        <Pressable
+          className="w-full rounded bg-black py-3"
+          onPress={handleSignIn}
+          disabled={loading}>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-center font-bold text-white">Sign In</Text>
+          )}
+        </Pressable>
+      </View>
     </View>
   );
 }
