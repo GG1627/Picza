@@ -55,8 +55,9 @@ const SCREEN_OPTIONS = {
 } as const;
 
 const INDEX_OPTIONS = {
+  headerShown: false,
   headerLargeTitle: true,
-  title: 'NativeWindUI',
+  title: 'My App',
   headerRight: () => <SettingsIcon />,
 } as const;
 
