@@ -1,4 +1,9 @@
 import 'react-native-url-polyfill/auto';
+import { Buffer } from 'buffer';
+
+if (!global.Buffer) {
+  global.Buffer = Buffer;
+}
 
 import '../global.css';
 import 'expo-dev-client';

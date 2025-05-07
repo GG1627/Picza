@@ -1,30 +1,37 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { View, Text, TextInput, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { supabase } from '../../lib/supabase';
+import { useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 
-export default function Auth() {
+export default function SignIn() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function handleSignIn() {
+  async function signInWithEmail() {
+    if (loading) return;
+
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const {
+      error,
+      data: { session },
+    } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
     });
 
-    setLoading(false);
-
-    if (error) {
-      Alert.alert('Login failed', error.message);
-    } else {
-      Alert.alert('Success', 'You are signed in!');
+    if (session) {
+      router.replace('/(main)/home');
     }
+
+    if (error) Alert.alert(error.message);
+    setLoading(false);
   }
 
   return (
-    <View className="flex-1 items-center justify-center bg-[#fea390]">
+    <View className="flex-1 items-center justify-center bg-white px-4">
       <View className="w-[16rem] items-center gap-3">
         <Text className="text-xl font-bold">Login to Lokd</Text>
 
@@ -43,19 +50,27 @@ export default function Auth() {
           value={password}
           onChangeText={setPassword}
           className="w-full rounded border border-black px-3 py-2"
-          placeholderTextColor="#6b7280"
           secureTextEntry
+          placeholderTextColor="#6b7280"
         />
 
         <Pressable
           className="w-full rounded bg-black py-3"
-          onPress={handleSignIn}
+          onPress={signInWithEmail}
           disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text className="text-center font-bold text-white">Sign In</Text>
+            <Text className="text-center font-bold text-white">Log In</Text>
           )}
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            if (!loading) router.replace('/(auth)/signup');
+          }}>
+          <Text className="mt-2 text-sm text-blue-700 underline">
+            Don’t have an account? Register
+          </Text>
         </Pressable>
       </View>
     </View>

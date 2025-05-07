@@ -1,14 +1,22 @@
 import { useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '../lib/supabase';
 
 export default function SplashScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.replace('/login');
-    }, 2500);
+    const timer = setTimeout(async () => {
+      const { data } = await supabase.auth.getSession();
+      // console.log('Session data:', data.session);
+
+      if (data.session) {
+        router.replace('/(main)/home');
+      } else {
+        router.replace('/(auth)/signin');
+      }
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, []);
@@ -17,6 +25,7 @@ export default function SplashScreen() {
     <View className="flex-1 items-center justify-center bg-[#fea390]">
       <Text className="text-xl font-bold text-gray-500">Logo here</Text>
       <Text className="text-[5rem] font-bold text-black">Lokd AI</Text>
+      {/* <ActivityIndicator size="large" className="mt-4" /> */}
     </View>
   );
 }
