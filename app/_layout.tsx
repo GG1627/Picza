@@ -43,9 +43,14 @@ export default function RootLayout() {
         <BottomSheetModalProvider>
           <ActionSheetProvider>
             <NavThemeProvider value={NAV_THEME[colorScheme]}>
-              <Stack screenOptions={SCREEN_OPTIONS}>
-                <Stack.Screen name="index" options={INDEX_OPTIONS} />
-                <Stack.Screen name="modal" options={MODAL_OPTIONS} />
+              <Stack
+                screenOptions={{
+                  headerShown: false, // Hide header for all screens by default
+                  animation: 'ios_from_right',
+                }}>
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="(main)" options={{ headerShown: false }} />
               </Stack>
             </NavThemeProvider>
           </ActionSheetProvider>
@@ -65,27 +70,4 @@ const INDEX_OPTIONS = {
   headerShown: false,
   headerLargeTitle: true,
   title: 'My App',
-  headerRight: () => <SettingsIcon />,
-} as const;
-
-function SettingsIcon() {
-  const { colors } = useColorScheme();
-  return (
-    <Link href="/modal" asChild>
-      <Pressable className="opacity-80">
-        {({ pressed }) => (
-          <View className={cn(pressed ? 'opacity-50' : 'opacity-90')}>
-            <Icon name="cog-outline" color={colors.foreground} />
-          </View>
-        )}
-      </Pressable>
-    </Link>
-  );
-}
-
-const MODAL_OPTIONS = {
-  presentation: 'modal',
-  animation: 'fade_from_bottom', // for android
-  title: 'Settings',
-  headerRight: () => <ThemeToggle />,
 } as const;

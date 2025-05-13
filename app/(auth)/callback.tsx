@@ -22,7 +22,7 @@ export default function AuthCallbackScreen() {
 
         if (session) {
           console.log('Email verified successfully for:', session.user.email);
-          router.replace('/(main)/home');
+          router.replace('/(main)/feed');
         } else {
           console.log('No session found after verification');
           router.replace('/(auth)/login');

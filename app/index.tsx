@@ -22,7 +22,7 @@ export default function SplashScreen() {
 
         if (session) {
           console.log('Logged in as:', session.user.email);
-          router.replace('/(main)/home');
+          router.replace('/(main)/feed');
         } else {
           console.log('No active session, redirecting to login');
           router.replace('/(auth)/login');
@@ -34,7 +34,7 @@ export default function SplashScreen() {
     };
 
     // Add a small delay for better UX
-    const timer = setTimeout(checkSession, 1500);
+    const timer = setTimeout(checkSession, 1000);
     return () => clearTimeout(timer);
   }, []);
 

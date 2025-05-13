@@ -96,7 +96,7 @@ export default function SignUp() {
 
       if (session) {
         console.log('Successfully signed up as:', session.user.email);
-        router.replace('/(main)/home');
+        router.replace('/(main)/feed');
       } else {
         Alert.alert(
           'Verification Required',
@@ -113,13 +113,18 @@ export default function SignUp() {
 
   return (
     <View className="flex-1 bg-white">
+      {/* Background Pattern */}
+      <View className="absolute inset-0 bg-[#FFE4D6] opacity-30" />
+
       <View className="flex-1 items-center justify-center px-8">
-        <View className="w-full max-w-sm space-y-6">
-          <View className="items-center space-y-2">
+        <View className="w-full max-w-sm space-y-8">
+          {/* Header Section */}
+          <View className="items-center space-y-3">
             <Text className="text-3xl font-bold text-gray-900">Create Account</Text>
-            <Text className="text-base text-gray-600">Join our community</Text>
+            <Text className="text-base text-gray-600">Join our food community</Text>
           </View>
 
+          {/* Form Section */}
           <View className="space-y-4">
             <View className="space-y-2">
               <Text className="text-sm font-medium text-gray-700">School Email</Text>
@@ -127,7 +132,7 @@ export default function SignUp() {
                 placeholder="Enter your @ufl.edu email"
                 value={email}
                 onChangeText={setEmail}
-                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900"
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-gray-900 shadow-sm"
                 autoCapitalize="none"
                 keyboardType="email-address"
                 placeholderTextColor="#9ca3af"
@@ -140,7 +145,7 @@ export default function SignUp() {
                 placeholder="Create a password"
                 value={password}
                 onChangeText={setPassword}
-                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900"
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-gray-900 shadow-sm"
                 secureTextEntry
                 placeholderTextColor="#9ca3af"
               />
@@ -152,33 +157,39 @@ export default function SignUp() {
                 placeholder="Confirm your password"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900"
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-gray-900 shadow-sm"
                 secureTextEntry
                 placeholderTextColor="#9ca3af"
               />
             </View>
           </View>
 
-          <Pressable
-            className="w-full rounded-lg bg-blue-600 py-3.5"
-            onPress={signUpWithEmail}
-            disabled={loading}>
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-center text-base font-semibold text-white">Create Account</Text>
-            )}
-          </Pressable>
+          {/* Button Section */}
+          <View className="space-y-4 pt-4">
+            <Pressable
+              className="w-full rounded-xl bg-[#FFB38A] py-3.5 shadow-sm"
+              onPress={signUpWithEmail}
+              disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text className="text-center text-base font-semibold text-white">
+                  Create Account
+                </Text>
+              )}
+            </Pressable>
 
-          <Pressable
-            onPress={() => {
-              if (!loading) router.replace('/(auth)/login');
-            }}
-            className="mt-4">
-            <Text className="text-center text-sm text-gray-600">
-              Already have an account? <Text className="font-semibold text-blue-600">Sign in</Text>
-            </Text>
-          </Pressable>
+            <Pressable
+              onPress={() => {
+                if (!loading) router.replace('/(auth)/login');
+              }}
+              className="mt-4">
+              <Text className="text-center text-sm text-gray-600">
+                Already have an account?{' '}
+                <Text className="font-semibold text-[#FFB38A]">Sign in</Text>
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </View>

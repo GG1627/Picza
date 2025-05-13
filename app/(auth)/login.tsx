@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TextInput, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 
@@ -22,7 +22,7 @@ export default function LogIn() {
     });
 
     if (session) {
-      router.replace('/(main)/home');
+      router.replace('/(main)/feed');
     }
 
     if (error) Alert.alert(error.message);
@@ -31,13 +31,18 @@ export default function LogIn() {
 
   return (
     <View className="flex-1 bg-white">
+      {/* Background Pattern */}
+      <View className="absolute inset-0 bg-[#FFE4D6] opacity-30" />
+
       <View className="flex-1 items-center justify-center px-8">
-        <View className="w-full max-w-sm space-y-6">
-          <View className="items-center space-y-2">
+        <View className="w-full max-w-sm space-y-8">
+          {/* Header Section */}
+          <View className="items-center space-y-3">
             <Text className="text-3xl font-bold text-gray-900">Welcome Back</Text>
             <Text className="text-base text-gray-600">Sign in to continue</Text>
           </View>
 
+          {/* Form Section */}
           <View className="space-y-4">
             <View className="space-y-2">
               <Text className="text-sm font-medium text-gray-700">Email</Text>
@@ -45,7 +50,7 @@ export default function LogIn() {
                 placeholder="Enter your email"
                 value={email}
                 onChangeText={setEmail}
-                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900"
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-gray-900 shadow-sm"
                 autoCapitalize="none"
                 keyboardType="email-address"
                 placeholderTextColor="#9ca3af"
@@ -58,33 +63,37 @@ export default function LogIn() {
                 placeholder="Enter your password"
                 value={password}
                 onChangeText={setPassword}
-                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900"
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-gray-900 shadow-sm"
                 secureTextEntry
                 placeholderTextColor="#9ca3af"
               />
             </View>
           </View>
 
-          <Pressable
-            className="w-full rounded-lg bg-blue-600 py-3.5"
-            onPress={signInWithEmail}
-            disabled={loading}>
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-center text-base font-semibold text-white">Sign In</Text>
-            )}
-          </Pressable>
+          {/* Button Section */}
+          <View className="space-y-4 pt-4">
+            <Pressable
+              className="w-full rounded-xl bg-[#FFB38A] py-3.5 shadow-sm"
+              onPress={signInWithEmail}
+              disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text className="text-center text-base font-semibold text-white">Sign In</Text>
+              )}
+            </Pressable>
 
-          <Pressable
-            onPress={() => {
-              if (!loading) router.replace('/(auth)/signup');
-            }}
-            className="mt-4">
-            <Text className="text-center text-sm text-gray-600">
-              Don't have an account? <Text className="font-semibold text-blue-600">Create one</Text>
-            </Text>
-          </Pressable>
+            <Pressable
+              onPress={() => {
+                if (!loading) router.replace('/(auth)/signup');
+              }}
+              className="mt-4">
+              <Text className="text-center text-sm text-gray-600">
+                Don't have an account?{' '}
+                <Text className="font-semibold text-[#FFB38A]">Create one</Text>
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </View>
