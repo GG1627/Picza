@@ -4,7 +4,7 @@ import { View, Text, Pressable } from 'react-native';
 
 function LogOut() {
   const router = useRouter();
-  router.replace('/(auth)/signin');
+  router.replace('/(auth)/login');
 }
 
 export default function Home() {
