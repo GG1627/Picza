@@ -24,7 +24,7 @@ export default function SplashScreen() {
   return (
     <View className="flex-1 items-center justify-center bg-[#fea390]">
       <Text className="text-xl font-bold text-gray-500">Logo here</Text>
-      <Text className="text-[5rem] font-bold text-black">Lokd AI</Text>
+      <Text className="text-[5rem] font-bold text-black">Food App</Text>
       {/* <ActivityIndicator size="large" className="mt-4" /> */}
     </View>
   );
