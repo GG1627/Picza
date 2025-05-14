@@ -96,7 +96,7 @@ export default function SignUp() {
 
       if (session) {
         console.log('Successfully signed up as:', session.user.email);
-        router.replace('/(main)/feed');
+        router.replace('/(auth)/create-profile');
       } else {
         Alert.alert(
           'Verification Required',

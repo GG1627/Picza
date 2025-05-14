@@ -34,7 +34,7 @@ export default function SplashScreen() {
     };
 
     // Add a small delay for better UX
-    const timer = setTimeout(checkSession, 1000);
+    const timer = setTimeout(checkSession, 800);
     return () => clearTimeout(timer);
   }, []);
 
