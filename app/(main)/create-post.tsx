@@ -47,7 +47,7 @@ export default function CreatePostScreen() {
 
       const filePath = `${user.id}/${new Date().getTime()}.jpg`;
       const { error: uploadError } = await supabase.storage
-        .from('post_images')
+        .from('post-images')
         .upload(filePath, decode(base64Image), {
           contentType: 'image/jpeg',
         });
@@ -56,7 +56,7 @@ export default function CreatePostScreen() {
 
       const {
         data: { publicUrl },
-      } = supabase.storage.from('post_images').getPublicUrl(filePath);
+      } = supabase.storage.from('post-images').getPublicUrl(filePath);
 
       return publicUrl;
     } catch (error) {
