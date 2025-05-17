@@ -1,6 +1,6 @@
 {
   "cesVersion": "2.16.0",
-  "projectName": "my-expo-appy",
+  "projectName": "picza",
   "packages": [
     {
       "name": "expo-router",

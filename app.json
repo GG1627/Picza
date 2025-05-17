@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "my-expo-appy",
-    "slug": "my-expo-appy",
+    "name": "picza",
+    "slug": "picza",
     "version": "1.0.0",
-    "scheme": "my-expo-appy",
+    "scheme": "picza",
     "web": {
       "bundler": "metro",
       "output": "static",
