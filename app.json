@@ -9,7 +9,9 @@
       "output": "static",
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router"
+    ],
     "experiments": {
       "typedRoutes": true,
       "tsconfigPaths": true
@@ -22,7 +24,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true
     },
@@ -32,6 +36,12 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.anonymous.myexpoappy"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "18e3f17b-3900-4386-a72c-2d26b071afc6"
+      }
     }
   }
 }
