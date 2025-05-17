@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  StatusBar,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
@@ -129,6 +130,7 @@ export default function SignUp() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1">
+      <StatusBar barStyle="dark-content" />
       <View className="flex-1 bg-[#ffddc1]">
         {/* Decorative Elements */}
         <View className="absolute right-0 top-0 -mr-32 -mt-32 h-64 w-64 rounded-full bg-[#da4314] opacity-10" />
