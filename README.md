@@ -1,12 +1,12 @@
 # Picza - UF Food Community App
 
-Picza is a modern food community application designed specifically for University of Florida students. The app helps students discover, share, and connect over food experiences on campus.
+Picza is a modern food community application designed specifically for UF, UM, FSU students. The app helps students discover, share, and connect over food experiences on campus.
 
 ## Features
 
 - 🔐 **Secure Authentication**
 
-  - UF email-based authentication (@ufl.edu)
+  - UF email-based authentication (@ufl.edu)(etc.)
   - Secure password management
   - Password reset functionality
 
@@ -43,7 +43,7 @@ Picza is a modern food community application designed specifically for Universit
 
 ```bash
 git clone [repository-url]
-cd picza
+cd picza - NOTE: Rename the porject
 ```
 
 2. Install dependencies:
@@ -112,14 +112,6 @@ eas build --platform ios
 eas build --platform android
 ```
 
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
 ## Security
 
 - All authentication is handled through Supabase
@@ -129,7 +121,7 @@ eas build --platform android
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under a Proprietary License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
