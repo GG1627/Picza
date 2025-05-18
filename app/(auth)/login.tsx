@@ -6,15 +6,16 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
-  Image,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
   StatusBar,
+  Image,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+// import { Image } from 'expo-image';
 
 export default function LogIn() {
   const router = useRouter();

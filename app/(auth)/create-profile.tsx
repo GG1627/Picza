@@ -1,6 +1,6 @@
 import { View, Text, TextInput, Pressable, Image, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
@@ -12,6 +12,7 @@ export default function CreateProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const router = useRouter();
+  const { schoolId, schoolName } = useLocalSearchParams();
 
   const pickImage = async () => {
     try {
@@ -91,6 +92,7 @@ export default function CreateProfileScreen() {
           username: username,
           full_name: fullName,
           avatar_url: avatarUrl,
+          school_id: schoolId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -130,6 +132,14 @@ export default function CreateProfileScreen() {
               </View>
             )}
           </Pressable>
+        </View>
+
+        {/* School Display */}
+        <View>
+          <Text className="mb-2 text-sm font-medium text-gray-700">School</Text>
+          <View className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+            <Text className="text-base text-gray-900">{schoolName}</Text>
+          </View>
         </View>
 
         {/* Username Input */}

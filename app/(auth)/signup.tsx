@@ -25,6 +25,21 @@ export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  async function getSchoolFromEmail(email: string) {
+    const domain = email.split('@')[1];
+    const { data: school, error } = await supabase
+      .from('schools')
+      .select('*')
+      .eq('domain', domain)
+      .single();
+
+    if (error) {
+      console.error('Error fetching school:', error);
+      return null;
+    }
+    return school;
+  }
+
   async function signUpWithEmail() {
     if (loading) return;
 
@@ -40,9 +55,10 @@ export default function SignUp() {
       return;
     }
 
-    // Ensure it's a UFL email
-    if (!email.toLowerCase().endsWith('@ufl.edu')) {
-      Alert.alert('Invalid Email', 'Please use your @ufl.edu school email.');
+    // Get school from email domain
+    const school = await getSchoolFromEmail(email);
+    if (!school) {
+      Alert.alert('Invalid Email', 'Please use a valid school email address.');
       return;
     }
 
@@ -111,7 +127,11 @@ export default function SignUp() {
 
       if (session) {
         console.log('Successfully signed up as:', session.user.email);
-        router.replace('/(auth)/create-profile');
+        // Pass the school information to the create profile screen
+        router.replace({
+          pathname: '/(auth)/create-profile',
+          params: { schoolId: school.id, schoolName: school.name },
+        });
       } else {
         Alert.alert(
           'Verification Required',
@@ -158,7 +178,7 @@ export default function SignUp() {
                 <Text className="ml-1 text-sm font-medium text-gray-700">School Email</Text>
                 <View className="relative">
                   <TextInput
-                    placeholder="Enter your @ufl.edu email"
+                    placeholder="Enter your @*.edu email"
                     value={email}
                     onChangeText={setEmail}
                     className="w-full rounded-2xl border border-[#da4314] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
@@ -185,6 +205,8 @@ export default function SignUp() {
                     className="w-full rounded-2xl border border-[#da4314] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
                     secureTextEntry={!showPassword}
                     placeholderTextColor="#9ca3af"
+                    textContentType="newPassword"
+                    autoComplete="new-password"
                   />
                   <Ionicons
                     name="lock-closed-outline"
@@ -214,6 +236,8 @@ export default function SignUp() {
                     className="w-full rounded-2xl border border-[#da4314] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
                     secureTextEntry={!showConfirmPassword}
                     placeholderTextColor="#9ca3af"
+                    textContentType="newPassword"
+                    autoComplete="new-password"
                   />
                   <Ionicons
                     name="lock-closed-outline"
