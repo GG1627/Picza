@@ -1,14 +1,26 @@
-import { View, Text, TextInput, Pressable, Image, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  Image,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+} from 'react-native';
 import { useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function CreateProfileScreen() {
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
+  const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const router = useRouter();
@@ -66,6 +78,11 @@ export default function CreateProfileScreen() {
       return;
     }
 
+    if (bio.length > 60) {
+      alert('Bio must be 60 characters or less');
+      return;
+    }
+
     setLoading(true);
     try {
       const {
@@ -91,6 +108,7 @@ export default function CreateProfileScreen() {
           id: user.id,
           username: username,
           full_name: fullName,
+          bio: bio || null,
           avatar_url: avatarUrl,
           school_id: schoolId,
           created_at: new Date().toISOString(),
@@ -111,72 +129,154 @@ export default function CreateProfileScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white px-6">
-      <View className="mt-16">
-        <Text className="text-3xl font-bold text-gray-900">Create Profile</Text>
-        <Text className="mt-2 text-base text-gray-600">Let's get to know you better</Text>
-      </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      className="flex-1">
+      <StatusBar barStyle="dark-content" />
+      <View className="flex-1 bg-[#ffddc1]">
+        {/* Decorative Elements */}
+        <View className="absolute right-0 top-0 -mr-32 -mt-32 h-64 w-64 rounded-full bg-[#da4314] opacity-10" />
+        <View className="absolute bottom-0 left-0 -mb-24 -ml-24 h-48 w-48 rounded-full bg-[#FFB38A] opacity-10" />
 
-      <View className="mt-8 space-y-6">
-        {/* Profile Image Upload */}
-        <View className="items-center">
-          <Pressable
-            onPress={pickImage}
-            className="h-32 w-32 items-center justify-center rounded-full bg-gray-100">
-            {image ? (
-              <Image source={{ uri: image }} className="h-32 w-32 rounded-full" />
-            ) : (
-              <View className="items-center">
-                <Ionicons name="camera-outline" size={32} color="#6B7280" />
-                <Text className="mt-2 text-sm text-gray-500">Add Photo</Text>
+        <View className="flex-1 px-8">
+          <View className="mt-24">
+            <Text className="text-3xl font-bold text-[#da4314]">Create Profile</Text>
+            <Text className="mt-3 text-base text-gray-600">Let's get to know you better</Text>
+          </View>
+
+          <View className="mt-12 space-y-8">
+            {/* Profile Image Upload */}
+            <View className="items-center">
+              <Pressable
+                onPress={pickImage}
+                className="h-32 w-32 items-center justify-center rounded-full border-2 border-[#da4314] bg-white/90">
+                {image ? (
+                  <Image source={{ uri: image }} className="h-32 w-32 rounded-full" />
+                ) : (
+                  <View className="items-center">
+                    <Ionicons name="camera-outline" size={32} color="#da4314" />
+                    <Text className="mt-2 text-sm text-gray-500">Add Photo</Text>
+                  </View>
+                )}
+              </Pressable>
+            </View>
+
+            {/* School Display */}
+            <View>
+              <Text className="mb-2 text-sm font-medium text-gray-700">School</Text>
+              <View
+                style={{
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.9,
+                  shadowRadius: 4.65,
+                  elevation: 10,
+                  borderRadius: 2,
+                }}>
+                <LinearGradient
+                  colors={['rgba(0, 41, 165, 1)', 'rgba(255, 120, 36, 1)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    borderRadius: 16,
+                    padding: 12,
+                    borderWidth: 1,
+                    borderColor: 'black',
+                  }}>
+                  <Text className="text-base font-bold text-white">University of Florida</Text>
+                </LinearGradient>
               </View>
-            )}
-          </Pressable>
-        </View>
+            </View>
 
-        {/* School Display */}
-        <View>
-          <Text className="mb-2 text-sm font-medium text-gray-700">School</Text>
-          <View className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-            <Text className="text-base text-gray-900">{schoolName}</Text>
+            {/* Full Name Input */}
+            <View>
+              <Text className="mb-2 text-sm font-medium text-gray-700">Full Name</Text>
+              <View className="relative">
+                <TextInput
+                  className="w-full rounded-2xl border border-[#da4314] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
+                  placeholder="Enter your full name"
+                  placeholderTextColor="#9ca3af"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  autoCapitalize="words"
+                />
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color="#da4314"
+                  className="absolute left-4 top-4"
+                />
+              </View>
+            </View>
+
+            {/* Username Input */}
+            <View>
+              <View className="flex-row items-center justify-between">
+                <Text className="mb-2 text-sm font-medium text-gray-700">Username</Text>
+                <Text className="text-xs text-gray-500">{username.length}/20</Text>
+              </View>
+              <View className="relative">
+                <TextInput
+                  className="w-full rounded-2xl border border-[#da4314] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
+                  placeholder="Choose a username"
+                  placeholderTextColor="#9ca3af"
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={20}
+                />
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color="#da4314"
+                  className="absolute left-4 top-4"
+                />
+              </View>
+            </View>
+
+            {/* Bio Input */}
+            <View>
+              <View className="flex-row items-center justify-between">
+                <Text className="mb-2 text-sm font-medium text-gray-700">Bio (Optional)</Text>
+                <Text className="text-xs text-gray-500">{bio.length}/60</Text>
+              </View>
+              <View className="relative">
+                <TextInput
+                  className="w-full rounded-2xl border border-[#da4314] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
+                  placeholder="Tell us about yourself"
+                  placeholderTextColor="#9ca3af"
+                  value={bio}
+                  onChangeText={setBio}
+                  maxLength={60}
+                  multiline
+                  numberOfLines={3}
+                />
+                <Ionicons
+                  name="chatbubble-outline"
+                  size={20}
+                  color="#da4314"
+                  className="absolute left-4 top-4"
+                />
+              </View>
+            </View>
+
+            {/* Create Profile Button */}
+            <Pressable
+              onPress={handleCreateProfile}
+              disabled={loading}
+              className={`mt-8 rounded-2xl bg-[#da4314] py-4 shadow-sm ${loading ? 'opacity-50' : ''}`}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text className="text-center text-base font-semibold text-white">
+                  Create Profile
+                </Text>
+              )}
+            </Pressable>
           </View>
         </View>
-
-        {/* Username Input */}
-        <View>
-          <Text className="mb-2 text-sm font-medium text-gray-700">Username</Text>
-          <TextInput
-            className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-base text-gray-900"
-            placeholder="Choose a username"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </View>
-
-        {/* Full Name Input */}
-        <View>
-          <Text className="mb-2 text-sm font-medium text-gray-700">Full Name</Text>
-          <TextInput
-            className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-base text-gray-900"
-            placeholder="Enter your full name"
-            value={fullName}
-            onChangeText={setFullName}
-            autoCapitalize="words"
-          />
-        </View>
-
-        {/* Create Profile Button */}
-        <Pressable
-          onPress={handleCreateProfile}
-          disabled={loading}
-          className={`mt-8 rounded-xl bg-[#FFB38A] py-4 ${loading ? 'opacity-50' : ''}`}>
-          <Text className="text-center text-base font-semibold text-white">
-            {loading ? 'Creating Profile...' : 'Create Profile'}
-          </Text>
-        </Pressable>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

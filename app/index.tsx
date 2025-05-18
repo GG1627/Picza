@@ -16,20 +16,25 @@ export default function SplashScreen() {
 
         if (error) {
           console.error('Error checking session:', error.message);
-          router.replace('/(auth)/login');
+          // router.replace('/(auth)/login');
+          router.replace('/(auth)/create-profile');
+
           return;
         }
 
         if (session) {
           console.log('Logged in as:', session.user.email);
-          router.replace('/(main)/feed');
+          // router.replace('/(main)/feed');
+          router.replace('/(auth)/create-profile');
         } else {
           console.log('No active session, redirecting to login');
-          router.replace('/(auth)/login');
+          // router.replace('/(auth)/login');
+          router.replace('/(auth)/create-profile');
         }
       } catch (error) {
         console.error('Unexpected error:', error);
-        router.replace('/(auth)/login');
+        // router.replace('/(auth)/login');
+        router.replace('/(auth)/create-profile');
       }
     };
 
