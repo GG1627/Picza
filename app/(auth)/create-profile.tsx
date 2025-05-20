@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useColorScheme } from '../../lib/useColorScheme';
 
 export default function CreateProfileScreen() {
   const [username, setUsername] = useState('');
@@ -29,6 +30,7 @@ export default function CreateProfileScreen() {
   const [schoolColors, setSchoolColors] = useState({ primary: '#0029A5', secondary: '#FF7824' });
   const router = useRouter();
   const { schoolId, schoolName, email, password } = useLocalSearchParams();
+  const { colorScheme, colors } = useColorScheme();
 
   useEffect(() => {
     const fetchSchoolColors = async () => {
@@ -211,12 +213,18 @@ export default function CreateProfileScreen() {
       className="flex-1">
       <StatusBar barStyle="dark-content" />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className="flex-1 bg-[#F1E9DB]">
+        <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
           <View className="flex-1 items-center justify-center px-8">
             <View className="w-full max-w-sm space-y-8">
               <View className="mt-0">
-                <Text className="text-3xl font-bold text-[#07020D]">Create Profile</Text>
-                <Text className="mt-3 text-base text-gray-600">Let's get to know you better</Text>
+                <Text
+                  className={`text-3xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                  Create Profile
+                </Text>
+                <Text
+                  className={`mt-3 text-base ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                  Let's get to know you better
+                </Text>
               </View>
 
               <View className="mt-8 space-y-8">
@@ -225,30 +233,47 @@ export default function CreateProfileScreen() {
                   <View className="relative">
                     <Pressable
                       onPress={pickImage}
-                      className={`h-40 w-40 items-center justify-center rounded-full border-4 border-[#07020D] p-1 ${
-                        image ? 'bg-[#F1E9DB]' : 'bg-white'
-                      }`}>
+                      className={`h-40 w-40 items-center justify-center rounded-full border-4 ${
+                        colorScheme === 'dark' ? 'border-[#E0E0E0]' : 'border-[#07020D]'
+                      } p-1 ${image ? (colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]') : colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-white'}`}>
                       {image ? (
                         <Image source={{ uri: image }} className="h-full w-full rounded-full" />
                       ) : (
                         <View className="items-center">
-                          <Ionicons name="camera-outline" size={40} color="#07020D" />
-                          <Text className="mt-2 text-sm text-gray-500">Add Photo</Text>
+                          <Ionicons
+                            name="camera-outline"
+                            size={40}
+                            color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                          />
+                          <Text
+                            className={`mt-2 text-sm ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-gray-500'}`}>
+                            Add Photo
+                          </Text>
                         </View>
                       )}
                     </Pressable>
-                    <View className="absolute -bottom-0 -right-[-6] h-12 w-12 items-center justify-center rounded-full bg-[#07020D]">
-                      <Ionicons name="pencil" size={26} color="white" />
-                    </View>
+                    {/* <View
+                      className={`absolute -bottom-0 -right-[-6] h-12 w-12 items-center justify-center rounded-full ${
+                        colorScheme === 'dark' ? 'bg-[#E0E0E0]' : 'bg-[#07020D]'
+                      }`}>
+                      <Ionicons
+                        name="pencil"
+                        size={26}
+                        color={colorScheme === 'dark' ? '#07020D' : 'white'}
+                      />
+                    </View> */}
                   </View>
                 </View>
 
                 {/* School Display */}
                 <View>
-                  <Text className="mb-0 text-sm font-medium text-gray-700">School</Text>
+                  <Text
+                    className={`mb-0 text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                    School
+                  </Text>
                   <View
                     style={{
-                      shadowColor: '#000',
+                      shadowColor: colorScheme === 'dark' ? '#fff' : '#000',
                       shadowOffset: { width: 0, height: 0 },
                       shadowOpacity: 0.9,
                       shadowRadius: 4.65,
@@ -263,7 +288,7 @@ export default function CreateProfileScreen() {
                         borderRadius: 16,
                         padding: 12,
                         borderWidth: 1,
-                        borderColor: 'black',
+                        borderColor: colorScheme === 'dark' ? '#E0E0E0' : '#07020D',
                       }}>
                       <Text className="text-base font-bold text-white">{schoolName}</Text>
                     </LinearGradient>
@@ -272,10 +297,17 @@ export default function CreateProfileScreen() {
 
                 {/* Full Name Input */}
                 <View>
-                  <Text className="mb-0 mt-3 text-sm font-medium text-gray-700">Full Name</Text>
+                  <Text
+                    className={`mb-0 mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                    Full Name
+                  </Text>
                   <View className="relative">
                     <TextInput
-                      className="w-full rounded-2xl border border-[#07020D] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
+                      className={`w-full rounded-2xl border px-4 py-4 pl-12 text-gray-900 shadow-sm ${
+                        colorScheme === 'dark'
+                          ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]'
+                          : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
+                      }`}
                       placeholder="Enter your full name"
                       placeholderTextColor="#9ca3af"
                       value={fullName}
@@ -285,7 +317,7 @@ export default function CreateProfileScreen() {
                     <Ionicons
                       name="person-outline"
                       size={20}
-                      color="#07020D"
+                      color={colorScheme === 'dark' ? '#9ca3af' : '#07020D'}
                       className="absolute left-4 top-4"
                     />
                   </View>
@@ -294,12 +326,22 @@ export default function CreateProfileScreen() {
                 {/* Username Input */}
                 <View>
                   <View className="flex-row items-center justify-between">
-                    <Text className="mb-0 mt-3 text-sm font-medium text-gray-700">Username</Text>
-                    <Text className="text-xs text-gray-500">{username.length}/20</Text>
+                    <Text
+                      className={`mb-0 mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                      Username
+                    </Text>
+                    <Text
+                      className={`text-xs ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-gray-500'}`}>
+                      {username.length}/20
+                    </Text>
                   </View>
                   <View className="relative">
                     <TextInput
-                      className="w-full rounded-2xl border border-[#07020D] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
+                      className={`w-full rounded-2xl border px-4 py-4 pl-12 text-gray-900 shadow-sm ${
+                        colorScheme === 'dark'
+                          ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]'
+                          : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
+                      }`}
                       placeholder="Choose a username"
                       placeholderTextColor="#9ca3af"
                       value={username}
@@ -311,7 +353,7 @@ export default function CreateProfileScreen() {
                     <Ionicons
                       name="person-outline"
                       size={20}
-                      color="#07020D"
+                      color={colorScheme === 'dark' ? '#9ca3af' : '#07020D'}
                       className="absolute left-4 top-4"
                     />
                   </View>
@@ -320,14 +362,22 @@ export default function CreateProfileScreen() {
                 {/* Bio Input */}
                 <View>
                   <View className="flex-row items-center justify-between">
-                    <Text className="mb-0 mt-3 text-sm font-medium text-gray-700">
+                    <Text
+                      className={`mb-0 mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
                       Bio (Optional)
                     </Text>
-                    <Text className="text-xs text-gray-500">{bio.length}/60</Text>
+                    <Text
+                      className={`text-xs ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-gray-500'}`}>
+                      {bio.length}/60
+                    </Text>
                   </View>
                   <View className="relative">
                     <TextInput
-                      className="w-full rounded-2xl border border-[#07020D] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
+                      className={`w-full rounded-2xl border px-4 py-4 pl-12 text-gray-900 shadow-sm ${
+                        colorScheme === 'dark'
+                          ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]'
+                          : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
+                      }`}
                       placeholder="Tell us about yourself"
                       placeholderTextColor="#9ca3af"
                       value={bio}
@@ -344,7 +394,7 @@ export default function CreateProfileScreen() {
                     <Ionicons
                       name="chatbubble-outline"
                       size={20}
-                      color="#07020D"
+                      color={colorScheme === 'dark' ? '#9ca3af' : '#07020D'}
                       className="absolute left-4 top-4"
                     />
                   </View>
@@ -354,11 +404,14 @@ export default function CreateProfileScreen() {
                 <Pressable
                   onPress={handleCreateProfile}
                   disabled={loading}
-                  className={`mt-8 rounded-2xl bg-[#5DB7DE] py-4 shadow-sm ${loading ? 'opacity-50' : ''}`}>
+                  className={`mt-8 rounded-2xl ${colorScheme === 'dark' ? 'bg-[#F00511]' : 'bg-[#F00511]'} py-4 shadow-sm ${
+                    loading ? 'opacity-50' : ''
+                  }`}>
                   {loading ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text className="text-center text-base font-semibold text-white">
+                    <Text
+                      className={`text-center text-base font-semibold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#E0E0E0]'}`}>
                       Create Profile
                     </Text>
                   )}

@@ -3,9 +3,11 @@ import { View, Text, ActivityIndicator, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import Logo from '../images/logo.svg';
+import { useColorScheme } from '../lib/useColorScheme';
 
 export default function SplashScreen() {
   const router = useRouter();
+  const { colorScheme, colors } = useColorScheme();
 
   useEffect(() => {
     const checkSession = async () => {
@@ -40,9 +42,10 @@ export default function SplashScreen() {
   }, []);
 
   return (
-    <View className="flex-1 items-center justify-center bg-[#5DB7DE]">
+    <View
+      className={`flex-1 items-center justify-center ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#F00511]'}`}>
       <StatusBar hidden={true} />
-      <Logo width={150} height={150} fill="#F1E9DB" />
+      <Logo width={160} height={160} fill={colorScheme === 'dark' ? '#F00511' : '#E0E0E0'} />
       {/* <Text className="text-[5rem] font-bold text-black">Picza</Text> */}
       {/* <ActivityIndicator size="large" color="#000" className="mt-4" /> */}
     </View>

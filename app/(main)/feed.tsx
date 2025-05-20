@@ -266,20 +266,22 @@ export default function FeedScreen() {
     <SafeAreaView className="flex-1 bg-[#F1E9DB]">
       {/* School Header */}
       {school && (
-        <View className="border-b border-[#07020D]/10 bg-[#5DB7DE] px-6 pb-4">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center space-x-3">
-              <View className="h-12 w-12 items-center justify-center rounded-full bg-[#F1E9DB]">
-                <Ionicons name="school" size={24} color="#07020D" />
+        <View className="border-b border-[#07020D]/10 bg-white">
+          <View className="px-6 pb-4">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center space-x-3">
+                <View className="h-12 w-12 items-center justify-center rounded-full bg-[#F1E9DB]">
+                  <Ionicons name="school" size={24} color="#07020D" />
+                </View>
+                <View>
+                  <Text className="text-lg font-bold text-[#07020D]">{school.name}</Text>
+                  <Text className="text-sm text-[#877B66]">Student Feed</Text>
+                </View>
               </View>
-              <View>
-                <Text className="text-lg font-bold text-[#07020D]">{school.name}</Text>
-                <Text className="text-sm text-[#877B66]">Student Feed</Text>
-              </View>
+              <Pressable className="rounded-full bg-[#F1E9DB] p-2">
+                <Ionicons name="notifications-outline" size={24} color="#07020D" />
+              </Pressable>
             </View>
-            <Pressable className="rounded-full bg-[#F1E9DB] p-2">
-              <Ionicons name="notifications-outline" size={24} color="#07020D" />
-            </Pressable>
           </View>
         </View>
       )}
