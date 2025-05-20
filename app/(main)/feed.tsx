@@ -4,6 +4,7 @@ import React from 'react';
 import { supabase } from '../../lib/supabase'; // Ensure this path is correct
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Post = {
   id: string;
@@ -20,11 +21,18 @@ type Post = {
   } | null; // It's possible a profile might not be found, though unlikely with correct setup
 };
 
+type School = {
+  name: string;
+  primary_color: string;
+  secondary_color: string;
+};
+
 export default function FeedScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [school, setSchool] = useState<School | null>(null);
 
   useEffect(() => {
     fetchCurrentUser();
@@ -43,6 +51,28 @@ export default function FeedScreen() {
         data: { user },
       } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
+
+      if (user) {
+        // Fetch user's school information
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('school_id')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) throw profileError;
+
+        if (profileData?.school_id) {
+          const { data: schoolData, error: schoolError } = await supabase
+            .from('schools')
+            .select('name, primary_color, secondary_color')
+            .eq('id', profileData.school_id)
+            .single();
+
+          if (schoolError) throw schoolError;
+          setSchool(schoolData);
+        }
+      }
     } catch (error) {
       console.error('Error fetching current user:', error);
     }
@@ -151,8 +181,8 @@ export default function FeedScreen() {
   if (loading && posts.length === 0) {
     // Show loading only if posts array is empty
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#FFB38A" />
+      <View className="flex-1 items-center justify-center bg-[#F1E9DB]">
+        <ActivityIndicator size="large" color="#5DB7DE" />
       </View>
     );
   }
@@ -169,23 +199,23 @@ export default function FeedScreen() {
         {/* Post Header */}
         <View className="flex-row items-center justify-between p-4">
           <View className="flex-row items-center space-x-3">
-            <View className="h-10 w-10 overflow-hidden rounded-full bg-gray-100">
+            <View className="h-10 w-10 overflow-hidden rounded-full bg-[#F1E9DB]">
               {avatarUrl ? (
                 <Image source={{ uri: avatarUrl }} className="h-full w-full" />
               ) : (
                 <View className="h-full w-full items-center justify-center">
-                  <Ionicons name="person" size={24} color="#6B7280" />
+                  <Ionicons name="person" size={24} color="#07020D" />
                 </View>
               )}
             </View>
-            <Text className="text-base font-semibold text-gray-900">{username}</Text>
+            <Text className="text-base font-semibold text-[#07020D]">{username}</Text>
           </View>
 
           {isOwnPost && (
             <Pressable
               onPress={() => handleDeletePost(post.id, post.image_url)}
               className="rounded-full p-2">
-              <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              <Ionicons name="trash-outline" size={20} color="#BA3B46" />
             </Pressable>
           )}
         </View>
@@ -233,10 +263,30 @@ export default function FeedScreen() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-[#F1E9DB]">
+      {/* School Header */}
+      {school && (
+        <View className="border-b border-[#07020D]/10 bg-[#5DB7DE] px-6 pb-4">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center space-x-3">
+              <View className="h-12 w-12 items-center justify-center rounded-full bg-[#F1E9DB]">
+                <Ionicons name="school" size={24} color="#07020D" />
+              </View>
+              <View>
+                <Text className="text-lg font-bold text-[#07020D]">{school.name}</Text>
+                <Text className="text-sm text-[#877B66]">Student Feed</Text>
+              </View>
+            </View>
+            <Pressable className="rounded-full bg-[#F1E9DB] p-2">
+              <Ionicons name="notifications-outline" size={24} color="#07020D" />
+            </Pressable>
+          </View>
+        </View>
+      )}
+
       {posts.length === 0 && !loading ? (
         <View className="flex-1 items-center justify-center">
-          <Text className="text-lg text-gray-500">No posts yet. Be the first!</Text>
+          <Text className="text-lg text-[#877B66]">No posts yet. Be the first!</Text>
           {/* Optionally, add a button to create a post */}
         </View>
       ) : (
@@ -250,6 +300,6 @@ export default function FeedScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }

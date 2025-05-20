@@ -68,22 +68,13 @@ export default function ResetPassword() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1">
       <StatusBar barStyle="dark-content" />
-      <View className="flex-1 bg-[#ffddc1]">
-        {/* Decorative Elements */}
-        <View className="absolute right-0 top-0 -mr-32 -mt-32 h-64 w-64 rounded-full bg-[#da4314] opacity-10" />
-        <View className="absolute bottom-0 left-0 -mb-24 -ml-24 h-48 w-48 rounded-full bg-[#FFB38A] opacity-10" />
-
+      <View className="flex-1 bg-[#F1E9DB]">
         <View className="flex-1 items-center justify-center px-8">
           <View className="w-full max-w-sm space-y-8">
             {/* Header Section */}
             <View className="items-center space-y-4">
-              <Image
-                source={require('../../images/logo.png')}
-                className="mb-2 h-28 w-28"
-                resizeMode="contain"
-              />
               <View className="items-center">
-                <Text className="mb-2 text-5xl font-bold text-[#da4314]">Picza</Text>
+                <Text className="mb-2 text-6xl font-bold text-[#07020D]">Picza</Text>
                 <Text className="mb-1 text-2xl font-medium text-gray-700">Reset Password</Text>
                 <Text className="text-center text-base text-gray-600">
                   Enter your email address and we'll send you a link to reset your password
@@ -93,14 +84,14 @@ export default function ResetPassword() {
 
             {/* Form Section */}
             <View className="space-y-5">
-              <View className="space-y-2">
+              <View className="mt-4 space-y-2">
                 <Text className="ml-1 text-sm font-medium text-gray-700">School Email</Text>
                 <View className="relative">
                   <TextInput
-                    placeholder="Enter your @ufl.edu email"
+                    placeholder="Enter your @.edu email"
                     value={email}
                     onChangeText={setEmail}
-                    className="w-full rounded-2xl border border-[#da4314] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
+                    className="w-full rounded-2xl border border-[#07020D] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
                     autoCapitalize="none"
                     keyboardType="email-address"
                     placeholderTextColor="#9ca3af"
@@ -108,7 +99,7 @@ export default function ResetPassword() {
                   <Ionicons
                     name="mail-outline"
                     size={20}
-                    color="#da4314"
+                    color="#07020D"
                     className="absolute left-4 top-4"
                   />
                 </View>
@@ -118,7 +109,7 @@ export default function ResetPassword() {
             {/* Button Section */}
             <View className="space-y-4 pt-4">
               <Pressable
-                className="w-full rounded-2xl bg-[#da4314] py-4 shadow-sm"
+                className="w-full rounded-2xl bg-[#5DB7DE] py-4 shadow-sm"
                 onPress={handleResetPassword}
                 disabled={loading}>
                 {loading ? (
@@ -130,7 +121,7 @@ export default function ResetPassword() {
                 )}
               </Pressable>
 
-              <View className="mt-2 flex-row items-center justify-center space-x-2">
+              <View className="mt-4 flex-row items-center justify-center space-x-2">
                 <View className="h-[1px] flex-1 bg-gray-400" />
                 <Text className="text-gray-500">or</Text>
                 <View className="h-[1px] flex-1 bg-gray-400" />
@@ -143,7 +134,7 @@ export default function ResetPassword() {
                 className="mt-2">
                 <Text className="text-center text-sm text-gray-600">
                   Remember your password?{' '}
-                  <Text className="font-semibold text-[#da4314]">Sign in</Text>
+                  <Text className="font-semibold text-[#5DB7DE]">Sign in</Text>
                 </Text>
               </Pressable>
             </View>

@@ -8,8 +8,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import * as ImagePicker from 'expo-image-picker';
@@ -23,8 +26,35 @@ export default function CreateProfileScreen() {
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState<string | null>(null);
+  const [schoolColors, setSchoolColors] = useState({ primary: '#0029A5', secondary: '#FF7824' });
   const router = useRouter();
-  const { schoolId, schoolName } = useLocalSearchParams();
+  const { schoolId, schoolName, email, password } = useLocalSearchParams();
+
+  useEffect(() => {
+    const fetchSchoolColors = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('schools')
+          .select('primary_color, secondary_color')
+          .eq('id', schoolId)
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          setSchoolColors({
+            primary: data.primary_color,
+            secondary: data.secondary_color,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching school colors:', error);
+      }
+    };
+
+    if (schoolId) {
+      fetchSchoolColors();
+    }
+  }, [schoolId]);
 
   const pickImage = async () => {
     try {
@@ -74,22 +104,57 @@ export default function CreateProfileScreen() {
 
   const handleCreateProfile = async () => {
     if (!username || !fullName) {
-      alert('Please fill in all fields');
+      Alert.alert('Required Fields', 'Please fill in all required fields');
       return;
     }
 
     if (bio.length > 60) {
-      alert('Bio must be 60 characters or less');
+      Alert.alert('Bio Too Long', 'Bio must be 60 characters or less');
       return;
     }
 
     setLoading(true);
     try {
+      // Create the auth account first
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+        error: signUpError,
+      } = await supabase.auth.signUp({
+        email: email as string,
+        password: password as string,
+      });
 
-      if (!user) throw new Error('No user found');
+      if (signUpError) {
+        if (signUpError.message.includes('already registered')) {
+          Alert.alert(
+            'Account Exists',
+            'An account with this email already exists. Would you like to sign in instead?',
+            [
+              {
+                text: 'Cancel',
+                style: 'cancel',
+              },
+              {
+                text: 'Sign In',
+                onPress: () => {
+                  router.replace('/(auth)/login');
+                },
+              },
+            ]
+          );
+        } else {
+          Alert.alert('Error', signUpError.message);
+        }
+        return;
+      }
+
+      if (!session?.user) {
+        Alert.alert(
+          'Verification Required',
+          'Please check your email for a verification link to complete your registration.'
+        );
+        return;
+      }
 
       let avatarUrl = null;
       if (image) {
@@ -103,9 +168,9 @@ export default function CreateProfileScreen() {
         avatarUrl = await uploadImage(base64Image.split(',')[1]);
       }
 
-      const { error } = await supabase.from('profiles').insert([
+      const { error: profileError } = await supabase.from('profiles').insert([
         {
-          id: user.id,
+          id: session.user.id,
           username: username,
           full_name: fullName,
           bio: bio || null,
@@ -116,16 +181,28 @@ export default function CreateProfileScreen() {
         },
       ]);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
       // Navigate to feed after successful profile creation
       router.replace('/(main)/feed');
     } catch (error) {
       console.error('Error creating profile:', error);
-      alert('Error creating profile. Please try again.');
+      Alert.alert('Error', 'Error creating profile. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBioChange = (text: string) => {
+    // Count existing newlines
+    const newlineCount = (text.match(/\n/g) || []).length;
+
+    // If we're at max newlines and trying to add another, don't allow it
+    if (newlineCount >= 2 && text.endsWith('\n')) {
+      return;
+    }
+
+    setBio(text);
   };
 
   return (
@@ -133,150 +210,164 @@ export default function CreateProfileScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1">
       <StatusBar barStyle="dark-content" />
-      <View className="flex-1 bg-[#ffddc1]">
-        {/* Decorative Elements */}
-        <View className="absolute right-0 top-0 -mr-32 -mt-32 h-64 w-64 rounded-full bg-[#da4314] opacity-10" />
-        <View className="absolute bottom-0 left-0 -mb-24 -ml-24 h-48 w-48 rounded-full bg-[#FFB38A] opacity-10" />
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View className="flex-1 bg-[#F1E9DB]">
+          <View className="flex-1 items-center justify-center px-8">
+            <View className="w-full max-w-sm space-y-8">
+              <View className="mt-0">
+                <Text className="text-3xl font-bold text-[#07020D]">Create Profile</Text>
+                <Text className="mt-3 text-base text-gray-600">Let's get to know you better</Text>
+              </View>
 
-        <View className="flex-1 px-8">
-          <View className="mt-24">
-            <Text className="text-3xl font-bold text-[#da4314]">Create Profile</Text>
-            <Text className="mt-3 text-base text-gray-600">Let's get to know you better</Text>
-          </View>
-
-          <View className="mt-12 space-y-8">
-            {/* Profile Image Upload */}
-            <View className="items-center">
-              <Pressable
-                onPress={pickImage}
-                className="h-32 w-32 items-center justify-center rounded-full border-2 border-[#da4314] bg-white/90">
-                {image ? (
-                  <Image source={{ uri: image }} className="h-32 w-32 rounded-full" />
-                ) : (
-                  <View className="items-center">
-                    <Ionicons name="camera-outline" size={32} color="#da4314" />
-                    <Text className="mt-2 text-sm text-gray-500">Add Photo</Text>
+              <View className="mt-8 space-y-8">
+                {/* Profile Image Upload */}
+                <View className="items-center">
+                  <View className="relative">
+                    <Pressable
+                      onPress={pickImage}
+                      className={`h-40 w-40 items-center justify-center rounded-full border-4 border-[#07020D] p-1 ${
+                        image ? 'bg-[#F1E9DB]' : 'bg-white'
+                      }`}>
+                      {image ? (
+                        <Image source={{ uri: image }} className="h-full w-full rounded-full" />
+                      ) : (
+                        <View className="items-center">
+                          <Ionicons name="camera-outline" size={40} color="#07020D" />
+                          <Text className="mt-2 text-sm text-gray-500">Add Photo</Text>
+                        </View>
+                      )}
+                    </Pressable>
+                    <View className="absolute -bottom-0 -right-[-6] h-12 w-12 items-center justify-center rounded-full bg-[#07020D]">
+                      <Ionicons name="pencil" size={26} color="white" />
+                    </View>
                   </View>
-                )}
-              </Pressable>
-            </View>
+                </View>
 
-            {/* School Display */}
-            <View>
-              <Text className="mb-2 text-sm font-medium text-gray-700">School</Text>
-              <View
-                style={{
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.9,
-                  shadowRadius: 4.65,
-                  elevation: 10,
-                  borderRadius: 2,
-                }}>
-                <LinearGradient
-                  colors={['rgba(0, 41, 165, 1)', 'rgba(255, 120, 36, 1)']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    borderRadius: 16,
-                    padding: 12,
-                    borderWidth: 1,
-                    borderColor: 'black',
-                  }}>
-                  <Text className="text-base font-bold text-white">University of Florida</Text>
-                </LinearGradient>
+                {/* School Display */}
+                <View>
+                  <Text className="mb-0 text-sm font-medium text-gray-700">School</Text>
+                  <View
+                    style={{
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 0 },
+                      shadowOpacity: 0.9,
+                      shadowRadius: 4.65,
+                      elevation: 10,
+                      borderRadius: 2,
+                    }}>
+                    <LinearGradient
+                      colors={[schoolColors.primary, schoolColors.secondary]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{
+                        borderRadius: 16,
+                        padding: 12,
+                        borderWidth: 1,
+                        borderColor: 'black',
+                      }}>
+                      <Text className="text-base font-bold text-white">{schoolName}</Text>
+                    </LinearGradient>
+                  </View>
+                </View>
+
+                {/* Full Name Input */}
+                <View>
+                  <Text className="mb-0 mt-3 text-sm font-medium text-gray-700">Full Name</Text>
+                  <View className="relative">
+                    <TextInput
+                      className="w-full rounded-2xl border border-[#07020D] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
+                      placeholder="Enter your full name"
+                      placeholderTextColor="#9ca3af"
+                      value={fullName}
+                      onChangeText={setFullName}
+                      autoCapitalize="words"
+                    />
+                    <Ionicons
+                      name="person-outline"
+                      size={20}
+                      color="#07020D"
+                      className="absolute left-4 top-4"
+                    />
+                  </View>
+                </View>
+
+                {/* Username Input */}
+                <View>
+                  <View className="flex-row items-center justify-between">
+                    <Text className="mb-0 mt-3 text-sm font-medium text-gray-700">Username</Text>
+                    <Text className="text-xs text-gray-500">{username.length}/20</Text>
+                  </View>
+                  <View className="relative">
+                    <TextInput
+                      className="w-full rounded-2xl border border-[#07020D] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
+                      placeholder="Choose a username"
+                      placeholderTextColor="#9ca3af"
+                      value={username}
+                      onChangeText={setUsername}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      maxLength={20}
+                    />
+                    <Ionicons
+                      name="person-outline"
+                      size={20}
+                      color="#07020D"
+                      className="absolute left-4 top-4"
+                    />
+                  </View>
+                </View>
+
+                {/* Bio Input */}
+                <View>
+                  <View className="flex-row items-center justify-between">
+                    <Text className="mb-0 mt-3 text-sm font-medium text-gray-700">
+                      Bio (Optional)
+                    </Text>
+                    <Text className="text-xs text-gray-500">{bio.length}/60</Text>
+                  </View>
+                  <View className="relative">
+                    <TextInput
+                      className="w-full rounded-2xl border border-[#07020D] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
+                      placeholder="Tell us about yourself"
+                      placeholderTextColor="#9ca3af"
+                      value={bio}
+                      onChangeText={handleBioChange}
+                      maxLength={60}
+                      multiline
+                      numberOfLines={3}
+                      returnKeyType="done"
+                      blurOnSubmit={true}
+                      onSubmitEditing={Keyboard.dismiss}
+                      textAlignVertical="top"
+                      style={{ height: 65 }}
+                    />
+                    <Ionicons
+                      name="chatbubble-outline"
+                      size={20}
+                      color="#07020D"
+                      className="absolute left-4 top-4"
+                    />
+                  </View>
+                </View>
+
+                {/* Create Profile Button */}
+                <Pressable
+                  onPress={handleCreateProfile}
+                  disabled={loading}
+                  className={`mt-8 rounded-2xl bg-[#5DB7DE] py-4 shadow-sm ${loading ? 'opacity-50' : ''}`}>
+                  {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text className="text-center text-base font-semibold text-white">
+                      Create Profile
+                    </Text>
+                  )}
+                </Pressable>
               </View>
             </View>
-
-            {/* Full Name Input */}
-            <View>
-              <Text className="mb-2 text-sm font-medium text-gray-700">Full Name</Text>
-              <View className="relative">
-                <TextInput
-                  className="w-full rounded-2xl border border-[#da4314] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
-                  placeholder="Enter your full name"
-                  placeholderTextColor="#9ca3af"
-                  value={fullName}
-                  onChangeText={setFullName}
-                  autoCapitalize="words"
-                />
-                <Ionicons
-                  name="person-outline"
-                  size={20}
-                  color="#da4314"
-                  className="absolute left-4 top-4"
-                />
-              </View>
-            </View>
-
-            {/* Username Input */}
-            <View>
-              <View className="flex-row items-center justify-between">
-                <Text className="mb-2 text-sm font-medium text-gray-700">Username</Text>
-                <Text className="text-xs text-gray-500">{username.length}/20</Text>
-              </View>
-              <View className="relative">
-                <TextInput
-                  className="w-full rounded-2xl border border-[#da4314] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
-                  placeholder="Choose a username"
-                  placeholderTextColor="#9ca3af"
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  maxLength={20}
-                />
-                <Ionicons
-                  name="person-outline"
-                  size={20}
-                  color="#da4314"
-                  className="absolute left-4 top-4"
-                />
-              </View>
-            </View>
-
-            {/* Bio Input */}
-            <View>
-              <View className="flex-row items-center justify-between">
-                <Text className="mb-2 text-sm font-medium text-gray-700">Bio (Optional)</Text>
-                <Text className="text-xs text-gray-500">{bio.length}/60</Text>
-              </View>
-              <View className="relative">
-                <TextInput
-                  className="w-full rounded-2xl border border-[#da4314] bg-white/90 px-4 py-4 pl-12 text-gray-900 shadow-sm"
-                  placeholder="Tell us about yourself"
-                  placeholderTextColor="#9ca3af"
-                  value={bio}
-                  onChangeText={setBio}
-                  maxLength={60}
-                  multiline
-                  numberOfLines={3}
-                />
-                <Ionicons
-                  name="chatbubble-outline"
-                  size={20}
-                  color="#da4314"
-                  className="absolute left-4 top-4"
-                />
-              </View>
-            </View>
-
-            {/* Create Profile Button */}
-            <Pressable
-              onPress={handleCreateProfile}
-              disabled={loading}
-              className={`mt-8 rounded-2xl bg-[#da4314] py-4 shadow-sm ${loading ? 'opacity-50' : ''}`}>
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text className="text-center text-base font-semibold text-white">
-                  Create Profile
-                </Text>
-              )}
-            </Pressable>
           </View>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }

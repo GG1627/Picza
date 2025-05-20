@@ -7,12 +7,12 @@ export default function MainLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#FFB38A',
+        tabBarActiveTintColor: '#F1E9DB',
         tabBarInactiveTintColor: '#9ca3af',
         tabBarStyle: {
           borderTopWidth: 1,
-          borderTopColor: '#f3f4f6',
-          backgroundColor: 'white',
+          borderTopColor: '#816C61',
+          backgroundColor: '#816C61',
           height: Platform.OS === 'ios' ? 85 : 60,
           paddingBottom: Platform.OS === 'ios' ? 30 : 8,
           paddingTop: 8,
@@ -52,7 +52,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="competitions"
         options={{
-          title: 'Clash',
+          title: 'Compete',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="trophy-outline" size={size} color={color} />
           ),

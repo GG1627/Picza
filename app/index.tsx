@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
-import { View, Text, ActivityIndicator, StatusBar, Image } from 'react-native';
+import { View, Text, ActivityIndicator, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import Logo from '../images/logo.svg';
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -16,25 +17,20 @@ export default function SplashScreen() {
 
         if (error) {
           console.error('Error checking session:', error.message);
-          // router.replace('/(auth)/login');
-          router.replace('/(auth)/create-profile');
-
+          router.replace('/(auth)/login');
           return;
         }
 
         if (session) {
           console.log('Logged in as:', session.user.email);
-          // router.replace('/(main)/feed');
-          router.replace('/(auth)/create-profile');
+          router.replace('/(main)/feed');
         } else {
           console.log('No active session, redirecting to login');
-          // router.replace('/(auth)/login');
-          router.replace('/(auth)/create-profile');
+          router.replace('/(auth)/login');
         }
       } catch (error) {
         console.error('Unexpected error:', error);
-        // router.replace('/(auth)/login');
-        router.replace('/(auth)/create-profile');
+        router.replace('/(auth)/login');
       }
     };
 
@@ -44,10 +40,10 @@ export default function SplashScreen() {
   }, []);
 
   return (
-    <View className="flex-1 items-center justify-center bg-[#ffddc1]">
+    <View className="flex-1 items-center justify-center bg-[#5DB7DE]">
       <StatusBar hidden={true} />
-      <Image source={require('../images/logo.png')} className="h-32 w-32" resizeMode="contain" />
-      <Text className="text-[5rem] font-bold text-black">Picza</Text>
+      <Logo width={150} height={150} fill="#F1E9DB" />
+      {/* <Text className="text-[5rem] font-bold text-black">Picza</Text> */}
       {/* <ActivityIndicator size="large" color="#000" className="mt-4" /> */}
     </View>
   );
