@@ -2,24 +2,57 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { useColorScheme as useNativewindColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { COLORS } from '~/theme/colors';
 
+const THEME_STORAGE_KEY = '@theme_preference';
+
 function useColorScheme() {
   const { colorScheme, setColorScheme: setNativeWindColorScheme } = useNativewindColorScheme();
+  const [isSystemTheme, setIsSystemTheme] = React.useState(true);
 
-  async function setColorScheme(colorScheme: 'light' | 'dark') {
-    setNativeWindColorScheme(colorScheme);
-    if (Platform.OS !== 'android') return;
+  React.useEffect(() => {
+    // Load saved theme preference
+    loadThemePreference();
+  }, []);
+
+  async function loadThemePreference() {
     try {
-      await setNavigationBar(colorScheme);
+      const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+      if (savedTheme) {
+        const { theme, isSystem } = JSON.parse(savedTheme);
+        setIsSystemTheme(isSystem);
+        if (!isSystem) {
+          setNativeWindColorScheme(theme);
+        }
+      }
     } catch (error) {
-      console.error('useColorScheme.tsx", "setColorScheme', error);
+      console.error('Error loading theme preference:', error);
+    }
+  }
+
+  async function setColorScheme(theme: 'light' | 'dark', useSystem: boolean = false) {
+    try {
+      setIsSystemTheme(useSystem);
+      if (!useSystem) {
+        setNativeWindColorScheme(theme);
+      }
+      await AsyncStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ theme, isSystem: useSystem }));
+      if (Platform.OS !== 'android') return;
+      try {
+        await setNavigationBar(theme);
+      } catch (error) {
+        console.error('useColorScheme.tsx", "setColorScheme', error);
+      }
+    } catch (error) {
+      console.error('Error saving theme preference:', error);
     }
   }
 
   function toggleColorScheme() {
-    return setColorScheme(colorScheme === 'light' ? 'dark' : 'light');
+    const newTheme = colorScheme === 'light' ? 'dark' : 'light';
+    setColorScheme(newTheme, false);
   }
 
   return {
@@ -27,6 +60,7 @@ function useColorScheme() {
     isDarkColorScheme: colorScheme === 'dark',
     setColorScheme,
     toggleColorScheme,
+    isSystemTheme,
     colors: COLORS[colorScheme ?? 'light'],
   };
 }

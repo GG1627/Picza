@@ -115,7 +115,7 @@ export default function SignUp() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1">
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
       <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
         <View className="flex-1 items-center justify-center px-8">
           <View className="w-full max-w-sm space-y-8">
@@ -154,7 +154,7 @@ export default function SignUp() {
                     placeholder="Enter your @.edu email"
                     value={email}
                     onChangeText={setEmail}
-                    className={`w-full rounded-2xl border px-4 py-4 pl-12 text-gray-900 shadow-sm ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
+                    className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#0d0302]'}`}
                     autoCapitalize="none"
                     keyboardType="email-address"
                     placeholderTextColor="#9ca3af"
@@ -178,7 +178,7 @@ export default function SignUp() {
                     placeholder="Create a password"
                     value={password}
                     onChangeText={setPassword}
-                    className={`w-full rounded-2xl border px-4 py-4 pl-12 text-gray-900 shadow-sm ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
+                    className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
                     secureTextEntry={!showPassword}
                     placeholderTextColor="#9ca3af"
                     textContentType="newPassword"
@@ -212,7 +212,7 @@ export default function SignUp() {
                     placeholder="Confirm your password"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
-                    className={`w-full rounded-2xl border px-4 py-4 pl-12 text-gray-900 shadow-sm ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
+                    className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
                     secureTextEntry={!showConfirmPassword}
                     placeholderTextColor="#9ca3af"
                     textContentType="newPassword"

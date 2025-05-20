@@ -211,7 +211,7 @@ export default function CreateProfileScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1">
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
           <View className="flex-1 items-center justify-center px-8">
@@ -303,7 +303,7 @@ export default function CreateProfileScreen() {
                   </Text>
                   <View className="relative">
                     <TextInput
-                      className={`w-full rounded-2xl border px-4 py-4 pl-12 text-gray-900 shadow-sm ${
+                      className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${
                         colorScheme === 'dark'
                           ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]'
                           : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
@@ -337,7 +337,7 @@ export default function CreateProfileScreen() {
                   </View>
                   <View className="relative">
                     <TextInput
-                      className={`w-full rounded-2xl border px-4 py-4 pl-12 text-gray-900 shadow-sm ${
+                      className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${
                         colorScheme === 'dark'
                           ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]'
                           : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
@@ -373,7 +373,7 @@ export default function CreateProfileScreen() {
                   </View>
                   <View className="relative">
                     <TextInput
-                      className={`w-full rounded-2xl border px-4 py-4 pl-12 text-gray-900 shadow-sm ${
+                      className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${
                         colorScheme === 'dark'
                           ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]'
                           : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'

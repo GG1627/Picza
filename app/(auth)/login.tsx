@@ -49,7 +49,7 @@ export default function LogIn() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1">
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
       <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
         <View className="flex-1 items-center justify-center px-8">
           <View className="w-full max-w-sm space-y-8">
