@@ -1,5 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import { Buffer } from 'buffer';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '../lib/queryClient';
 
 if (!global.Buffer) {
   global.Buffer = Buffer;
@@ -31,7 +33,7 @@ export default function RootLayout() {
   const { colorScheme, isDarkColorScheme } = useColorScheme();
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <StatusBar
         key={`root-status-bar-${isDarkColorScheme ? 'light' : 'dark'}`}
         style={isDarkColorScheme ? 'light' : 'dark'}
@@ -58,7 +60,7 @@ export default function RootLayout() {
       </GestureHandlerRootView>
 
       {/* </ExampleProvider> */}
-    </>
+    </QueryClientProvider>
   );
 }
 
