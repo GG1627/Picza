@@ -147,20 +147,23 @@ export default function ResetPassword() {
                 />
               </View>
 
-              <Pressable
-                onPress={() => {
-                  if (!loading) router.replace('/(auth)/login');
-                }}
-                className="mt-2">
-                <Text
-                  className={`text-center text-sm ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-gray-500'}`}>
-                  Remember your password?{' '}
+              <View className="mt-2">
+                <View className="flex-row items-center justify-center">
                   <Text
-                    className={`font-semibold ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
-                    Sign in
+                    className={`text-sm ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-gray-500'}`}>
+                    Remember your password?{' '}
                   </Text>
-                </Text>
-              </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      if (!loading) router.replace('/(auth)/login');
+                    }}>
+                    <Text
+                      className={`font-semibold ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
+                      Log in
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
             </View>
           </View>
         </View>

@@ -83,10 +83,11 @@ export default function LogIn() {
                     placeholder="Enter your email"
                     value={email}
                     onChangeText={setEmail}
-                    className={`w-full rounded-2xl border px-4 py-4 pl-12 text-gray-900 shadow-sm ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
+                    className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
                     autoCapitalize="none"
                     keyboardType="email-address"
                     placeholderTextColor="#9ca3af"
+                    spellCheck={false}
                   />
                   <Ionicons
                     name="mail-outline"
@@ -107,9 +108,10 @@ export default function LogIn() {
                     placeholder="Enter your password"
                     value={password}
                     onChangeText={setPassword}
-                    className={`w-full rounded-2xl border px-4 py-4 pl-12 text-gray-900 shadow-sm ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
+                    className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
                     secureTextEntry={!showPassword}
                     placeholderTextColor="#9ca3af"
+                    spellCheck={false}
                   />
                   <Ionicons
                     name="lock-closed-outline"
@@ -129,16 +131,17 @@ export default function LogIn() {
                 </View>
               </View>
 
-              <TouchableOpacity
-                className="items-end"
-                onPress={() => {
-                  if (!loading) router.replace('/(auth)/reset-password');
-                }}>
-                <Text
-                  className={`font-medium ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
-                  Forgot Password?
-                </Text>
-              </TouchableOpacity>
+              <View className="items-end">
+                <TouchableOpacity
+                  onPress={() => {
+                    if (!loading) router.replace('/(auth)/reset-password');
+                  }}>
+                  <Text
+                    className={`font-medium ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
+                    Forgot Password?
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Button Section */}
@@ -170,20 +173,23 @@ export default function LogIn() {
                 />
               </View>
 
-              <Pressable
-                onPress={() => {
-                  if (!loading) router.replace('/(auth)/signup');
-                }}
-                className="mt-2">
-                <Text
-                  className={`text-center text-sm ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-gray-500'}`}>
-                  Don't have an account?{' '}
+              <View className="mt-2">
+                <View className="flex-row items-center justify-center">
                   <Text
-                    className={`font-semibold ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
-                    Create one
+                    className={`text-sm ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-gray-500'}`}>
+                    Don't have an account?
                   </Text>
-                </Text>
-              </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      if (!loading) router.replace('/(auth)/signup');
+                    }}>
+                    <Text
+                      className={`ml-1 text-sm font-semibold ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
+                      Create one
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
             </View>
           </View>
         </View>

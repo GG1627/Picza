@@ -313,6 +313,7 @@ export default function CreateProfileScreen() {
                       value={fullName}
                       onChangeText={setFullName}
                       autoCapitalize="words"
+                      spellCheck={false}
                     />
                     <Ionicons
                       name="person-outline"
@@ -349,6 +350,7 @@ export default function CreateProfileScreen() {
                       autoCapitalize="none"
                       autoCorrect={false}
                       maxLength={20}
+                      spellCheck={false}
                     />
                     <Ionicons
                       name="person-outline"

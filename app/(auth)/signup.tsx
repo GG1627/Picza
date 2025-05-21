@@ -158,6 +158,7 @@ export default function SignUp() {
                     autoCapitalize="none"
                     keyboardType="email-address"
                     placeholderTextColor="#9ca3af"
+                    spellCheck={false}
                   />
                   <Ionicons
                     name="mail-outline"
@@ -266,20 +267,23 @@ export default function SignUp() {
                 />
               </View>
 
-              <Pressable
-                onPress={() => {
-                  if (!loading) router.replace('/(auth)/login');
-                }}
-                className="mt-2">
-                <Text
-                  className={`text-center text-sm ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-gray-500'}`}>
-                  Already have an account?{' '}
+              <View className="mt-2">
+                <View className="flex-row items-center justify-center">
                   <Text
-                    className={`font-semibold ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
-                    Sign in
+                    className={`text-sm ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-gray-500'}`}>
+                    Already have an account?{' '}
                   </Text>
-                </Text>
-              </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      if (!loading) router.replace('/(auth)/login');
+                    }}>
+                    <Text
+                      className={`font-semibold ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
+                      Sign in
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
             </View>
           </View>
         </View>
