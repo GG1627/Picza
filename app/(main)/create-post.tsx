@@ -14,6 +14,7 @@ import { supabase } from '../../lib/supabase';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from '../../lib/useColorScheme';
 
 export default function CreatePostScreen() {
   const [image, setImage] = useState<string | null>(null);
@@ -21,6 +22,7 @@ export default function CreatePostScreen() {
   const [loading, setLoading] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const router = useRouter();
+  const { colorScheme } = useColorScheme();
 
   useEffect(() => {
     (async () => {
@@ -121,21 +123,29 @@ export default function CreatePostScreen() {
 
   if (hasPermission === null) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#F1E9DB]">
-        <ActivityIndicator size="large" color="#5DB7DE" />
+      <View
+        className={`flex-1 items-center justify-center ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
+        <ActivityIndicator size="large" color="#F00511" />
       </View>
     );
   }
 
   if (hasPermission === false) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#F1E9DB] px-6">
+      <View
+        className={`flex-1 items-center justify-center ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'} px-6`}>
         <View className="items-center space-y-4">
-          <Ionicons name="camera-outline" size={48} color="#07020D" />
-          <Text className="text-center text-lg text-[#07020D]">
+          <Ionicons
+            name="camera-outline"
+            size={48}
+            color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+          />
+          <Text
+            className={`text-center text-lg ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
             Camera permission is required to create posts
           </Text>
-          <Text className="text-center text-base text-[#877B66]">
+          <Text
+            className={`text-center text-base ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
             Please enable camera access in your device settings
           </Text>
         </View>
@@ -144,29 +154,44 @@ export default function CreatePostScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#F1E9DB]">
-      <StatusBar barStyle="dark-content" />
+    <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
       <View className="mt-16 px-6">
-        <Text className="text-3xl font-bold text-[#07020D]">Create Post</Text>
-        <Text className="mt-2 text-base text-[#877B66]">Share your food moments</Text>
+        <Text
+          className={`text-3xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+          Create Post
+        </Text>
+        <Text
+          className={`mt-2 text-base ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
+          Share your food moments
+        </Text>
       </View>
 
       <View className="mt-8 px-6">
         {/* Camera Preview */}
         <Pressable
           onPress={takePicture}
-          className="aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-2xl border-4 border-[#07020D] bg-white">
+          className={`aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-2xl border-2 ${
+            colorScheme === 'dark' ? 'border-[#282828] bg-[#282828]' : 'border-[#f9f9f9] bg-white'
+          }`}>
           {image ? (
             <Image source={{ uri: image }} className="h-full w-full" resizeMode="cover" />
           ) : (
             <View className="items-center space-y-3">
-              <View className="rounded-full bg-[#5DB7DE]/10 p-4">
-                <Ionicons name="camera" size={40} color="#5DB7DE" />
+              <View
+                className={`rounded-full ${colorScheme === 'dark' ? 'bg-[#F00511]/10' : 'bg-[#F00511]/10'} p-4`}>
+                <Ionicons name="camera" size={40} color="#F00511" />
               </View>
-              <Text className="text-base font-medium text-[#07020D]">Take a Picture</Text>
-              <Text className="text-sm text-[#877B66]">Tap to capture your food</Text>
+              <Text
+                className={`text-base font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                Take a Picture
+              </Text>
+              <Text
+                className={`text-sm ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
+                Tap to capture your food
+              </Text>
             </View>
           )}
         </Pressable>
@@ -174,13 +199,23 @@ export default function CreatePostScreen() {
         {/* Caption Input */}
         <View className="mt-8">
           <View className="flex-row items-center justify-between">
-            <Text className="text-sm font-medium text-[#07020D]">Caption</Text>
-            <Text className="text-xs text-[#877B66]">{caption.length}/200</Text>
+            <Text
+              className={`text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+              Caption
+            </Text>
+            <Text
+              className={`text-xs ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
+              {caption.length}/200
+            </Text>
           </View>
           <TextInput
-            className="mt-2 rounded-xl border border-[#5DB7DE] bg-white px-4 py-3 text-base text-[#07020D]"
+            className={`mt-2 rounded-xl border px-4 py-3 text-base ${
+              colorScheme === 'dark'
+                ? 'border-[#282828] bg-[#282828] text-[#E0E0E0]'
+                : 'border-[#f9f9f9] bg-white text-[#07020D]'
+            }`}
             placeholder="Write a caption..."
-            placeholderTextColor="#877B66"
+            placeholderTextColor={colorScheme === 'dark' ? '#9ca3af' : '#877B66'}
             value={caption}
             onChangeText={setCaption}
             multiline
@@ -190,6 +225,7 @@ export default function CreatePostScreen() {
             returnKeyType="done"
             blurOnSubmit={true}
             onSubmitEditing={Keyboard.dismiss}
+            spellCheck={false}
           />
         </View>
 
@@ -197,7 +233,7 @@ export default function CreatePostScreen() {
         <Pressable
           onPress={handleCreatePost}
           disabled={loading || !image}
-          className={`mt-8 rounded-xl bg-[#5DB7DE] py-4 ${loading || !image ? 'opacity-50' : ''}`}>
+          className={`mt-8 rounded-xl bg-[#F00511] py-4 ${loading || !image ? 'opacity-50' : ''}`}>
           {loading ? (
             <View className="flex-row items-center justify-center space-x-2">
               <ActivityIndicator color="white" />
@@ -210,7 +246,10 @@ export default function CreatePostScreen() {
 
         {/* Cancel Button */}
         <Pressable onPress={() => router.back()} className="mt-4">
-          <Text className="text-center text-base font-medium text-[#877B66]">Cancel</Text>
+          <Text
+            className={`text-center text-base font-medium ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
+            Cancel
+          </Text>
         </Pressable>
       </View>
     </View>

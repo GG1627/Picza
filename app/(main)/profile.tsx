@@ -7,6 +7,7 @@ import {
   TextInput,
   ScrollView,
   Animated,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
@@ -19,17 +20,33 @@ import { Alert } from 'react-native';
 import { useColorScheme } from '../../lib/useColorScheme';
 import React from 'react';
 
+type Post = {
+  id: string;
+  image_url: string;
+  caption: string | null;
+  created_at: string;
+  likes_count: number;
+};
+
+type School = {
+  name: string;
+  primary_color: string;
+  secondary_color: string;
+};
+
 type Profile = {
   username: string;
   full_name: string;
   created_at: string;
   avatar_url: string | null;
   bio: string | null;
+  school_id: string | null;
 };
 
 export default function ProfileScreen() {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [school, setSchool] = useState<School | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedUsername, setEditedUsername] = useState('');
@@ -38,11 +55,13 @@ export default function ProfileScreen() {
   const [newImage, setNewImage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [posts, setPosts] = useState<Post[]>([]);
   const router = useRouter();
   const { colorScheme, toggleColorScheme, isDarkColorScheme } = useColorScheme();
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
   const translateY = React.useRef(new Animated.Value(0)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -66,12 +85,32 @@ export default function ProfileScreen() {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('username, full_name, created_at, avatar_url, bio')
+        .select('username, full_name, created_at, avatar_url, bio, school_id')
         .eq('id', user.id)
         .single();
 
       if (error) throw error;
       setProfile(data);
+
+      if (data.school_id) {
+        const { data: schoolData, error: schoolError } = await supabase
+          .from('schools')
+          .select('name, primary_color, secondary_color')
+          .eq('id', data.school_id)
+          .single();
+
+        if (schoolError) throw schoolError;
+        setSchool(schoolData);
+      }
+
+      const { data: postsData, error: postsError } = await supabase
+        .from('posts')
+        .select('id, image_url, caption, created_at, likes_count')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (postsError) throw postsError;
+      setPosts(postsData || []);
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
@@ -284,6 +323,17 @@ export default function ProfileScreen() {
     }, 200);
   };
 
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchProfile();
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-[#F1E9DB]">
@@ -326,7 +376,17 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <ScrollView
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+              colors={[colorScheme === 'dark' ? '#E0E0E0' : '#07020D']}
+            />
+          }>
           <View className="px-6">
             {/* Profile Header */}
             <View className="mt-6 items-center">
@@ -370,12 +430,28 @@ export default function ProfileScreen() {
                 </Text>
               </View>
 
-              {!isEditing && profile?.bio && (
-                <Text
-                  className={`mt-2 text-center text-base ${colorScheme === 'dark' ? 'text-[#b3b3b3]' : 'text-[#07020D]'}`}>
-                  {profile.bio}
-                </Text>
-              )}
+              {/* Bio and School Section */}
+              <View className="mt-4 items-center">
+                {profile?.bio && (
+                  <Text
+                    className={`text-center text-base ${colorScheme === 'dark' ? 'text-[#b3b3b3]' : 'text-[#07020D]'}`}>
+                    {profile.bio}
+                  </Text>
+                )}
+                {school && (
+                  <View className="mt-2 flex-row items-center justify-center space-x-2">
+                    <Ionicons
+                      name="school"
+                      size={16}
+                      color={colorScheme === 'dark' ? '#9ca3af' : '#877B66'}
+                    />
+                    <Text
+                      className={`text-sm ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
+                      {school.name}
+                    </Text>
+                  </View>
+                )}
+              </View>
 
               <Pressable
                 onPress={() => setIsEditing(!isEditing)}
@@ -435,24 +511,79 @@ export default function ProfileScreen() {
                 </Pressable>
               </View>
             ) : (
-              <View className="mt-8 space-y-6">
-                <View
-                  className={`rounded-2xl ${colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-white/80'} p-6 shadow-sm`}>
+              <View className="mt-8">
+                {/* Posts Grid */}
+                {posts.length > 0 ? (
                   <View className="space-y-4">
-                    <View>
-                      <Text className="text-sm font-medium text-[#8c8c8c]">Member Since</Text>
-                      <Text className="mt-1 text-base text-[#07020D]">
-                        {profile?.created_at
-                          ? new Date(profile.created_at).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            })
-                          : 'N/A'}
+                    <View className="flex-row items-center justify-between">
+                      <Text
+                        className={`ml-[-20px] text-lg font-semibold ${
+                          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                        }`}>
+                        {profile?.full_name.split(' ')[0]}'s Food Album
+                      </Text>
+                      <Text
+                        className={`text-sm ${
+                          colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'
+                        }`}>
+                        {posts.length} {posts.length === 1 ? 'post' : 'posts'}
                       </Text>
                     </View>
+                    <View className="-mx-6 flex-row">
+                      {posts.map((post, index) => (
+                        <Pressable
+                          key={post.id}
+                          className={`w-1/3 border-b border-r ${
+                            index % 3 === 2 ? 'border-r-0' : ''
+                          } border-[#e0e0e0] dark:border-[#121113]`}>
+                          <View className="aspect-square">
+                            <Image
+                              source={{ uri: post.image_url }}
+                              className="h-full w-full"
+                              resizeMode="cover"
+                            />
+                            <View className="absolute inset-0 bg-black/0 hover:bg-black/20" />
+                            <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between bg-gradient-to-t from-black/60 to-transparent p-2">
+                              <View className="flex-row items-center space-x-1">
+                                <Ionicons name="heart" size={14} color="white" />
+                                <Text className="text-xs text-white">{post.likes_count}</Text>
+                              </View>
+                              <View className="flex-row items-center space-x-1">
+                                <Ionicons name="chatbubble" size={14} color="white" />
+                                <Text className="text-xs text-white">0</Text>
+                              </View>
+                            </View>
+                          </View>
+                        </Pressable>
+                      ))}
+                    </View>
                   </View>
-                </View>
+                ) : (
+                  <View className="items-center justify-center py-12">
+                    <View
+                      className={`rounded-full p-4 ${
+                        colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-[#f9f9f9]'
+                      }`}>
+                      <Ionicons
+                        name="camera-outline"
+                        size={32}
+                        color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                      />
+                    </View>
+                    <Text
+                      className={`mt-4 text-center text-base ${
+                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                      }`}>
+                      No posts yet
+                    </Text>
+                    <Text
+                      className={`mt-1 text-center text-sm ${
+                        colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'
+                      }`}>
+                      Share your first food moment
+                    </Text>
+                  </View>
+                )}
               </View>
             )}
           </View>
