@@ -88,6 +88,7 @@ export default function LogIn() {
                     keyboardType="email-address"
                     placeholderTextColor="#9ca3af"
                     spellCheck={false}
+                    style={{ textAlignVertical: 'center' }}
                   />
                   <Ionicons
                     name="mail-outline"
@@ -112,6 +113,7 @@ export default function LogIn() {
                     secureTextEntry={!showPassword}
                     placeholderTextColor="#9ca3af"
                     spellCheck={false}
+                    style={{ textAlignVertical: 'center' }}
                   />
                   <Ionicons
                     name="lock-closed-outline"

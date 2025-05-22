@@ -6,7 +6,9 @@ import * as base64 from 'base64-js';
 type Post = {
   id: string;
   user_id: string;
+  dish_name: string | null;
   caption: string | null;
+  ingredients: string | null;
   image_url: string;
   created_at: string;
   likes_count: number;
@@ -33,7 +35,10 @@ export const queryKeys = {
 } as const;
 
 // Custom Hooks
-export function usePosts(schoolId?: string, filter: 'mySchool' | 'otherSchools' = 'mySchool') {
+export function usePosts(
+  schoolId?: string,
+  filter: 'all' | 'mySchool' | 'otherSchools' | 'friends' = 'mySchool'
+) {
   return useQuery({
     queryKey: [queryKeys.posts, schoolId, filter],
     queryFn: async () => {
@@ -54,9 +59,10 @@ export function usePosts(schoolId?: string, filter: 'mySchool' | 'otherSchools' 
       if (schoolId) {
         if (filter === 'mySchool') {
           query = query.eq('profiles.school_id', schoolId);
-        } else {
+        } else if (filter === 'otherSchools') {
           query = query.not('profiles.school_id', 'is', null).neq('profiles.school_id', schoolId);
         }
+        // For 'all' and 'friends', we don't filter by school_id
       }
 
       const { data, error } = await query;
@@ -96,7 +102,17 @@ export function useCreatePost() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ image, caption }: { image: string; caption: string }) => {
+    mutationFn: async ({
+      image,
+      dish_name,
+      caption,
+      ingredients,
+    }: {
+      image: string;
+      dish_name: string;
+      caption: string;
+      ingredients: string;
+    }) => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -128,7 +144,9 @@ export function useCreatePost() {
       const { error } = await supabase.from('posts').insert([
         {
           user_id: user.id,
+          dish_name: dish_name,
           caption: caption,
+          ingredients: ingredients,
           image_url: publicUrl,
           likes_count: 0,
         },

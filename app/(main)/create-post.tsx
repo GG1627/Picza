@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   Keyboard,
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -21,17 +22,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CreatePostScreen() {
   const router = useRouter();
   const [image, setImage] = useState<string | null>(null);
+  const [dishName, setDishName] = useState('');
   const [caption, setCaption] = useState('');
+  const [ingredients, setIngredients] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isIngredientsFocused, setIsIngredientsFocused] = useState(false);
   const createPost = useCreatePost();
   const { colorScheme } = useColorScheme();
   const scrollViewRef = useRef<ScrollView>(null);
+  const ingredientsHeight = useRef(new Animated.Value(80)).current;
+  const ingredientsInputRef = useRef<TextInput>(null);
 
-  const hasContent = image || caption.trim().length > 0;
+  const hasContent = image || dishName.trim().length > 0 || ingredients.trim().length > 0;
 
   const resetForm = () => {
     setImage(null);
+    setDishName('');
     setCaption('');
+    setIngredients('');
     setIsSuccess(false);
   };
 
@@ -52,7 +60,12 @@ export default function CreatePostScreen() {
     if (!image) return;
 
     try {
-      await createPost.mutateAsync({ image, caption });
+      await createPost.mutateAsync({
+        image,
+        dish_name: dishName,
+        caption,
+        ingredients,
+      });
       setIsSuccess(true);
 
       setTimeout(() => {
@@ -68,6 +81,78 @@ export default function CreatePostScreen() {
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 100);
+  };
+
+  const handleIngredientsFocus = () => {
+    setIsIngredientsFocused(true);
+    if (!ingredients) {
+      setIngredients('• ');
+    }
+    Animated.spring(ingredientsHeight, {
+      toValue: 120,
+      useNativeDriver: false,
+      tension: 50,
+      friction: 7,
+    }).start();
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  };
+
+  const handleIngredientsBlur = () => {
+    setIsIngredientsFocused(false);
+    if (ingredients === '• ') {
+      setIngredients('');
+    }
+    Animated.spring(ingredientsHeight, {
+      toValue: 80,
+      useNativeDriver: false,
+      tension: 50,
+      friction: 7,
+    }).start();
+  };
+
+  const handleIngredientsChange = (text: string) => {
+    // Handle backspace at the start of a line
+    if (text.endsWith('\n')) {
+      const lines = text.split('\n');
+      const lastLine = lines[lines.length - 2]; // Get the line before the newline
+
+      // If the last line is empty or only contains a bullet, remove it
+      if (lastLine === '• ' || lastLine === '') {
+        setIngredients(text.slice(0, -1));
+        return;
+      }
+
+      // Add bullet point to the new line immediately
+      const newText = text + '• ';
+      setIngredients(newText);
+    } else {
+      setIngredients(text);
+    }
+  };
+
+  const handleIngredientsKeyPress = (e: any) => {
+    if (e.nativeEvent.key === 'Backspace') {
+      const lines = ingredients.split('\n');
+      const currentLine = lines[lines.length - 1];
+
+      // If we're at the start of a line with just a bullet, remove the entire line
+      if (currentLine === '• ') {
+        setIngredients(ingredients.slice(0, -3));
+      }
+    }
+  };
+
+  const finishIngredientsList = () => {
+    // Remove the last bullet point if it's empty
+    const lines = ingredients.split('\n');
+    const lastLine = lines[lines.length - 1];
+    if (lastLine === '• ') {
+      setIngredients(ingredients.slice(0, -3));
+    }
+    Keyboard.dismiss();
+    setIsIngredientsFocused(false);
   };
 
   return (
@@ -168,30 +253,102 @@ export default function CreatePostScreen() {
               </TouchableOpacity>
             )}
 
-            <View className="mt-4">
-              <Text
-                className={`mb-2 text-sm font-medium ${
-                  colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                }`}>
-                Caption
-              </Text>
-              <TextInput
-                value={caption}
-                onChangeText={setCaption}
-                placeholder="Write a caption..."
-                placeholderTextColor={colorScheme === 'dark' ? '#9ca3af' : '#877B66'}
-                multiline
-                returnKeyType="done"
-                blurOnSubmit={true}
-                onFocus={handleCaptionFocus}
-                onSubmitEditing={Keyboard.dismiss}
-                className={`rounded-2xl border px-4 py-3 text-base ${
-                  colorScheme === 'dark'
-                    ? 'border-[#282828] bg-[#282828] text-[#E0E0E0]'
-                    : 'border-[#f9f9f9] bg-white text-[#07020D]'
-                }`}
-                style={{ height: 100 }}
-              />
+            <View className="mt-4 space-y-4">
+              {/* Dish Name Input */}
+              <View className="">
+                <Text
+                  className={`mb-0 text-sm font-medium ${
+                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                  }`}>
+                  Dish Name (optional)
+                </Text>
+                <TextInput
+                  value={dishName}
+                  onChangeText={setDishName}
+                  placeholder="What's the name of your dish?"
+                  placeholderTextColor={colorScheme === 'dark' ? '#9ca3af' : '#877B66'}
+                  className={`w-full rounded-2xl border px-4 py-3 ${
+                    colorScheme === 'dark'
+                      ? 'border-[#282828] bg-[#282828] text-[#E0E0E0]'
+                      : 'border-[#f9f9f9] bg-white text-[#07020D]'
+                  }`}
+                  style={{ textAlignVertical: 'center' }}
+                />
+              </View>
+
+              {/* Caption Input */}
+              <View className="">
+                <Text
+                  className={`mb-0 mt-2 text-sm font-medium ${
+                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                  }`}>
+                  Caption (optional)
+                </Text>
+                <TextInput
+                  value={caption}
+                  onChangeText={setCaption}
+                  placeholder="Add a caption to your post..."
+                  placeholderTextColor={colorScheme === 'dark' ? '#9ca3af' : '#877B66'}
+                  className={`w-full rounded-2xl border px-4 py-3 ${
+                    colorScheme === 'dark'
+                      ? 'border-[#282828] bg-[#282828] text-[#E0E0E0]'
+                      : 'border-[#f9f9f9] bg-white text-[#07020D]'
+                  }`}
+                  style={{ textAlignVertical: 'center' }}
+                  onFocus={handleCaptionFocus}
+                />
+              </View>
+
+              {/* Ingredients Input with Animation */}
+              <View>
+                <Text
+                  className={`mb-0 mt-2 text-sm font-medium ${
+                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                  }`}>
+                  Ingredients List (optional)
+                </Text>
+                <Animated.View
+                  style={{
+                    height: ingredientsHeight,
+                  }}>
+                  <TextInput
+                    ref={ingredientsInputRef}
+                    value={ingredients}
+                    onChangeText={handleIngredientsChange}
+                    onKeyPress={handleIngredientsKeyPress}
+                    placeholder="Start typing ingredients..."
+                    placeholderTextColor={colorScheme === 'dark' ? '#9ca3af' : '#877B66'}
+                    multiline
+                    returnKeyType="default"
+                    blurOnSubmit={false}
+                    onFocus={handleIngredientsFocus}
+                    onBlur={handleIngredientsBlur}
+                    className={`rounded-2xl border px-4 py-3 ${
+                      colorScheme === 'dark'
+                        ? 'border-[#282828] bg-[#282828] text-[#E0E0E0]'
+                        : 'border-[#f9f9f9] bg-white text-[#07020D]'
+                    }`}
+                    style={{ height: '100%', textAlignVertical: 'center' }}
+                  />
+                </Animated.View>
+                {isIngredientsFocused && (
+                  <View className="mt-2 flex-row items-center justify-between">
+                    <Text
+                      className={`text-xs ${
+                        colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'
+                      }`}>
+                      Press return for new line
+                    </Text>
+                    <TouchableOpacity
+                      onPress={finishIngredientsList}
+                      className={`rounded-full px-4 py-1 ${
+                        colorScheme === 'dark' ? 'bg-[#F00511]/20' : 'bg-[#F00511]/10'
+                      }`}>
+                      <Text className="text-sm font-medium text-[#F00511]">Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
         </ScrollView>

@@ -159,6 +159,7 @@ export default function SignUp() {
                     keyboardType="email-address"
                     placeholderTextColor="#9ca3af"
                     spellCheck={false}
+                    style={{ textAlignVertical: 'center' }}
                   />
                   <Ionicons
                     name="mail-outline"
@@ -218,6 +219,7 @@ export default function SignUp() {
                     placeholderTextColor="#9ca3af"
                     textContentType="newPassword"
                     autoComplete="new-password"
+                    style={{ textAlignVertical: 'center' }}
                   />
                   <Ionicons
                     name="lock-closed-outline"
