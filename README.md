@@ -88,29 +88,21 @@ To connect students through their shared love of food, making campus dining more
 
 ```bash
 git clone [repository-url]
-cd picza
+cd Picza
 ```
 
 2. **Install Dependencies**
 
 ```bash
-npm install
+npm install --legacy-peer-deps
 # or
-yarn install
+yarn install --legacy-peer-deps
 ```
 
-3. **Environment Configuration**
-   Create `.env`:
-
-```
-EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-4. **Launch Development Server**
+3. **Launch Development Server**
 
 ```bash
-npx expo start
+npx expo start --clear
 ```
 
 ## Project Architecture
