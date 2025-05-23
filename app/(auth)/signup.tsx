@@ -121,14 +121,9 @@ export default function SignUp() {
           <View className="w-full max-w-sm space-y-8">
             {/* Header Section */}
             <View className="items-center space-y-4">
-              {/* <Image
-                source={require('../../images/logo.png')}
-                className="mb-2 h-28 w-28"
-                resizeMode="contain"
-              /> */}
               <View className="items-center">
                 <Text
-                  className={`mb-2 text-6xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                  className={`mb-2 font-['LuckiestGuy'] text-[5rem] ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
                   Picza
                 </Text>
                 <Text
@@ -243,7 +238,7 @@ export default function SignUp() {
             {/* Button Section */}
             <View className="space-y-4 pt-4">
               <Pressable
-                className={`w-full rounded-2xl ${colorScheme === 'dark' ? 'bg-[#F00511]' : 'bg-[#F00511]'} py-4 shadow-sm`}
+                className={`w-full rounded-2xl ${colorScheme === 'dark' ? 'bg-[#5070fd]' : 'bg-[#5070fd]'} py-4 shadow-sm`}
                 onPress={signUpWithEmail}
                 disabled={loading}>
                 {loading ? (
@@ -280,8 +275,8 @@ export default function SignUp() {
                       if (!loading) router.replace('/(auth)/login');
                     }}>
                     <Text
-                      className={`font-semibold ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
-                      Sign in
+                      className={`font-semibold ${colorScheme === 'dark' ? 'text-[#5070fd]' : 'text-[#5070fd]'}`}>
+                      Log in
                     </Text>
                   </Pressable>
                 </View>

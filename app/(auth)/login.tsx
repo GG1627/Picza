@@ -16,6 +16,7 @@ import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from '../../lib/useColorScheme';
+import MaskedView from '@react-native-masked-view/masked-view';
 
 export default function LogIn() {
   const router = useRouter();
@@ -57,7 +58,7 @@ export default function LogIn() {
             <View className="items-center space-y-4">
               <View className="items-center">
                 <Text
-                  className={`mb-2 text-6xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                  className={`mb-2 font-['LuckiestGuy'] text-[5rem] ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
                   Picza
                 </Text>
                 <Text
@@ -139,7 +140,7 @@ export default function LogIn() {
                     if (!loading) router.replace('/(auth)/reset-password');
                   }}>
                   <Text
-                    className={`font-medium ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
+                    className={`font-medium ${colorScheme === 'dark' ? 'text-[#5070fd]' : 'text-[#5070fd]'}`}>
                     Forgot Password?
                   </Text>
                 </TouchableOpacity>
@@ -149,7 +150,7 @@ export default function LogIn() {
             {/* Button Section */}
             <View className="space-y-4 pt-4">
               <Pressable
-                className={`w-full rounded-2xl ${colorScheme === 'dark' ? 'bg-[#F00511]' : 'bg-[#F00511]'} py-4 shadow-sm`}
+                className={`w-full rounded-2xl ${colorScheme === 'dark' ? 'bg-[#5070fd]' : 'bg-[#5070fd]'} py-4 shadow-sm`}
                 onPress={signInWithEmail}
                 disabled={loading}>
                 {loading ? (
@@ -186,7 +187,7 @@ export default function LogIn() {
                       if (!loading) router.replace('/(auth)/signup');
                     }}>
                     <Text
-                      className={`ml-1 text-sm font-semibold ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
+                      className={`ml-1 text-sm font-semibold ${colorScheme === 'dark' ? 'text-[#5070fd]' : 'text-[#5070fd]'}`}>
                       Create one
                     </Text>
                   </Pressable>

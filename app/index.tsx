@@ -1,17 +1,26 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import Logo from '../images/logo.svg';
 import { useColorScheme } from '../lib/useColorScheme';
+import { LinearGradient } from 'expo-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { loadFonts } from '../lib/fonts';
 
 export default function SplashScreen() {
   const router = useRouter();
   const { colorScheme, colors } = useColorScheme();
+  const [fontsLoaded, setFontsLoaded] = useState(false);
 
   useEffect(() => {
-    const checkSession = async () => {
+    const prepare = async () => {
       try {
+        // Load fonts
+        await loadFonts();
+        setFontsLoaded(true);
+
+        // Check session
         const {
           data: { session },
           error,
@@ -37,17 +46,43 @@ export default function SplashScreen() {
     };
 
     // Add a small delay for better UX
-    const timer = setTimeout(checkSession, 700);
+    const timer = setTimeout(prepare, 700);
     return () => clearTimeout(timer);
   }, []);
 
+  // if (!fontsLoaded) {
+  //   return (
+  //     <View
+  //       className={`flex-1 items-center justify-center ${colorScheme === 'dark' ? 'bg-[#121113]' : ''}`}>
+  //       <ActivityIndicator size="large" color="#5070fd" />
+  //     </View>
+  //   );
+  // }
+
   return (
     <View
-      className={`flex-1 items-center justify-center ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#F00511]'}`}>
+      className={`flex-1 items-center justify-center ${colorScheme === 'dark' ? 'bg-[#121113]' : ''}`}>
       <StatusBar hidden={true} />
-      <Logo width={160} height={160} fill={colorScheme === 'dark' ? '#F00511' : '#E0E0E0'} />
-      {/* <Text className="text-[5rem] font-bold text-black">Picza</Text> */}
-      {/* <ActivityIndicator size="large" color="#000" className="mt-4" /> */}
+      {colorScheme !== 'dark' && (
+        <View className="absolute inset-0">
+          <LinearGradient
+            colors={['#5070fd', '#1e3394']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ flex: 1 }}
+          />
+        </View>
+      )}
+      <MaskedView
+        style={{ width: 160, height: 160, marginTop: -100 }}
+        maskElement={<Logo width={160} height={160} fill="white" />}>
+        <LinearGradient
+          colors={colorScheme === 'dark' ? ['#5070fd', '#1e3394'] : ['#ffffff', '#f0f0f0']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ flex: 1 }}
+        />
+      </MaskedView>
     </View>
   );
 }

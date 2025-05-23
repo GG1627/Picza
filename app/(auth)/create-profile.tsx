@@ -406,7 +406,7 @@ export default function CreateProfileScreen() {
                 <Pressable
                   onPress={handleCreateProfile}
                   disabled={loading}
-                  className={`mt-8 rounded-2xl ${colorScheme === 'dark' ? 'bg-[#F00511]' : 'bg-[#F00511]'} py-4 shadow-sm ${
+                  className={`mt-8 rounded-2xl ${colorScheme === 'dark' ? 'bg-[#5070fd]' : 'bg-[#5070fd]'} py-4 shadow-sm ${
                     loading ? 'opacity-50' : ''
                   }`}>
                   {loading ? (

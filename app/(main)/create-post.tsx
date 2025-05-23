@@ -263,6 +263,7 @@ export default function CreatePostScreen() {
                   Dish Name (optional)
                 </Text>
                 <TextInput
+                  textAlignVertical="center"
                   value={dishName}
                   onChangeText={setDishName}
                   placeholder="What's the name of your dish?"
@@ -287,6 +288,7 @@ export default function CreatePostScreen() {
                 <TextInput
                   value={caption}
                   onChangeText={setCaption}
+                  textAlignVertical="center"
                   placeholder="Add a caption to your post..."
                   placeholderTextColor={colorScheme === 'dark' ? '#9ca3af' : '#877B66'}
                   className={`w-full rounded-2xl border px-4 py-3 ${
