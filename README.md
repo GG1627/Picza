@@ -1,6 +1,6 @@
 # Picza - The Ultimate Campus Food Community Platform 🍕
 
-![Picza Logo](images/logo.svg)
+![Picza Logo](images/logo1.svg)
 
 > "Where every bite tells a story, and every meal connects a community" 🎓
 
@@ -39,7 +39,7 @@ To connect students through their shared love of food, making campus dining more
   - Beautiful transitions that'll make you go "ooh!"
   - Context-aware UI that just gets you
 
-### �� Design Excellence
+### Design Excellence
 
 - **Adaptive Theming**
   - Dark mode for night owls
