@@ -946,12 +946,12 @@ export default function FeedScreen() {
         )}
       </ScrollView>
 
-      {/* Create Post Button */}
+      {/* Create Post Button
       <TouchableOpacity
         onPress={() => router.push('/create-post')}
         className="absolute bottom-6 right-6 h-16 w-16 items-center justify-center rounded-2xl bg-[#F00511] shadow-lg">
         <Ionicons name="add" size={32} color="white" />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       {/* Modals */}
       <OptionsModal />
