@@ -87,7 +87,7 @@ To connect students through their shared love of food, making campus dining more
 1. **Clone Repository**
 
 ```bash
-git clone [repository-url]
+git clone https://github.com/GG1627/Picza.git
 cd Picza
 ```
 
