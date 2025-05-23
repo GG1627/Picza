@@ -8,6 +8,10 @@ module.exports = {
   presets: [require('nativewind/preset')],
   theme: {
     extend: {
+      fontFamily: {
+        'luckiest-guy': ['LuckiestGuy'],
+        pattaya: ['Pattaya'],
+      },
       colors: {
         border: withOpacity('border'),
         input: withOpacity('input'),

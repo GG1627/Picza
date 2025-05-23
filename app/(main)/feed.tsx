@@ -25,6 +25,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import GradientText from '../../components/GradientText';
+import { MotiView } from 'moti';
+import { Easing } from 'react-native-reanimated';
 
 export default function FeedScreen() {
   const router = useRouter();
@@ -51,12 +53,16 @@ export default function FeedScreen() {
   const lastPinchDistance = useRef(0);
   const viewModeAnimation = useRef(new Animated.Value(0)).current;
   const [isGridView, setIsGridView] = useState(false);
+  const [isViewTransitioning, setIsViewTransitioning] = useState(false);
   const transitionAnim = useRef(new Animated.Value(0)).current;
   const { width: screenWidth } = Dimensions.get('window');
   const gridItemWidth = (screenWidth - 48) / 2; // 2 columns with proper spacing (16px padding on each side + 16px gap between items)
   const lastTouchPoints = useRef({ x: 0, y: 0 });
   const initialDistance = useRef(0);
   const currentProgress = useRef(0);
+  const createButtonAnimation = useRef(new Animated.Value(0)).current;
+  const filterAnimation = useRef(new Animated.Value(0)).current;
+  const pulseAnimation = useRef(new Animated.Value(1)).current;
 
   const { data: schoolData } = useSchool(user?.id || '');
   const { data: posts, isLoading, refetch } = usePosts(schoolData?.id, activeFilter);
@@ -454,49 +460,74 @@ export default function FeedScreen() {
             marginLeft: index % 2 === 0 ? 16 : 8,
             marginRight: index % 2 === 0 ? 8 : 16,
           }}>
-          <View className="mb-4">
+          <MotiView
+            from={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'timing', duration: 500, delay: index * 100 }}
+            className="mb-4">
             <View className="aspect-square overflow-hidden rounded-2xl">
               <Image
                 source={{ uri: post.image_url }}
                 className="h-full w-full"
                 resizeMode="cover"
               />
-              <View className="absolute inset-0 bg-black/20" />
-              <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between bg-gradient-to-t from-black/60 to-transparent p-2">
-                <View className="flex-row items-center space-x-1">
-                  <Ionicons name="heart" size={14} color="white" />
-                  <Text className="text-xs text-white">{post.likes_count}</Text>
+              <View className="absolute inset-0">
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
+                  locations={[0, 0.5, 1]}
+                  style={{ flex: 1 }}
+                />
+              </View>
+              <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between p-3">
+                <View className="flex-row items-center space-x-2">
+                  <View className="h-8 w-8 overflow-hidden rounded-full border-2 border-white">
+                    <Image
+                      source={
+                        post.profiles?.avatar_url
+                          ? { uri: post.profiles.avatar_url }
+                          : require('../../assets/splash.png')
+                      }
+                      className="h-full w-full"
+                    />
+                  </View>
+                  <Text className="text-sm font-semibold text-white">
+                    {post.profiles?.username || 'Unknown User'}
+                  </Text>
                 </View>
-                <View className="flex-row items-center space-x-1">
-                  <Ionicons name="chatbubble" size={14} color="white" />
-                  <Text className="text-xs text-white">0</Text>
+                <View className="flex-row items-center space-x-3">
+                  <View className="flex-row items-center space-x-1">
+                    <Ionicons name="heart" size={16} color="white" />
+                    <Text className="text-xs text-white">{post.likes_count}</Text>
+                  </View>
+                  <View className="flex-row items-center space-x-1">
+                    <Ionicons name="chatbubble" size={16} color="white" />
+                    <Text className="text-xs text-white">0</Text>
+                  </View>
                 </View>
               </View>
             </View>
-          </View>
+          </MotiView>
         </View>
       );
     }
 
     return (
-      <View key={post.id} className="mx-4 mb-4">
-        <View
+      <View key={post.id} className="mb-6">
+        <MotiView
+          from={{ opacity: 0, translateY: 20 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 500, delay: index * 100 }}
           className={`overflow-hidden rounded-3xl ${
-            colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-white'
+            colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-white'
           } shadow-lg`}>
-          {/* Post Header with Gradient Background */}
-          <View
-            className={`flex-row items-center justify-between p-3 ${
-              colorScheme === 'dark'
-                ? 'bg-gradient-to-r from-[#1a1a1a] to-[#282828]'
-                : 'bg-gradient-to-r from-[#f8f8f8] to-white'
-            }`}>
+          {/* Post Header */}
+          <View className="mb-[-0.25rem] mt-[-0.25rem] flex-row items-center justify-between p-3">
             <View className="flex-row items-center">
               <View
                 className={`h-12 w-12 overflow-hidden rounded-full border-2 ${
                   colorScheme === 'dark'
-                    ? 'border-[#5070fd] bg-[#1a1a1a]'
-                    : 'border-[#5070fd] bg-[#f9f9f9]'
+                    ? 'border-[#282828] bg-[#282828]'
+                    : 'border-gray-100 bg-gray-50'
                 }`}>
                 <Image
                   source={
@@ -509,24 +540,26 @@ export default function FeedScreen() {
               </View>
               <View className="ml-3">
                 <Text
-                  className={`text-lg font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                  className={`text-base font-bold ${
+                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                  }`}>
                   {post.profiles?.username || 'Unknown User'}
                 </Text>
                 <View className="flex-row items-center">
-                  <View
-                    className={`h-1.5 w-1.5 rounded-full ${colorScheme === 'dark' ? 'bg-[#5070fd]' : 'bg-[#5070fd]'}`}
-                  />
-                  <Text className="ml-2 text-xs text-gray-500">
-                    {getTimeElapsed(post.created_at)}
-                  </Text>
+                  <Text className="text-xs text-gray-500">{getTimeElapsed(post.created_at)}</Text>
+                  <Text className="mx-1 text-xs text-gray-500">•</Text>
+                  <View className="flex-row items-center">
+                    <Ionicons name="school" size={12} color="#5070fd" />
+                    <GradientText
+                      colors={['#5070fd', '#2f4ccc']}
+                      className="ml-1 text-xs font-medium">
+                      {post.profiles?.schools?.name || 'Unknown School'}
+                    </GradientText>
+                  </View>
                 </View>
               </View>
             </View>
-            <TouchableOpacity
-              onPress={() => handleOptionsPress(post.id)}
-              className={`rounded-full p-2 ${
-                colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-[#f8f8f8]'
-              }`}>
+            <TouchableOpacity onPress={() => handleOptionsPress(post.id)} className="p-2">
               <Ionicons
                 name="ellipsis-horizontal"
                 size={20}
@@ -535,34 +568,44 @@ export default function FeedScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Post Image with Overlay */}
+          {/* Post Image */}
           <View className="relative">
             <Image
               source={{ uri: post.image_url }}
               className="aspect-square w-full"
               resizeMode="cover"
             />
-            <View className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+            <View className="absolute inset-0">
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
+                locations={[0, 0.5, 1]}
+                style={{ flex: 1 }}
+              />
+            </View>
+            {post.dish_name && (
+              <View className="absolute bottom-0 left-0 right-0 p-4">
+                <Text className="text-2xl font-bold text-white" numberOfLines={2}>
+                  {post.dish_name}
+                </Text>
+              </View>
+            )}
           </View>
 
-          {/* Post Actions with Redesigned Layout */}
-          <View className="p-3">
+          {/* Post Actions */}
+          <View className="mt-[-0.25rem] p-3">
             <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center space-x-6">
-                <View className="w-[4rem]">
+              <View className="flex-row items-center space-x-4">
+                <View className="flex-row items-center space-x-1">
                   <TouchableOpacity
                     onPress={() => handleLike(post.id)}
                     className="flex-row items-center">
                     <Animated.View
                       style={{
                         transform: [{ scale: heartAnimations.current[post.id] || 1 }],
-                      }}
-                      className={`rounded-full p-1 ${
-                        colorScheme === 'dark' ? 'bg-none' : 'bg-none'
-                      }`}>
+                      }}>
                       <Ionicons
                         name={likedPosts.has(post.id) ? 'heart' : 'heart-outline'}
-                        size={24}
+                        size={28}
                         color={
                           likedPosts.has(post.id)
                             ? '#F00511'
@@ -572,80 +615,137 @@ export default function FeedScreen() {
                         }
                       />
                     </Animated.View>
-                    <Text
-                      className={`ml-0 text-base font-semibold ${
-                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                      }`}>
-                      {postLikes[post.id] || 0}
-                    </Text>
                   </TouchableOpacity>
-                </View>
-                <TouchableOpacity
-                  className={`flex-row items-center space-x-2 rounded-full p-1 ${
-                    colorScheme === 'dark' ? 'bg-none' : 'bg-none'
-                  }`}>
-                  <Ionicons
-                    name="chatbubble-outline"
-                    size={22}
-                    color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                  />
                   <Text
-                    className={`ml-1 text-base  font-semibold ${
+                    className={`text-base font-semibold ${
                       colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                     }`}>
-                    Comment
+                    {postLikes[post.id] || 0}
                   </Text>
+                </View>
+                <TouchableOpacity>
+                  <Ionicons
+                    name="chatbubble-outline"
+                    size={28}
+                    color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                  />
                 </TouchableOpacity>
+                <TouchableOpacity>
+                  <Ionicons
+                    name="paper-plane-outline"
+                    size={28}
+                    color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                  />
+                </TouchableOpacity>
+              </View>
+              <View className="flex-row items-center space-x-2">
                 {post.ingredients && (
                   <TouchableOpacity
                     onPress={() =>
                       handleShowIngredients(post.ingredients || 'No ingredients listed')
                     }
-                    className={`ml-4 flex-row items-center space-x-2 rounded-full border-2 border-[#2DFE54] p-1 ${
+                    className={`rounded-full border-2 border-[#2DFE54] px-3 py-1.5 ${
                       colorScheme === 'dark' ? 'bg-[#46584a]' : 'bg-none'
                     }`}>
                     <Text
-                      className={`text-base font-semibold ${
+                      className={`text-sm font-semibold ${
                         colorScheme === 'dark' ? 'text-[#2DFE54]' : 'text-[#2DFE54]'
                       }`}>
                       Ingredients
                     </Text>
                   </TouchableOpacity>
                 )}
+                <TouchableOpacity>
+                  <Ionicons
+                    name="bookmark-outline"
+                    size={28}
+                    color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                  />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                className={`rounded-full p-1 ${colorScheme === 'dark' ? 'bg-none' : 'bg-none'}`}>
-                <Ionicons
-                  name="bookmark-outline"
-                  size={22}
-                  color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                />
-              </TouchableOpacity>
             </View>
 
-            {/* Post Caption with Enhanced Typography */}
-            <View className="mt-1 bg-gradient-to-r from-transparent to-transparent">
-              {post.dish_name && (
-                <Text
-                  className={`text-xl font-bold leading-6 ${
-                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                  }`}>
-                  {post.dish_name}
-                </Text>
-              )}
+            {/* Post Caption */}
+            <View className="mt-1">
               {post.caption && (
                 <Text
-                  className={`mt-1 text-base leading-6 ${
+                  className={`text-base leading-5 ${
                     colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                   }`}>
+                  <Text className="font-bold">{post.profiles?.username || 'Unknown User'} </Text>
                   {post.caption}
                 </Text>
               )}
             </View>
           </View>
-        </View>
+        </MotiView>
       </View>
     );
+  };
+
+  useEffect(() => {
+    // Initial spring animation
+    Animated.spring(createButtonAnimation, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
+
+    // Continuous pulse animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnimation, {
+          toValue: 1.1,
+          duration: 1000,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        Animated.timing(pulseAnimation, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+      ])
+    ).start();
+
+    Animated.spring(filterAnimation, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
+  }, []);
+
+  const handleViewSwitch = () => {
+    if (isViewTransitioning) return;
+
+    setIsViewTransitioning(true);
+    setIsGridView(!isGridView);
+
+    // Reset the transition state after animation completes
+    setTimeout(() => {
+      setIsViewTransitioning(false);
+    }, 500); // Match this with your animation duration
+  };
+
+  // Add this function to handle filter changes
+  const handleFilterChange = (filter: 'all' | 'mySchool' | 'otherSchools' | 'friends') => {
+    if (isViewTransitioning) return;
+
+    setIsViewTransitioning(true);
+    setActiveFilter(filter);
+
+    // If we're in grid view, switch to list view first
+    if (isGridView) {
+      setIsGridView(false);
+    }
+
+    // Reset the transition state after animation completes
+    setTimeout(() => {
+      setIsViewTransitioning(false);
+    }, 500);
   };
 
   if (isLoading) {
@@ -653,7 +753,7 @@ export default function FeedScreen() {
       <SafeAreaView
         className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#F00511" />
+          <ActivityIndicator size="large" color="#5070fd" />
         </View>
       </SafeAreaView>
     );
@@ -661,46 +761,48 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
-      {/* Filter Buttons */}
-      <View className="flex-row justify-center gap-2 space-x-4 p-4">
-        <TouchableOpacity
-          onPress={() => setActiveFilter('all')}
-          className={`rounded-2xl px-5 ${activeFilter === 'all' ? 'py-1.5' : 'py-2'} ${
-            activeFilter === 'all'
-              ? colorScheme === 'dark'
-                ? 'bg-[#282828]'
-                : 'bg-[#f9f9f9]'
-              : colorScheme === 'dark'
-                ? 'bg-[#282828]'
-                : 'bg-[#f9f9f9]'
+      {/* Animated Header */}
+      <MotiView
+        from={{ opacity: 0, translateY: -20 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 500 }}
+        className="mt-[-0.5rem] px-4">
+        <Text
+          className={`font-pattaya text-4xl ${
+            colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
           }`}>
-          {activeFilter === 'all' && (
-            <View className="absolute inset-0 overflow-hidden rounded-2xl">
-              <LinearGradient
-                colors={['#5070fd', '#2f4ccc']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  borderRadius: 16,
-                }}
-              />
-              <View
-                className="absolute inset-[1.5px] rounded-2xl"
-                style={{
-                  backgroundColor: colorScheme === 'dark' ? '#121113' : '#e0e0e0',
-                }}
-              />
-            </View>
-          )}
+          Picza
+        </Text>
+        <Text
+          className={`mt-[-0.5rem] text-base ${
+            colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+          }`}>
+          Discover amazing food from your community
+        </Text>
+      </MotiView>
+
+      {/* Filter Buttons */}
+      <Animated.View
+        style={{
+          transform: [
+            {
+              translateY: filterAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [20, 0],
+              }),
+            },
+          ],
+          opacity: filterAnimation,
+        }}
+        className="mb-[-0.75rem] mt-[-0.75rem] flex-row justify-center gap-2 space-x-4 p-4">
+        <TouchableOpacity
+          onPress={() => handleFilterChange('all')}
+          disabled={isViewTransitioning}
+          className={`rounded-2xl px-5 py-2 ${isViewTransitioning ? 'opacity-50' : ''}`}>
           {activeFilter === 'all' ? (
             <GradientText
               colors={['#5070fd', '#2f4ccc']}
-              className="text-center text-xl font-extrabold text-white"
+              className="text-center text-xl font-extrabold"
               style={{
                 textShadowColor: 'rgba(0, 0, 0, 0.2)',
                 textShadowOffset: { width: 0, height: 1 },
@@ -712,7 +814,7 @@ export default function FeedScreen() {
           ) : (
             <Text
               className={`text-center text-base font-medium ${
-                colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                colorScheme === 'dark' ? 'text-[#515151]' : 'text-gray-600'
               }`}>
               All
             </Text>
@@ -720,51 +822,16 @@ export default function FeedScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => setActiveFilter('mySchool')}
-          className={`relative rounded-2xl px-5 ${
-            activeFilter === 'mySchool' ? 'py-1.5' : 'py-2'
-          } ${
-            activeFilter === 'mySchool'
-              ? colorScheme === 'dark'
-                ? 'bg-[#282828]'
-                : 'bg-[#f9f9f9]'
-              : colorScheme === 'dark'
-                ? 'bg-[#282828]'
-                : 'bg-[#f9f9f9]'
-          }`}>
-          {activeFilter === 'mySchool' && (
-            <View className="absolute inset-0 overflow-hidden rounded-2xl">
-              <LinearGradient
-                colors={[
-                  schoolData?.primary_color || '#F00511',
-                  schoolData?.secondary_color || '#F00511',
-                ]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  borderRadius: 16,
-                }}
-              />
-              <View
-                className="absolute inset-[1.5px] rounded-2xl"
-                style={{
-                  backgroundColor: colorScheme === 'dark' ? '#121113' : '#e0e0e0',
-                }}
-              />
-            </View>
-          )}
+          onPress={() => handleFilterChange('mySchool')}
+          disabled={isViewTransitioning}
+          className={`rounded-2xl px-5 py-2 ${isViewTransitioning ? 'opacity-50' : ''}`}>
           {activeFilter === 'mySchool' ? (
             <GradientText
               colors={[
                 schoolData?.primary_color || '#F00511',
                 schoolData?.secondary_color || '#F00511',
               ]}
-              className="text-center text-xl font-extrabold text-white"
+              className="text-center text-xl font-extrabold"
               style={{
                 textShadowColor: 'rgba(0, 0, 0, 0.2)',
                 textShadowOffset: { width: 0, height: 1 },
@@ -776,7 +843,7 @@ export default function FeedScreen() {
           ) : (
             <Text
               className={`text-center text-base font-medium ${
-                colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                colorScheme === 'dark' ? 'text-[#515151]' : 'text-gray-600'
               }`}>
               {schoolData?.short_name}
             </Text>
@@ -784,101 +851,39 @@ export default function FeedScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => setActiveFilter('otherSchools')}
-          className={`relative rounded-2xl px-5 ${
-            activeFilter === 'otherSchools' ? 'py-1.5' : 'py-2'
-          } ${
-            activeFilter === 'otherSchools'
-              ? colorScheme === 'dark'
-                ? 'bg-[#282828]'
-                : 'bg-[#f9f9f9]'
-              : colorScheme === 'dark'
-                ? 'bg-[#282828]'
-                : 'bg-[#f9f9f9]'
-          }`}>
-          {activeFilter === 'otherSchools' && (
-            <View className="absolute inset-0 overflow-hidden rounded-2xl">
-              <LinearGradient
-                colors={['#5070fd', '#2f4ccc']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  borderRadius: 16,
-                }}
-              />
-              <View
-                className="absolute inset-[1.5px] rounded-2xl"
-                style={{
-                  backgroundColor: colorScheme === 'dark' ? '#121113' : '#e0e0e0',
-                }}
-              />
-            </View>
-          )}
+          onPress={() => handleFilterChange('otherSchools')}
+          disabled={isViewTransitioning}
+          className={`rounded-2xl px-5 py-2 ${isViewTransitioning ? 'opacity-50' : ''}`}>
           {activeFilter === 'otherSchools' ? (
             <GradientText
               colors={['#5070fd', '#2f4ccc']}
-              className="text-center text-xl font-extrabold text-white"
+              className="text-center text-xl font-extrabold"
               style={{
                 textShadowColor: 'rgba(0, 0, 0, 0.2)',
                 textShadowOffset: { width: 0, height: 1 },
                 textShadowRadius: 3,
                 letterSpacing: 0.5,
               }}>
-              Other Schools
+              Other
             </GradientText>
           ) : (
             <Text
               className={`text-center text-base font-medium ${
-                colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                colorScheme === 'dark' ? 'text-[#515151]' : 'text-gray-600'
               }`}>
-              Other Schools
+              Other
             </Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => setActiveFilter('friends')}
-          className={`relative rounded-2xl px-5 ${activeFilter === 'friends' ? 'py-1.5' : 'py-2'} ${
-            activeFilter === 'friends'
-              ? colorScheme === 'dark'
-                ? 'bg-[#282828]'
-                : 'bg-[#f9f9f9]'
-              : colorScheme === 'dark'
-                ? 'bg-[#282828]'
-                : 'bg-[#f9f9f9]'
-          }`}>
-          {activeFilter === 'friends' && (
-            <View className="absolute inset-0 overflow-hidden rounded-2xl">
-              <LinearGradient
-                colors={['#5070fd', '#2f4ccc']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  borderRadius: 16,
-                }}
-              />
-              <View
-                className="absolute inset-[1.5px] rounded-2xl"
-                style={{
-                  backgroundColor: colorScheme === 'dark' ? '#121113' : '#e0e0e0',
-                }}
-              />
-            </View>
-          )}
+          onPress={() => handleFilterChange('friends')}
+          disabled={isViewTransitioning}
+          className={`rounded-2xl px-5 py-2 ${isViewTransitioning ? 'opacity-50' : ''}`}>
           {activeFilter === 'friends' ? (
             <GradientText
-              colors={['#5070fd', '#2f4ccc']}
-              className="text-center text-xl font-extrabold text-white"
+              colors={['#ff4d6d', '#ff8fa3']}
+              className="text-center text-xl font-extrabold"
               style={{
                 textShadowColor: 'rgba(0, 0, 0, 0.2)',
                 textShadowOffset: { width: 0, height: 1 },
@@ -890,40 +895,51 @@ export default function FeedScreen() {
           ) : (
             <Text
               className={`text-center text-base font-medium ${
-                colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                colorScheme === 'dark' ? 'text-[#515151]' : 'text-gray-600'
               }`}>
               Friends
             </Text>
           )}
         </TouchableOpacity>
-      </View>
 
-      {/* View Toggle Button */}
-      <TouchableOpacity
-        onPress={() => setIsGridView(!isGridView)}
-        className="absolute right-4 top-4 z-10 rounded-full bg-[#F00511] p-2"
-        style={{ marginTop: 16 }}>
-        <Ionicons name={isGridView ? 'grid' : 'list'} size={24} color="white" />
-      </TouchableOpacity>
+        {/* View Toggle Button */}
+        <TouchableOpacity
+          onPress={handleViewSwitch}
+          disabled={isViewTransitioning}
+          className={`rounded-2xl px-5 py-2 ${isViewTransitioning ? 'opacity-50' : ''}`}>
+          <Ionicons
+            name={isGridView ? 'grid' : 'list'}
+            size={24}
+            color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+          />
+        </TouchableOpacity>
+      </Animated.View>
 
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}>
         {posts?.length === 0 ? (
-          <View className="flex-1 items-center justify-center p-8">
-            <Ionicons
-              name={
-                activeFilter === 'mySchool'
-                  ? 'school'
-                  : activeFilter === 'friends'
-                    ? 'people'
-                    : 'globe'
-              }
-              size={64}
-              color="#F00511"
-              className="mb-4"
-            />
+          <MotiView
+            from={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'timing', duration: 500 }}
+            className="flex-1 items-center justify-center p-8">
+            <View className="mb-6 h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-[#5070fd] to-[#2f4ccc]">
+              <Ionicons
+                name={
+                  activeFilter === 'mySchool'
+                    ? 'school'
+                    : activeFilter === 'friends'
+                      ? 'people'
+                      : 'globe'
+                }
+                size={48}
+                color="white"
+              />
+            </View>
             <Text
-              className={`mb-2 text-center text-xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+              className={`mb-2 text-center text-2xl font-bold ${
+                colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+              }`}>
               {activeFilter === 'mySchool'
                 ? 'No posts from your school yet'
                 : activeFilter === 'otherSchools'
@@ -938,20 +954,68 @@ export default function FeedScreen() {
                 Be the first to share something!
               </Text>
             )}
-          </View>
+          </MotiView>
         ) : (
           <View className={`${isGridView ? 'flex-row flex-wrap' : ''} pb-16`}>
-            {posts?.map((post, index) => renderPost(post, index))}
+            {posts?.map((post, index) => (
+              <MotiView
+                key={post.id}
+                from={{ opacity: 0, translateY: 20 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{
+                  type: 'timing',
+                  duration: 500,
+                  delay: index * 100,
+                }}
+                onDidAnimate={(styleProp, finished) => {
+                  if (finished && styleProp === 'opacity') {
+                    // Handle animation completion if needed
+                  }
+                }}>
+                {renderPost(post, index)}
+              </MotiView>
+            ))}
           </View>
         )}
       </ScrollView>
 
-      {/* Create Post Button
-      <TouchableOpacity
-        onPress={() => router.push('/create-post')}
-        className="absolute bottom-6 right-6 h-16 w-16 items-center justify-center rounded-2xl bg-[#F00511] shadow-lg">
-        <Ionicons name="add" size={32} color="white" />
-      </TouchableOpacity> */}
+      {/* Create Post Button */}
+      <Animated.View
+        style={{
+          transform: [
+            {
+              scale: createButtonAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.5, 1],
+              }),
+            },
+          ],
+          opacity: createButtonAnimation,
+        }}
+        className="absolute bottom-24 right-3">
+        <Animated.View
+          style={{
+            transform: [
+              {
+                scale: pulseAnimation,
+              },
+            ],
+          }}>
+          <TouchableOpacity
+            onPress={() => router.push('/create-post')}
+            className="h-16 w-16 items-center justify-center rounded-full">
+            <LinearGradient
+              colors={['#5070fd', '#2f4ccc']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              className="absolute inset-0 rounded-full"
+            />
+            <View className="absolute inset-0 rounded-full bg-white opacity-10" />
+            <View className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 to-transparent" />
+            <Ionicons name="add" size={32} color="white" />
+          </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
 
       {/* Modals */}
       <OptionsModal />

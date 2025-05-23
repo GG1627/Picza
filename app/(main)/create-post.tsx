@@ -26,12 +26,9 @@ export default function CreatePostScreen() {
   const [caption, setCaption] = useState('');
   const [ingredients, setIngredients] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
-  const [isIngredientsFocused, setIsIngredientsFocused] = useState(false);
   const createPost = useCreatePost();
   const { colorScheme } = useColorScheme();
   const scrollViewRef = useRef<ScrollView>(null);
-  const ingredientsHeight = useRef(new Animated.Value(80)).current;
-  const ingredientsInputRef = useRef<TextInput>(null);
 
   const hasContent = image || dishName.trim().length > 0 || ingredients.trim().length > 0;
 
@@ -77,84 +74,6 @@ export default function CreatePostScreen() {
     }
   };
 
-  const handleCaptionFocus = () => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  };
-
-  const handleIngredientsFocus = () => {
-    setIsIngredientsFocused(true);
-    if (!ingredients) {
-      setIngredients('• ');
-    }
-    Animated.spring(ingredientsHeight, {
-      toValue: 120,
-      useNativeDriver: false,
-      tension: 50,
-      friction: 7,
-    }).start();
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  };
-
-  const handleIngredientsBlur = () => {
-    setIsIngredientsFocused(false);
-    if (ingredients === '• ') {
-      setIngredients('');
-    }
-    Animated.spring(ingredientsHeight, {
-      toValue: 80,
-      useNativeDriver: false,
-      tension: 50,
-      friction: 7,
-    }).start();
-  };
-
-  const handleIngredientsChange = (text: string) => {
-    // Handle backspace at the start of a line
-    if (text.endsWith('\n')) {
-      const lines = text.split('\n');
-      const lastLine = lines[lines.length - 2]; // Get the line before the newline
-
-      // If the last line is empty or only contains a bullet, remove it
-      if (lastLine === '• ' || lastLine === '') {
-        setIngredients(text.slice(0, -1));
-        return;
-      }
-
-      // Add bullet point to the new line immediately
-      const newText = text + '• ';
-      setIngredients(newText);
-    } else {
-      setIngredients(text);
-    }
-  };
-
-  const handleIngredientsKeyPress = (e: any) => {
-    if (e.nativeEvent.key === 'Backspace') {
-      const lines = ingredients.split('\n');
-      const currentLine = lines[lines.length - 1];
-
-      // If we're at the start of a line with just a bullet, remove the entire line
-      if (currentLine === '• ') {
-        setIngredients(ingredients.slice(0, -3));
-      }
-    }
-  };
-
-  const finishIngredientsList = () => {
-    // Remove the last bullet point if it's empty
-    const lines = ingredients.split('\n');
-    const lastLine = lines[lines.length - 1];
-    if (lastLine === '• ') {
-      setIngredients(ingredients.slice(0, -3));
-    }
-    Keyboard.dismiss();
-    setIsIngredientsFocused(false);
-  };
-
   return (
     <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
       {/* Header */}
@@ -189,12 +108,18 @@ export default function CreatePostScreen() {
               ? colorScheme === 'dark'
                 ? 'bg-[#282828]'
                 : 'bg-[#f9f9f9]'
-              : 'bg-[#F00511]'
+              : colorScheme === 'dark'
+                ? 'border-2 border-[#259365] bg-[#26342e]'
+                : 'border-2 border-[#259365] bg-[#c7e5d9]'
           }`}>
           {createPost.isPending ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color={colorScheme === 'dark' ? 'white' : '#259365'} />
           ) : isSuccess ? (
-            <Ionicons name="checkmark" size={20} color="white" />
+            <Ionicons
+              name="checkmark"
+              size={20}
+              color={colorScheme === 'dark' ? 'white' : '#259365'}
+            />
           ) : (
             <Text
               className={`font-medium ${
@@ -202,7 +127,9 @@ export default function CreatePostScreen() {
                   ? colorScheme === 'dark'
                     ? 'text-[#9ca3af]'
                     : 'text-[#877B66]'
-                  : 'text-white'
+                  : colorScheme === 'dark'
+                    ? 'text-[#259365]'
+                    : 'text-[#259365]'
               }`}>
               Post
             </Text>
@@ -220,7 +147,8 @@ export default function CreatePostScreen() {
           className="flex-1"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1 }}>
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardDismissMode="on-drag">
           <View className="flex-1 p-4">
             {image ? (
               <View className="mb-4 aspect-square w-full overflow-hidden rounded-2xl">
@@ -234,9 +162,9 @@ export default function CreatePostScreen() {
                 }`}>
                 <View
                   className={`rounded-full p-4 ${
-                    colorScheme === 'dark' ? 'bg-[#F00511]/10' : 'bg-[#F00511]/10'
+                    colorScheme === 'dark' ? 'bg-[#5070fd]/10' : 'bg-[#5070fd]/10'
                   }`}>
-                  <Ionicons name="camera" size={40} color="#F00511" />
+                  <Ionicons name="camera" size={40} color="#5070fd" />
                 </View>
                 <Text
                   className={`mt-2 text-base font-medium ${
@@ -253,7 +181,7 @@ export default function CreatePostScreen() {
               </TouchableOpacity>
             )}
 
-            <View className="mt-4 space-y-4">
+            <View className="mt-2 space-y-4">
               {/* Dish Name Input */}
               <View className="">
                 <Text
@@ -274,6 +202,11 @@ export default function CreatePostScreen() {
                       : 'border-[#f9f9f9] bg-white text-[#07020D]'
                   }`}
                   style={{ textAlignVertical: 'center' }}
+                  onFocus={() => {
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }, 100);
+                  }}
                 />
               </View>
 
@@ -297,11 +230,15 @@ export default function CreatePostScreen() {
                       : 'border-[#f9f9f9] bg-white text-[#07020D]'
                   }`}
                   style={{ textAlignVertical: 'center' }}
-                  onFocus={handleCaptionFocus}
+                  onFocus={() => {
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollTo({ y: 200, animated: true });
+                    }, 100);
+                  }}
                 />
               </View>
 
-              {/* Ingredients Input with Animation */}
+              {/* Ingredients Input */}
               <View>
                 <Text
                   className={`mb-0 mt-2 text-sm font-medium ${
@@ -309,47 +246,31 @@ export default function CreatePostScreen() {
                   }`}>
                   Ingredients List (optional)
                 </Text>
-                <Animated.View
+                <TextInput
+                  value={ingredients}
+                  onChangeText={setIngredients}
+                  placeholder="Enter your ingredients..."
+                  placeholderTextColor={colorScheme === 'dark' ? '#9ca3af' : '#877B66'}
+                  multiline
+                  returnKeyType="done"
+                  blurOnSubmit={true}
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                  className={`rounded-2xl border px-4 py-3 ${
+                    colorScheme === 'dark'
+                      ? 'border-[#282828] bg-[#282828] text-[#E0E0E0]'
+                      : 'border-[#f9f9f9] bg-white text-[#07020D]'
+                  }`}
                   style={{
-                    height: ingredientsHeight,
-                  }}>
-                  <TextInput
-                    ref={ingredientsInputRef}
-                    value={ingredients}
-                    onChangeText={handleIngredientsChange}
-                    onKeyPress={handleIngredientsKeyPress}
-                    placeholder="Start typing ingredients..."
-                    placeholderTextColor={colorScheme === 'dark' ? '#9ca3af' : '#877B66'}
-                    multiline
-                    returnKeyType="default"
-                    blurOnSubmit={false}
-                    onFocus={handleIngredientsFocus}
-                    onBlur={handleIngredientsBlur}
-                    className={`rounded-2xl border px-4 py-3 ${
-                      colorScheme === 'dark'
-                        ? 'border-[#282828] bg-[#282828] text-[#E0E0E0]'
-                        : 'border-[#f9f9f9] bg-white text-[#07020D]'
-                    }`}
-                    style={{ height: '100%', textAlignVertical: 'center' }}
-                  />
-                </Animated.View>
-                {isIngredientsFocused && (
-                  <View className="mt-2 flex-row items-center justify-between">
-                    <Text
-                      className={`text-xs ${
-                        colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'
-                      }`}>
-                      Press return for new line
-                    </Text>
-                    <TouchableOpacity
-                      onPress={finishIngredientsList}
-                      className={`rounded-full px-4 py-1 ${
-                        colorScheme === 'dark' ? 'bg-[#F00511]/20' : 'bg-[#F00511]/10'
-                      }`}>
-                      <Text className="text-sm font-medium text-[#F00511]">Done</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
+                    height: 80,
+                    textAlignVertical: 'center',
+                    textAlign: 'left',
+                  }}
+                  onFocus={() => {
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollTo({ y: 400, animated: true });
+                    }, 100);
+                  }}
+                />
               </View>
             </View>
           </View>

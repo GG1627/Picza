@@ -5,6 +5,7 @@ export const loadFonts = async () => {
     console.log('Starting to load fonts...');
     await Font.loadAsync({
       LuckiestGuy: require('../assets/fonts/LuckiestGuy-Regular.ttf'),
+      Pattaya: require('../assets/fonts/Pattaya-Regular.ttf'),
     });
     console.log('Fonts loaded successfully!');
   } catch (error) {

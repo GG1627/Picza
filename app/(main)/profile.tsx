@@ -408,7 +408,7 @@ export default function ProfileScreen() {
     return (
       <View
         className={`flex-1 items-center justify-center ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
-        <ActivityIndicator size="large" color="#F00511" />
+        <ActivityIndicator size="large" color="#5070fd" />
       </View>
     );
   }
@@ -570,7 +570,7 @@ export default function ProfileScreen() {
                         setEditedUsername(text);
                         setUsernameChangeError(null);
                       }}
-                      className={`rounded-xl border border-[#5DB7DE] px-4 py-3 ${
+                      className={`rounded-xl border px-4 py-3 ${
                         colorScheme === 'dark'
                           ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]'
                           : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
@@ -597,7 +597,7 @@ export default function ProfileScreen() {
                     <TextInput
                       value={editedFullName}
                       onChangeText={setEditedFullName}
-                      className={`rounded-xl border border-[#5DB7DE] px-4 py-3 ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
+                      className={`rounded-xl border px-4 py-3 ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
                       placeholder="Enter full name"
                       placeholderTextColor="#877B66"
                       textAlignVertical="center"
@@ -612,7 +612,7 @@ export default function ProfileScreen() {
                     <TextInput
                       value={editedBio}
                       onChangeText={setEditedBio}
-                      className={`rounded-xl border border-[#5DB7DE] px-4 py-3 ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
+                      className={`rounded-xl border px-4 py-3 ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
                       placeholder="Tell us about yourself"
                       placeholderTextColor="#877B66"
                       numberOfLines={3}

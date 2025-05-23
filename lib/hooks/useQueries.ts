@@ -16,6 +16,11 @@ type Post = {
     username: string;
     avatar_url: string | null;
     school_id: string;
+    schools: {
+      name: string;
+      primary_color: string;
+      secondary_color: string;
+    } | null;
   } | null;
 };
 
@@ -50,7 +55,12 @@ export function usePosts(
           profiles:profiles!user_id ( 
             username,
             avatar_url,
-            school_id
+            school_id,
+            schools:schools!school_id (
+              name,
+              primary_color,
+              secondary_color
+            )
           )
         `
         )
