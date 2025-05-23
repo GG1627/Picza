@@ -15,6 +15,7 @@ export default function CompetitionsScreen() {
         className={`mt-2 text-gray-600 ${colorScheme === 'dark' ? 'text-white' : 'text-gray-600'} `}>
         Join food competitions here
       </Text>
+      <Text className="mt-2 text-center text-gray-600">Big ole caitlins page</Text>
     </View>
   );
 }
