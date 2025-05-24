@@ -5,21 +5,17 @@ import * as base64 from 'base64-js';
 // Types
 type Post = {
   id: string;
-  user_id: string;
-  dish_name: string | null;
-  caption: string | null;
-  ingredients: string | null;
   image_url: string;
+  caption: string | null;
   created_at: string;
   likes_count: number;
+  dish_name: string | null;
+  ingredients: string | null;
   profiles: {
     username: string;
     avatar_url: string | null;
-    school_id: string;
     schools: {
       name: string;
-      primary_color: string;
-      secondary_color: string;
     } | null;
   } | null;
 };
@@ -32,6 +28,23 @@ type School = {
   secondary_color: string;
 };
 
+type DatabasePost = {
+  id: string;
+  image_url: string;
+  caption: string | null;
+  created_at: string;
+  likes_count: number;
+  dish_name: string | null;
+  ingredients: string | null;
+  profiles: {
+    username: string;
+    avatar_url: string | null;
+    schools: {
+      name: string;
+    } | null;
+  } | null;
+};
+
 // Query Keys
 export const queryKeys = {
   posts: 'posts',
@@ -40,45 +53,48 @@ export const queryKeys = {
 } as const;
 
 // Custom Hooks
-export function usePosts(
-  schoolId?: string,
-  filter: 'all' | 'mySchool' | 'otherSchools' | 'friends' = 'mySchool'
-) {
+export function usePosts(schoolId: string | undefined, filter: string, page = 1, pageSize = 10) {
   return useQuery({
-    queryKey: [queryKeys.posts, schoolId, filter],
+    queryKey: ['posts', schoolId, filter, page],
     queryFn: async () => {
       let query = supabase
         .from('posts')
         .select(
           `
-          *,
-          profiles:profiles!user_id ( 
+          id,
+          image_url,
+          caption,
+          created_at,
+          likes_count,
+          dish_name,
+          ingredients,
+          profiles:user_id (
             username,
             avatar_url,
-            school_id,
-            schools:schools!school_id (
-              name,
-              primary_color,
-              secondary_color
+            schools:school_id (
+              name
             )
           )
         `
         )
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range((page - 1) * pageSize, page * pageSize - 1);
 
-      if (schoolId) {
-        if (filter === 'mySchool') {
-          query = query.eq('profiles.school_id', schoolId);
-        } else if (filter === 'otherSchools') {
-          query = query.not('profiles.school_id', 'is', null).neq('profiles.school_id', schoolId);
-        }
-        // For 'all' and 'friends', we don't filter by school_id
+      // Apply filters
+      if (filter === 'mySchool' && schoolId) {
+        query = query.eq('profiles.school_id', schoolId);
+      } else if (filter === 'otherSchools' && schoolId) {
+        query = query.neq('profiles.school_id', schoolId);
       }
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data as Post[]).filter((post) => post.profiles !== null);
+
+      // First cast to unknown, then to DatabasePost[]
+      return (data || []) as unknown as DatabasePost[];
     },
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    gcTime: 30 * 60 * 1000, // Keep data in cache for 30 minutes
   });
 }
 

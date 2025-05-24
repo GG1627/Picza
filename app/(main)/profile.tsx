@@ -45,6 +45,7 @@ type Profile = {
   school_id: string | null;
   last_username_change: string | null;
   album_name: string | null;
+  competitions_won: number | null;
 };
 
 export default function ProfileScreen() {
@@ -69,6 +70,13 @@ export default function ProfileScreen() {
   const translateY = React.useRef(new Animated.Value(0)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
   const [refreshing, setRefreshing] = useState(false);
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const loadingScale = React.useRef(new Animated.Value(1)).current;
+  const loadingOpacity = React.useRef(new Animated.Value(1)).current;
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const pageSize = 10;
 
   useEffect(() => {
     fetchProfile();
@@ -83,6 +91,29 @@ export default function ProfileScreen() {
     }
   }, [profile]);
 
+  useEffect(() => {
+    if (!loading) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(loadingOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(loadingScale, {
+          toValue: 0.8,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 7,
+        }),
+      ]).start();
+    }
+  }, [loading]);
+
   const fetchProfile = async () => {
     try {
       const {
@@ -94,7 +125,7 @@ export default function ProfileScreen() {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          'username, full_name, created_at, avatar_url, bio, school_id, last_username_change, album_name'
+          'username, full_name, created_at, avatar_url, bio, school_id, last_username_change, album_name, competitions_won'
         )
         .eq('id', user.id)
         .single();
@@ -118,14 +149,48 @@ export default function ProfileScreen() {
         .from('posts')
         .select('id, image_url, caption, created_at, likes_count')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(0, pageSize - 1);
 
       if (postsError) throw postsError;
-      setPosts(postsData || []);
+      setAllPosts(postsData || []);
+      setHasMore(postsData?.length === pageSize);
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (!hasMore || loading) return;
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) throw new Error('No user found');
+
+      const nextPage = page + 1;
+      const { data: newPosts, error } = await supabase
+        .from('posts')
+        .select('id, image_url, caption, created_at, likes_count')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .range((nextPage - 1) * pageSize, nextPage * pageSize - 1);
+
+      if (error) throw error;
+
+      if (newPosts && newPosts.length > 0) {
+        setAllPosts((prev) => [...prev, ...newPosts]);
+        setPage(nextPage);
+        setHasMore(newPosts.length === pageSize);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error loading more posts:', error);
     }
   };
 
@@ -408,7 +473,13 @@ export default function ProfileScreen() {
     return (
       <View
         className={`flex-1 items-center justify-center ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
-        <ActivityIndicator size="large" color="#5070fd" />
+        <Animated.View
+          style={{
+            opacity: loadingOpacity,
+            transform: [{ scale: loadingScale }],
+          }}>
+          <ActivityIndicator size="large" color="#5070fd" />
+        </Animated.View>
       </View>
     );
   }
@@ -430,326 +501,381 @@ export default function ProfileScreen() {
           }),
         }}
         className={`${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
-        {/* Header */}
-        <View className="mt-16 flex-row items-center justify-between px-6">
-          <Text
-            className={`text-2xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-            Profile
-          </Text>
-          <Pressable
-            onPress={openSettings}
-            className={`rounded-full ${colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-white/80'} p-2 shadow-sm`}>
-            <Ionicons
-              name="settings-outline"
-              size={24}
-              color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-            />
-          </Pressable>
-        </View>
-
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
-          // keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
-        >
-          <ScrollView
-            className="flex-1"
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                colors={[colorScheme === 'dark' ? '#E0E0E0' : '#07020D']}
+        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+          {/* Header */}
+          <View className="mt-16 flex-row items-center justify-between px-6">
+            <Pressable
+              className={`rounded-full ${colorScheme === 'dark' ? 'bg-none' : 'bg-none'} p-2 shadow-sm`}>
+              <Ionicons
+                name="person-add-outline"
+                size={24}
+                color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
               />
-            }>
-            <View className="px-6">
-              {/* Profile Header */}
-              <View className="mt-6 items-center">
-                <Pressable onPress={isEditing ? pickImage : undefined} className="relative">
-                  <View
-                    className={`h-32 w-32 items-center justify-center rounded-full border-2 ${
-                      colorScheme === 'dark'
-                        ? 'border-[#E0E0E0] bg-[#282828]'
-                        : 'border-[#07020D] bg-black'
-                    }`}>
-                    {newImage || profile?.avatar_url ? (
-                      <Image
-                        source={{ uri: newImage || profile?.avatar_url || '' }}
-                        className="h-full w-full rounded-full"
-                      />
-                    ) : (
-                      <View className="items-center">
-                        <Ionicons
-                          name="person-outline"
-                          size={48}
-                          color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+            </Pressable>
+            <Pressable
+              onPress={openSettings}
+              className={`rounded-full ${colorScheme === 'dark' ? 'bg-none' : 'bg-none'} p-2 shadow-sm`}>
+              <Ionicons
+                name="settings-outline"
+                size={24}
+                color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+              />
+            </Pressable>
+          </View>
+
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            className="flex-1"
+            // keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+          >
+            <ScrollView
+              className="flex-1"
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                  colors={[colorScheme === 'dark' ? '#E0E0E0' : '#07020D']}
+                />
+              }
+              onScroll={({ nativeEvent }) => {
+                const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+                const isCloseToBottom =
+                  layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
+
+                if (isCloseToBottom) {
+                  loadMore();
+                }
+              }}
+              scrollEventThrottle={400}>
+              <View className="px-6">
+                {/* Profile Header */}
+                <View className="mt-0 items-center">
+                  <Pressable onPress={isEditing ? pickImage : undefined} className="relative">
+                    <View
+                      className={`h-32 w-32 items-center justify-center rounded-full border-2 ${
+                        colorScheme === 'dark'
+                          ? 'border-[#E0E0E0] bg-[#282828]'
+                          : 'border-[#07020D] bg-black'
+                      }`}>
+                      {newImage || profile?.avatar_url ? (
+                        <Image
+                          source={{ uri: newImage || profile?.avatar_url || '' }}
+                          className="h-full w-full rounded-full"
                         />
-                      </View>
+                      ) : (
+                        <View className="items-center">
+                          <Ionicons
+                            name="person-outline"
+                            size={48}
+                            color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                          />
+                        </View>
+                      )}
+                      {isEditing && (
+                        <View className="absolute inset-0 items-center justify-center rounded-full bg-black/30">
+                          <Ionicons name="camera" size={32} color="white" />
+                        </View>
+                      )}
+                    </View>
+                  </Pressable>
+
+                  <View className="mt-4 items-center">
+                    <Text
+                      className={`text-2xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                      {profile?.full_name}
+                    </Text>
+                    <Text
+                      className={`text-base ${colorScheme === 'dark' ? 'text-[#b3b3b3]' : 'text-[#07020D]'}`}>
+                      @{profile?.username}
+                    </Text>
+                  </View>
+
+                  {/* Bio and School Section */}
+                  <View className="mt-0 items-center">
+                    {profile?.bio && (
+                      <Text
+                        className={`text-center text-base ${colorScheme === 'dark' ? 'text-[#b3b3b3]' : 'text-[#07020D]'}`}>
+                        {profile.bio}
+                      </Text>
                     )}
-                    {isEditing && (
-                      <View className="absolute inset-0 items-center justify-center rounded-full bg-black/30">
-                        <Ionicons name="camera" size={32} color="white" />
+                    {school && (
+                      <View className="mt-2 flex-row items-center justify-center space-x-2">
+                        <Ionicons
+                          name="school"
+                          size={16}
+                          color={colorScheme === 'dark' ? '#9ca3af' : '#877B66'}
+                        />
+                        <Text
+                          className={`ml-1 text-sm ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
+                          {school.name}
+                        </Text>
                       </View>
                     )}
                   </View>
-                </Pressable>
 
-                <View className="mt-4 items-center">
-                  <Text
-                    className={`text-2xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-                    {profile?.full_name}
-                  </Text>
-                  <Text
-                    className={`text-base ${colorScheme === 'dark' ? 'text-[#b3b3b3]' : 'text-[#07020D]'}`}>
-                    @{profile?.username}
-                  </Text>
-                </View>
-
-                {/* Bio and School Section */}
-                <View className="mt-0 items-center">
-                  {profile?.bio && (
-                    <Text
-                      className={`text-center text-base ${colorScheme === 'dark' ? 'text-[#b3b3b3]' : 'text-[#07020D]'}`}>
-                      {profile.bio}
-                    </Text>
-                  )}
-                  {school && (
-                    <View className="mt-2 flex-row items-center justify-center space-x-2">
-                      <Ionicons
-                        name="school"
-                        size={16}
-                        color={colorScheme === 'dark' ? '#9ca3af' : '#877B66'}
-                      />
+                  {/* Stats Section */}
+                  <View className="mt-3 flex-row items-center justify-center space-x-10">
+                    <View className="items-center">
                       <Text
-                        className={`ml-1 text-sm ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
-                        {school.name}
+                        className={`text-xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                        {allPosts.length}
+                      </Text>
+                      <Text
+                        className={`text-sm ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
+                        Posts
                       </Text>
                     </View>
-                  )}
-                </View>
-
-                <Pressable
-                  onPress={() => setIsEditing(!isEditing)}
-                  className={`mt-4 rounded-xl border-2 px-6 py-2 first-line:bg-none ${
-                    isEditing
-                      ? colorScheme === 'dark'
-                        ? 'border-[#BA3B46] bg-[#312728]'
-                        : 'border-[#BA3B46] bg-[#f4cdd0]'
-                      : colorScheme === 'dark'
-                        ? 'border-[#5070fd] bg-[#1e2236]'
-                        : 'border-[#5070fd] bg-[#bac4f3]'
-                  }`}>
-                  <Text
-                    className={`font-semibold ${
-                      isEditing
-                        ? colorScheme === 'dark'
-                          ? 'text-[#BA3B46]'
-                          : 'text-[#BA3B46]'
-                        : colorScheme === 'dark'
-                          ? 'text-[#5070fd]'
-                          : 'text-[#5070fd]'
-                    }`}>
-                    {isEditing ? 'Cancel' : 'Edit Profile'}
-                  </Text>
-                </Pressable>
-              </View>
-
-              {/* Profile Information */}
-              {isEditing ? (
-                <View className="mt-2 space-y-6">
-                  <View>
-                    <Text
-                      className={` text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-                      Username
-                    </Text>
-                    <TextInput
-                      value={editedUsername}
-                      onChangeText={(text) => {
-                        setEditedUsername(text);
-                        setUsernameChangeError(null);
-                      }}
-                      className={`rounded-xl border px-4 py-3 ${
-                        colorScheme === 'dark'
-                          ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]'
-                          : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
-                      } ${!canChangeUsername() ? 'opacity-50' : ''}`}
-                      placeholder="Enter username"
-                      placeholderTextColor="#877B66"
-                      textAlignVertical="center"
-                      editable={canChangeUsername()}
-                      pointerEvents={canChangeUsername() ? 'auto' : 'none'}
-                    />
-                    {!canChangeUsername() && (
-                      <Text className="mt-2 text-sm text-[#BA3B46]">
-                        You can change your username again on{' '}
-                        {getNextUsernameChangeDate()?.toLocaleDateString()}
+                    <View className="items-center">
+                      <Text
+                        className={`ml-5 mr-5 text-xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                        0
                       </Text>
-                    )}
-                  </View>
-
-                  <View>
-                    <Text
-                      className={`mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-                      Full Name
-                    </Text>
-                    <TextInput
-                      value={editedFullName}
-                      onChangeText={setEditedFullName}
-                      className={`rounded-xl border px-4 py-3 ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
-                      placeholder="Enter full name"
-                      placeholderTextColor="#877B66"
-                      textAlignVertical="center"
-                    />
-                  </View>
-
-                  <View>
-                    <Text
-                      className={`mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-                      Bio
-                    </Text>
-                    <TextInput
-                      value={editedBio}
-                      onChangeText={setEditedBio}
-                      className={`rounded-xl border px-4 py-3 ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
-                      placeholder="Tell us about yourself"
-                      placeholderTextColor="#877B66"
-                      numberOfLines={3}
-                      textAlignVertical="center"
-                    />
+                      <Text
+                        className={`ml-5 mr-5 text-sm ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
+                        Friends
+                      </Text>
+                    </View>
+                    <View className="items-center">
+                      <Text
+                        className={`text-xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                        {profile?.competitions_won || 0}
+                      </Text>
+                      <Text
+                        className={`text-sm ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
+                        Wins
+                      </Text>
+                    </View>
                   </View>
 
                   <Pressable
-                    onPress={handleSaveProfile}
-                    disabled={saving}
-                    className={`mt-4 rounded-xl border-2 py-4 ${colorScheme === 'dark' ? 'border-[#259365] bg-[#26342e]' : 'border-[#259365] bg-[#c7e5d9]'} ${saving ? 'opacity-50' : ''}`}>
-                    <Text className="text-center text-base font-semibold text-[#259365]">
-                      {saving ? 'Saving...' : 'Save Changes'}
+                    onPress={() => setIsEditing(!isEditing)}
+                    className={`mt-4 rounded-xl border-2 px-6 py-2 first-line:bg-none ${
+                      isEditing
+                        ? colorScheme === 'dark'
+                          ? 'border-[#BA3B46] bg-[#312728]'
+                          : 'border-[#BA3B46] bg-[#f4cdd0]'
+                        : colorScheme === 'dark'
+                          ? 'border-[#5070fd] bg-[#1e2236]'
+                          : 'border-[#5070fd] bg-[#bac4f3]'
+                    }`}>
+                    <Text
+                      className={`font-semibold ${
+                        isEditing
+                          ? colorScheme === 'dark'
+                            ? 'text-[#BA3B46]'
+                            : 'text-[#BA3B46]'
+                          : colorScheme === 'dark'
+                            ? 'text-[#5070fd]'
+                            : 'text-[#5070fd]'
+                      }`}>
+                      {isEditing ? 'Cancel' : 'Edit Profile'}
                     </Text>
                   </Pressable>
                 </View>
-              ) : (
-                <View className="mt-8">
-                  {/* Posts Grid */}
-                  {posts.length > 0 ? (
-                    <View className="space-y-4">
-                      <View className="flex-row items-center justify-between">
-                        {isEditingAlbumName ? (
-                          <View className="ml-[-20px] flex-row items-center space-x-2">
-                            <TextInput
-                              value={editedAlbumName}
-                              onChangeText={setEditedAlbumName}
-                              className={`px-2 py-1 ${
-                                colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                              }`}
-                              placeholder="Enter album name"
-                              placeholderTextColor="#877B66"
-                            />
-                            <Pressable
-                              onPress={handleSaveAlbumName}
-                              className="rounded-full bg-[#5070fd] p-1">
-                              <Ionicons name="checkmark" size={16} color="white" />
-                            </Pressable>
-                            <Pressable
-                              onPress={() => {
-                                setIsEditingAlbumName(false);
-                                setEditedAlbumName(
-                                  profile?.album_name ||
-                                    `${profile?.full_name.split(' ')[0]}'s Food Album`
-                                );
-                              }}
-                              className="rounded-full bg-[#BA3B46] p-1">
-                              <Ionicons name="close" size={16} color="white" />
-                            </Pressable>
-                          </View>
-                        ) : (
-                          <View className="ml-[-20px] flex-row items-center space-x-2">
-                            <Text
-                              className={`text-lg font-semibold ${
-                                colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                              }`}>
-                              {profile?.album_name ||
-                                `${profile?.full_name.split(' ')[0]}'s Food Album`}
-                            </Text>
-                            <Pressable
-                              onPress={() => setIsEditingAlbumName(true)}
-                              className="rounded-full p-1">
-                              <Ionicons
-                                name="pencil"
-                                size={16}
-                                color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                              />
-                            </Pressable>
-                          </View>
-                        )}
-                        <Text
-                          className={`text-sm ${
-                            colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'
-                          }`}>
-                          {posts.length} {posts.length === 1 ? 'post' : 'posts'}
+
+                {/* Profile Information */}
+                {isEditing ? (
+                  <View className="mt-2 space-y-6">
+                    <View>
+                      <Text
+                        className={` text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                        Username
+                      </Text>
+                      <TextInput
+                        value={editedUsername}
+                        onChangeText={(text) => {
+                          setEditedUsername(text);
+                          setUsernameChangeError(null);
+                        }}
+                        className={`rounded-xl border px-4 py-3 ${
+                          colorScheme === 'dark'
+                            ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]'
+                            : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
+                        } ${!canChangeUsername() ? 'opacity-50' : ''}`}
+                        placeholder="Enter username"
+                        placeholderTextColor="#877B66"
+                        textAlignVertical="center"
+                        editable={canChangeUsername()}
+                        pointerEvents={canChangeUsername() ? 'auto' : 'none'}
+                      />
+                      {!canChangeUsername() && (
+                        <Text className="mt-2 text-sm text-[#BA3B46]">
+                          You can change your username again on{' '}
+                          {getNextUsernameChangeDate()?.toLocaleDateString()}
                         </Text>
-                      </View>
-                      <View className="-mx-6 flex-row">
-                        {posts.map((post, index) => (
-                          <Pressable
-                            key={post.id}
-                            className={`w-1/3 border-b border-r ${
-                              index % 3 === 2 ? 'border-r-0' : ''
-                            } border-[#e0e0e0] dark:border-[#121113]`}>
-                            <View className="aspect-square">
-                              <Image
-                                source={{ uri: post.image_url }}
-                                className="h-full w-full"
-                                resizeMode="cover"
+                      )}
+                    </View>
+
+                    <View>
+                      <Text
+                        className={`mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                        Full Name
+                      </Text>
+                      <TextInput
+                        value={editedFullName}
+                        onChangeText={setEditedFullName}
+                        className={`rounded-xl border px-4 py-3 ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
+                        placeholder="Enter full name"
+                        placeholderTextColor="#877B66"
+                        textAlignVertical="center"
+                      />
+                    </View>
+
+                    <View>
+                      <Text
+                        className={`mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                        Bio
+                      </Text>
+                      <TextInput
+                        value={editedBio}
+                        onChangeText={setEditedBio}
+                        className={`rounded-xl border px-4 py-3 ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
+                        placeholder="Tell us about yourself"
+                        placeholderTextColor="#877B66"
+                        numberOfLines={3}
+                        textAlignVertical="center"
+                      />
+                    </View>
+
+                    <Pressable
+                      onPress={handleSaveProfile}
+                      disabled={saving}
+                      className={`mt-4 rounded-xl border-2 py-4 ${colorScheme === 'dark' ? 'border-[#259365] bg-[#26342e]' : 'border-[#259365] bg-[#c7e5d9]'} ${saving ? 'opacity-50' : ''}`}>
+                      <Text className="text-center text-base font-semibold text-[#259365]">
+                        {saving ? 'Saving...' : 'Save Changes'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View className="mt-8">
+                    {/* Posts Grid */}
+                    {allPosts.length > 0 ? (
+                      <View className="space-y-4">
+                        <View className="flex-row items-center justify-between">
+                          {isEditingAlbumName ? (
+                            <View className="ml-[-20px] flex-row items-center space-x-2">
+                              <TextInput
+                                value={editedAlbumName}
+                                onChangeText={setEditedAlbumName}
+                                className={`px-2 py-1 ${
+                                  colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                                }`}
+                                placeholder="Enter album name"
+                                placeholderTextColor="#877B66"
                               />
-                              <View className="absolute inset-0 bg-black/0 hover:bg-black/20" />
-                              <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between bg-gradient-to-t from-black/60 to-transparent p-2">
-                                <View className="flex-row items-center space-x-1">
-                                  <Ionicons name="heart" size={14} color="white" />
-                                  <Text className="text-xs text-white">{post.likes_count}</Text>
-                                </View>
-                                <View className="flex-row items-center space-x-1">
-                                  <Ionicons name="chatbubble" size={14} color="white" />
-                                  <Text className="text-xs text-white">0</Text>
+                              <Pressable
+                                onPress={handleSaveAlbumName}
+                                className="rounded-full bg-[#5070fd] p-1">
+                                <Ionicons name="checkmark" size={16} color="white" />
+                              </Pressable>
+                              <Pressable
+                                onPress={() => {
+                                  setIsEditingAlbumName(false);
+                                  setEditedAlbumName(
+                                    profile?.album_name ||
+                                      `${profile?.full_name.split(' ')[0]}'s Food Album`
+                                  );
+                                }}
+                                className="rounded-full bg-[#BA3B46] p-1">
+                                <Ionicons name="close" size={16} color="white" />
+                              </Pressable>
+                            </View>
+                          ) : (
+                            <View className="ml-[-20px] flex-row items-center space-x-2">
+                              <Text
+                                className={`text-lg font-semibold ${
+                                  colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                                }`}>
+                                {profile?.album_name ||
+                                  `${profile?.full_name.split(' ')[0]}'s Food Album`}
+                              </Text>
+                              <Pressable
+                                onPress={() => setIsEditingAlbumName(true)}
+                                className="rounded-full p-1">
+                                <Ionicons
+                                  name="pencil"
+                                  size={16}
+                                  color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                                />
+                              </Pressable>
+                            </View>
+                          )}
+                        </View>
+                        <View className="-mx-6 flex-row">
+                          {allPosts.map((post, index) => (
+                            <Pressable
+                              key={post.id}
+                              className={`w-1/3 border-b border-r ${
+                                index % 3 === 2 ? 'border-r-0' : ''
+                              } border-[#e0e0e0] dark:border-[#121113]`}>
+                              <View className="aspect-square">
+                                <Image
+                                  source={{
+                                    uri:
+                                      post.image_url.replace(
+                                        'https://[your-project].supabase.co/storage/v1/object/public/',
+                                        'https://[your-project].supabase.co/storage/v1/object/public/transform/'
+                                      ) + '?width=200&quality=80',
+                                  }}
+                                  className="h-full w-full"
+                                  resizeMode="cover"
+                                />
+                                <View className="absolute inset-0 bg-black/0 hover:bg-black/20" />
+                                <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between bg-gradient-to-t from-black/60 to-transparent p-2">
+                                  <View className="flex-row items-center space-x-1">
+                                    <Ionicons name="heart" size={14} color="white" />
+                                    <Text className="text-xs text-white">{post.likes_count}</Text>
+                                  </View>
+                                  <View className="flex-row items-center space-x-1">
+                                    <Ionicons name="chatbubble" size={14} color="white" />
+                                    <Text className="text-xs text-white">0</Text>
+                                  </View>
                                 </View>
                               </View>
-                            </View>
-                          </Pressable>
-                        ))}
+                            </Pressable>
+                          ))}
+                        </View>
+                        {loading && page > 1 && (
+                          <View className="w-full items-center py-4">
+                            <ActivityIndicator size="small" color="#5070fd" />
+                          </View>
+                        )}
                       </View>
-                    </View>
-                  ) : (
-                    <View className="items-center justify-center py-12">
-                      <View
-                        className={`rounded-full p-4 ${
-                          colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-[#f9f9f9]'
-                        }`}>
-                        <Ionicons
-                          name="camera-outline"
-                          size={32}
-                          color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                        />
+                    ) : (
+                      <View className="items-center justify-center py-12">
+                        <View
+                          className={`rounded-full p-4 ${
+                            colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-[#f9f9f9]'
+                          }`}>
+                          <Ionicons
+                            name="camera-outline"
+                            size={32}
+                            color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                          />
+                        </View>
+                        <Text
+                          className={`mt-4 text-center text-base ${
+                            colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                          }`}>
+                          No posts yet
+                        </Text>
+                        <Text
+                          className={`mt-1 text-center text-sm ${
+                            colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'
+                          }`}>
+                          Share your first food moment
+                        </Text>
                       </View>
-                      <Text
-                        className={`mt-4 text-center text-base ${
-                          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                        }`}>
-                        No posts yet
-                      </Text>
-                      <Text
-                        className={`mt-1 text-center text-sm ${
-                          colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'
-                        }`}>
-                        Share your first food moment
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+                    )}
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </Animated.View>
       </Animated.View>
 
       {/* Black background overlay */}

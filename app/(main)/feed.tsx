@@ -28,6 +28,24 @@ import GradientText from '../../components/GradientText';
 import { MotiView } from 'moti';
 import { Easing } from 'react-native-reanimated';
 
+// Add Post type at the top of the file
+type Post = {
+  id: string;
+  image_url: string;
+  caption: string | null;
+  created_at: string;
+  likes_count: number;
+  dish_name: string | null;
+  ingredients: string | null;
+  profiles: {
+    username: string;
+    avatar_url: string | null;
+    schools: {
+      name: string;
+    } | null;
+  } | null;
+};
+
 export default function FeedScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -63,9 +81,17 @@ export default function FeedScreen() {
   const createButtonAnimation = useRef(new Animated.Value(0)).current;
   const filterAnimation = useRef(new Animated.Value(0)).current;
   const pulseAnimation = useRef(new Animated.Value(1)).current;
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const pageSize = 10;
 
   const { data: schoolData } = useSchool(user?.id || '');
-  const { data: posts, isLoading, refetch } = usePosts(schoolData?.id, activeFilter);
+  const {
+    data: posts,
+    isLoading,
+    refetch,
+  } = usePosts(schoolData?.id, activeFilter, page, pageSize);
   const likePost = useLikePost();
 
   const deletePostMutation = useMutation({
@@ -85,22 +111,27 @@ export default function FeedScreen() {
     },
   });
 
-  // Initialize post likes when posts data changes
+  // Update posts when new data arrives
   useEffect(() => {
     if (posts) {
-      const initialLikes = posts.reduce(
-        (acc, post) => {
-          acc[post.id] = post.likes_count;
-          return acc;
-        },
-        {} as { [key: string]: number }
-      );
-      setPostLikes(initialLikes);
+      if (page === 1) {
+        setAllPosts(posts as Post[]);
+      } else {
+        setAllPosts((prev) => [...prev, ...(posts as Post[])]);
+      }
+      setHasMore((posts as Post[]).length === pageSize);
     }
   }, [posts]);
 
+  const loadMore = async () => {
+    if (!hasMore || isLoading) return;
+    setPage((prev) => prev + 1);
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
     await refetch();
     setRefreshing(false);
   };
@@ -281,8 +312,8 @@ export default function FeedScreen() {
   };
 
   const OptionsModal = () => {
-    const selectedPostData = posts?.find((post) => post.id === selectedPost);
-    const isOwnPost = selectedPostData?.user_id === user?.id;
+    const selectedPostData = (allPosts as Post[]).find((post: Post) => post.id === selectedPost);
+    const isOwnPost = selectedPostData?.profiles?.username === user?.id;
 
     return (
       <Modal
@@ -451,6 +482,12 @@ export default function FeedScreen() {
   );
 
   const renderPost = (post: any, index: number) => {
+    const optimizedImageUrl =
+      post.image_url.replace(
+        'https://[your-project].supabase.co/storage/v1/object/public/',
+        'https://[your-project].supabase.co/storage/v1/object/public/transform/'
+      ) + '?width=400&quality=80';
+
     if (isGridView) {
       return (
         <View
@@ -467,7 +504,7 @@ export default function FeedScreen() {
             className="mb-4">
             <View className="aspect-square overflow-hidden rounded-2xl">
               <Image
-                source={{ uri: post.image_url }}
+                source={{ uri: optimizedImageUrl }}
                 className="h-full w-full"
                 resizeMode="cover"
               />
@@ -571,7 +608,7 @@ export default function FeedScreen() {
           {/* Post Image */}
           <View className="relative">
             <Image
-              source={{ uri: post.image_url }}
+              source={{ uri: optimizedImageUrl }}
               className="aspect-square w-full"
               resizeMode="cover"
             />
@@ -766,15 +803,15 @@ export default function FeedScreen() {
         from={{ opacity: 0, translateY: -20 }}
         animate={{ opacity: 1, translateY: 0 }}
         transition={{ type: 'timing', duration: 500 }}
-        className="mt-[-0.5rem] px-4">
+        className="mt-2 px-4">
         <Text
-          className={`font-pattaya text-4xl ${
+          className={`font-pattaya text-[2.5rem] ${
             colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
           }`}>
           Picza
         </Text>
         <Text
-          className={`mt-[-0.5rem] text-base ${
+          className={`mt-[-0.60rem] text-base ${
             colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
           }`}>
           Discover amazing food from your community
@@ -916,8 +953,18 @@ export default function FeedScreen() {
       </Animated.View>
 
       <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}>
-        {posts?.length === 0 ? (
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const isCloseToBottom =
+            layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
+
+          if (isCloseToBottom) {
+            loadMore();
+          }
+        }}
+        scrollEventThrottle={400}>
+        {allPosts?.length === 0 ? (
           <MotiView
             from={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -957,7 +1004,7 @@ export default function FeedScreen() {
           </MotiView>
         ) : (
           <View className={`${isGridView ? 'flex-row flex-wrap' : ''} pb-16`}>
-            {posts?.map((post, index) => (
+            {allPosts?.map((post, index) => (
               <MotiView
                 key={post.id}
                 from={{ opacity: 0, translateY: 20 }}
@@ -966,15 +1013,15 @@ export default function FeedScreen() {
                   type: 'timing',
                   duration: 500,
                   delay: index * 100,
-                }}
-                onDidAnimate={(styleProp, finished) => {
-                  if (finished && styleProp === 'opacity') {
-                    // Handle animation completion if needed
-                  }
                 }}>
                 {renderPost(post, index)}
               </MotiView>
             ))}
+            {isLoading && page > 1 && (
+              <View className="w-full items-center py-4">
+                <ActivityIndicator size="small" color="#5070fd" />
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
