@@ -253,14 +253,14 @@ export default function SignUp() {
 
               <View className="mt-4 flex-row items-center justify-center space-x-2">
                 <View
-                  className={`h-[1px] flex-1 ${colorScheme === 'dark' ? 'bg-[#E0E0E0]' : 'bg-gray-400'}`}
+                  className={`h-[1px] flex-1 ${colorScheme === 'dark' ? 'bg-gray-500' : 'bg-gray-400'}`}
                 />
                 <Text
                   className={`text-gray-500 ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
                   or
                 </Text>
                 <View
-                  className={`h-[1px] flex-1 ${colorScheme === 'dark' ? 'bg-[#E0E0E0]' : 'bg-gray-400'}`}
+                  className={`h-[1px] flex-1 ${colorScheme === 'dark' ? 'bg-gray-500' : 'bg-gray-400'}`}
                 />
               </View>
 

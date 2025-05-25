@@ -4,31 +4,60 @@ const API_SECRET = 'MWKuC5xcERe8H5AEBSYWuSBRL3g';
 
 type UploadType = 'avatar' | 'post';
 
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const uploadToCloudinary = async (base64Image: string, type: UploadType = 'post') => {
-  try {
-    const formData = new FormData();
-    formData.append('file', `data:image/jpeg;base64,${base64Image}`);
-    formData.append('upload_preset', 'picza_preset'); // You'll need to create this in your Cloudinary settings
-    formData.append('cloud_name', CLOUD_NAME);
-    formData.append('api_key', API_KEY);
+  let lastError: Error | null = null;
 
-    // Add folder based on upload type - using public_id to specify the folder structure
-    const timestamp = new Date().getTime();
-    const folder = type === 'avatar' ? 'picza/avatars' : 'picza/posts';
-    const publicId = `${folder}/${timestamp}`;
-    formData.append('public_id', publicId);
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const formData = new FormData();
+      formData.append('file', `data:image/jpeg;base64,${base64Image}`);
+      formData.append('upload_preset', 'picza_preset');
+      formData.append('cloud_name', CLOUD_NAME);
+      formData.append('api_key', API_KEY);
 
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-      method: 'POST',
-      body: formData,
-    });
+      // Add folder based on upload type - using public_id to specify the folder structure
+      const timestamp = new Date().getTime();
+      const folder = type === 'avatar' ? 'picza/avatars' : 'picza/posts';
+      const publicId = `${folder}/${timestamp}`;
+      formData.append('public_id', publicId);
 
-    const data = await response.json();
-    return data.secure_url;
-  } catch (error) {
-    console.error('Error uploading to Cloudinary:', error);
-    throw error;
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          `Cloudinary upload failed: ${errorData.error?.message || response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      if (!data.secure_url) {
+        throw new Error('No secure URL returned from Cloudinary');
+      }
+
+      return data.secure_url;
+    } catch (error) {
+      lastError = error as Error;
+      console.error(`Upload attempt ${attempt} failed:`, error);
+
+      if (attempt < MAX_RETRIES) {
+        await sleep(RETRY_DELAY * attempt); // Exponential backoff
+        continue;
+      }
+    }
   }
+
+  throw new Error(
+    `Failed to upload to Cloudinary after ${MAX_RETRIES} attempts: ${lastError?.message}`
+  );
 };
 
 export const deleteFromCloudinary = async (imageUrl: string): Promise<boolean> => {
@@ -46,6 +75,13 @@ export const deleteFromCloudinary = async (imageUrl: string): Promise<boolean> =
       method: 'POST',
       body: formData,
     });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        `Cloudinary delete failed: ${errorData.error?.message || response.statusText}`
+      );
+    }
 
     const data = await response.json();
     return data.result === 'ok';

@@ -150,19 +150,57 @@ export default function CreateProfileScreen() {
 
       let avatarUrl = null;
       if (image) {
-        const response = await fetch(image);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        const base64Image = await new Promise<string>((resolve) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-        avatarUrl = await uploadImage(base64Image.split(',')[1]);
+        try {
+          const response = await fetch(image);
+          if (!response.ok) throw new Error('Failed to fetch image');
+
+          const blob = await response.blob();
+          const reader = new FileReader();
+          const base64Image = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          avatarUrl = await uploadToCloudinary(base64Image.split(',')[1]);
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          Alert.alert(
+            'Image Upload Failed',
+            'Failed to upload profile image. Would you like to continue without an image?',
+            [
+              {
+                text: 'Cancel',
+                style: 'cancel',
+              },
+              {
+                text: 'Continue',
+                onPress: async () => {
+                  await createProfileWithoutImage(session.user.id);
+                },
+              },
+            ]
+          );
+          return;
+        }
       }
 
+      await createProfileWithImage(session.user.id, avatarUrl);
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      Alert.alert(
+        'Error',
+        'Failed to create profile. Please check your internet connection and try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createProfileWithImage = async (userId: string, avatarUrl: string | null) => {
+    try {
       const { error: profileError } = await supabase.from('profiles').insert([
         {
-          id: session.user.id,
+          id: userId,
           username: username,
           full_name: fullName,
           bio: bio || null,
@@ -179,9 +217,34 @@ export default function CreateProfileScreen() {
       router.replace('/(main)/feed');
     } catch (error) {
       console.error('Error creating profile:', error);
-      Alert.alert('Error', 'Error creating profile. Please try again.');
-    } finally {
-      setLoading(false);
+      Alert.alert('Error', 'Failed to create profile. Please try again.');
+      throw error;
+    }
+  };
+
+  const createProfileWithoutImage = async (userId: string) => {
+    try {
+      const { error: profileError } = await supabase.from('profiles').insert([
+        {
+          id: userId,
+          username: username,
+          full_name: fullName,
+          bio: bio || null,
+          avatar_url: null,
+          school_id: schoolId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ]);
+
+      if (profileError) throw profileError;
+
+      // Navigate to feed after successful profile creation
+      router.replace('/(main)/feed');
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      Alert.alert('Error', 'Failed to create profile. Please try again.');
+      throw error;
     }
   };
 
