@@ -21,6 +21,7 @@ import { decode } from 'base64-arraybuffer';
 import { Alert } from 'react-native';
 import { useColorScheme } from '../../lib/useColorScheme';
 import React from 'react';
+import { uploadToCloudinary } from '../../lib/cloudinary';
 
 type Post = {
   id: string;
@@ -220,20 +221,9 @@ export default function ProfileScreen() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
-      const filePath = `${user.id}/${new Date().getTime()}.jpg`;
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, decode(base64Image), {
-          contentType: 'image/jpeg',
-        });
-
-      if (uploadError) throw uploadError;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
-      return publicUrl;
+      // Upload to Cloudinary with avatar type
+      const imageUrl = await uploadToCloudinary(base64Image, 'avatar');
+      return imageUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
       throw error;
@@ -356,14 +346,6 @@ export default function ProfileScreen() {
                 data: { user },
               } = await supabase.auth.getUser();
               if (!user) throw new Error('No user found');
-
-              // Delete user's avatar from storage if it exists
-              if (profile?.avatar_url) {
-                const avatarPath = profile.avatar_url.split('/').pop();
-                if (avatarPath) {
-                  await supabase.storage.from('avatars').remove([`${user.id}/${avatarPath}`]);
-                }
-              }
 
               // Delete user's profile
               const { error: profileError } = await supabase
@@ -814,11 +796,7 @@ export default function ProfileScreen() {
                               <View className="aspect-square">
                                 <Image
                                   source={{
-                                    uri:
-                                      post.image_url.replace(
-                                        'https://[your-project].supabase.co/storage/v1/object/public/',
-                                        'https://[your-project].supabase.co/storage/v1/object/public/transform/'
-                                      ) + '?width=200&quality=80',
+                                    uri: post.image_url,
                                   }}
                                   className="h-full w-full"
                                   resizeMode="cover"

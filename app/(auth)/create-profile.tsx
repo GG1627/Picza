@@ -20,6 +20,7 @@ import { decode } from 'base64-arraybuffer';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useColorScheme } from '../../lib/useColorScheme';
+import { uploadToCloudinary } from '../../lib/cloudinary';
 
 export default function CreateProfileScreen() {
   const [username, setUsername] = useState('');
@@ -84,20 +85,9 @@ export default function CreateProfileScreen() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
-      const filePath = `${user.id}/${new Date().getTime()}.jpg`;
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, decode(base64Image), {
-          contentType: 'image/jpeg',
-        });
-
-      if (uploadError) throw uploadError;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
-      return publicUrl;
+      // Upload to Cloudinary with avatar type
+      const imageUrl = await uploadToCloudinary(base64Image, 'avatar');
+      return imageUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
       throw error;

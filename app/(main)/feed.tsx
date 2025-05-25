@@ -27,10 +27,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import GradientText from '../../components/GradientText';
 import { MotiView } from 'moti';
 import { Easing } from 'react-native-reanimated';
+import { deleteFromCloudinary } from '../../lib/cloudinary';
 
 // Add Post type at the top of the file
 type Post = {
   id: string;
+  user_id: string;
   image_url: string;
   caption: string | null;
   created_at: string;
@@ -38,6 +40,7 @@ type Post = {
   dish_name: string | null;
   ingredients: string | null;
   profiles: {
+    id: string;
     username: string;
     avatar_url: string | null;
     schools: {
@@ -55,8 +58,6 @@ export default function FeedScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [postLikes, setPostLikes] = useState<{ [key: string]: number }>({});
-  const [selectedPost, setSelectedPost] = useState<string | null>(null);
-  const [showOptions, setShowOptions] = useState(false);
   const [showIngredients, setShowIngredients] = useState(false);
   const [selectedIngredients, setSelectedIngredients] = useState<string>('');
   const { colorScheme } = useColorScheme();
@@ -85,6 +86,9 @@ export default function FeedScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const pageSize = 10;
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   const { data: schoolData } = useSchool(user?.id || '');
   const {
@@ -96,14 +100,27 @@ export default function FeedScreen() {
 
   const deletePostMutation = useMutation({
     mutationFn: async (postId: string) => {
+      // First get the post to get the image URL
+      const { data: post, error: fetchError } = await supabase
+        .from('posts')
+        .select('image_url')
+        .eq('id', postId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Delete the image from Cloudinary
+      if (post?.image_url) {
+        await deleteFromCloudinary(post.image_url);
+      }
+
+      // Then delete the post from the database
       const { error } = await supabase.from('posts').delete().eq('id', postId);
 
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts'] });
-      setShowOptions(false);
-      setSelectedPost(null);
     },
     onError: (error) => {
       console.error('Error deleting post:', error);
@@ -239,14 +256,9 @@ export default function FeedScreen() {
   };
 
   useEffect(() => {
-    animateModal(showOptions);
+    animateModal(false);
     animateIngredientsModal(showIngredients);
-  }, [showOptions, showIngredients]);
-
-  const handleOptionsPress = (postId: string) => {
-    setSelectedPost(postId);
-    setShowOptions(true);
-  };
+  }, [showIngredients]);
 
   const handleDeletePost = async (postId: string) => {
     Alert.alert(
@@ -260,8 +272,13 @@ export default function FeedScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            deletePostMutation.mutate(postId);
+          onPress: async () => {
+            setDeletingPostId(postId);
+            try {
+              await deletePostMutation.mutateAsync(postId);
+            } finally {
+              setDeletingPostId(null);
+            }
           },
         },
       ]
@@ -309,100 +326,6 @@ export default function FeedScreen() {
 
     const diffInYears = Math.floor(diffInDays / 365);
     return `${diffInYears}y ago`;
-  };
-
-  const OptionsModal = () => {
-    const selectedPostData = (allPosts as Post[]).find((post: Post) => post.id === selectedPost);
-    const isOwnPost = selectedPostData?.profiles?.username === user?.id;
-
-    return (
-      <Modal
-        visible={showOptions}
-        transparent
-        animationType="none"
-        onRequestClose={() => setShowOptions(false)}>
-        <Animated.View
-          className="flex-1 items-center justify-center"
-          style={{
-            backgroundColor: backdropAnimation.interpolate({
-              inputRange: [0, 1],
-              outputRange: ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.85)'],
-            }),
-          }}>
-          <Pressable className="h-full w-full flex-1" onPress={() => setShowOptions(false)}>
-            <Animated.View
-              style={{
-                transform: [
-                  {
-                    scale: modalAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.95, 1],
-                    }),
-                  },
-                ],
-                opacity: modalAnimation,
-              }}
-              className="flex-1 items-center justify-center">
-              <Pressable
-                className={`w-72 overflow-hidden rounded-3xl shadow-2xl ${
-                  colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-white'
-                }`}
-                onPress={(e) => e.stopPropagation()}>
-                {/* Header */}
-                <View
-                  className={`border-b p-5 ${
-                    colorScheme === 'dark' ? 'border-gray-800' : 'border-gray-100'
-                  }`}>
-                  <Text
-                    className={`text-center text-xl font-bold ${
-                      colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                    }`}>
-                    Post Options
-                  </Text>
-                </View>
-
-                {/* Options */}
-                <View className="p-2">
-                  {isOwnPost && (
-                    <TouchableOpacity
-                      onPress={() => handleDeletePost(selectedPost!)}
-                      className={`flex-row items-center rounded-2xl p-4 ${
-                        colorScheme === 'dark' ? 'hover:bg-[#333333]' : 'hover:bg-gray-50'
-                      }`}>
-                      <View className="h-10 w-10 items-center justify-center rounded-full bg-red-50">
-                        <Ionicons name="trash-outline" size={22} color="#F00511" />
-                      </View>
-                      <View className="ml-3 flex-1">
-                        <Text className="text-base font-semibold text-[#F00511]">Delete Post</Text>
-                        <Text
-                          className={`mt-0.5 text-sm ${
-                            colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                          Remove this post permanently
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  )}
-
-                  <TouchableOpacity
-                    onPress={() => setShowOptions(false)}
-                    className={`mt-2 rounded-2xl p-4 ${
-                      colorScheme === 'dark' ? 'hover:bg-[#333333]' : 'hover:bg-gray-50'
-                    }`}>
-                    <Text
-                      className={`text-center text-base font-medium ${
-                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                      }`}>
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </Pressable>
-            </Animated.View>
-          </Pressable>
-        </Animated.View>
-      </Modal>
-    );
   };
 
   const IngredientsModal = () => (
@@ -481,12 +404,126 @@ export default function FeedScreen() {
     </Modal>
   );
 
+  const OptionsModal = () => {
+    if (!selectedPost) return null;
+    const isOwnPost = selectedPost.user_id === user?.id;
+
+    return (
+      <Modal
+        visible={showOptionsModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowOptionsModal(false)}>
+        <Pressable
+          className="flex-1 items-center justify-center bg-black/50"
+          onPress={() => setShowOptionsModal(false)}>
+          <Pressable
+            className={`w-80 overflow-hidden rounded-3xl ${
+              colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-white'
+            }`}
+            onPress={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <View
+              className={`border-b p-4 ${
+                colorScheme === 'dark' ? 'border-gray-800' : 'border-gray-100'
+              }`}>
+              <Text
+                className={`text-center text-lg font-semibold ${
+                  colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                }`}>
+                Post Options
+              </Text>
+            </View>
+
+            {/* Options */}
+            <View className="p-2">
+              {isOwnPost ? (
+                <>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowOptionsModal(false);
+                      // Pin functionality will be added later
+                      Alert.alert('Coming Soon', 'Pin functionality will be available soon!');
+                    }}
+                    className={`flex-row items-center space-x-3 rounded-xl p-3 ${
+                      colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50'
+                    }`}>
+                    <Ionicons name="pin" size={24} color="#5070fd" />
+                    <Text
+                      className={`text-base ${
+                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                      }`}>
+                      Pin Post
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowOptionsModal(false);
+                      handleDeletePost(selectedPost.id);
+                    }}
+                    className="mt-2 flex-row items-center space-x-3 rounded-xl bg-red-50 p-3">
+                    <Ionicons name="trash" size={24} color="#F00511" />
+                    <Text className="text-base text-[#F00511]">Delete Post</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowOptionsModal(false);
+                      // Save functionality will be added later
+                      Alert.alert('Coming Soon', 'Save functionality will be available soon!');
+                    }}
+                    className={`flex-row items-center space-x-3 rounded-xl p-3 ${
+                      colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50'
+                    }`}>
+                    <Ionicons name="bookmark-outline" size={24} color="#5070fd" />
+                    <Text
+                      className={`text-base ${
+                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                      }`}>
+                      Save Post
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowOptionsModal(false);
+                      // Report functionality will be added later
+                      Alert.alert('Coming Soon', 'Report functionality will be available soon!');
+                    }}
+                    className="mt-2 flex-row items-center space-x-3 rounded-xl bg-red-50 p-3">
+                    <Ionicons name="flag-outline" size={24} color="#F00511" />
+                    <Text className="text-base text-[#F00511]">Report Post</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+
+            {/* Cancel Button */}
+            <TouchableOpacity
+              onPress={() => setShowOptionsModal(false)}
+              className={`border-t p-4 ${
+                colorScheme === 'dark' ? 'border-gray-800' : 'border-gray-100'
+              }`}>
+              <Text
+                className={`text-center text-base font-medium ${
+                  colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                }`}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    );
+  };
+
   const renderPost = (post: any, index: number) => {
-    const optimizedImageUrl =
-      post.image_url.replace(
-        'https://[your-project].supabase.co/storage/v1/object/public/',
-        'https://[your-project].supabase.co/storage/v1/object/public/transform/'
-      ) + '?width=400&quality=80';
+    const optimizedImageUrl = post.image_url;
+    const isOwnPost = post.user_id === user?.id;
+    const isDeleting = deletingPostId === post.id;
 
     if (isGridView) {
       return (
@@ -508,6 +545,12 @@ export default function FeedScreen() {
                 className="h-full w-full"
                 resizeMode="cover"
               />
+              {isDeleting && (
+                <View className="absolute inset-0 items-center justify-center bg-black/50">
+                  <ActivityIndicator size="large" color="white" />
+                  <Text className="mt-2 text-white">Deleting...</Text>
+                </View>
+              )}
               <View className="absolute inset-0">
                 <LinearGradient
                   colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
@@ -596,10 +639,15 @@ export default function FeedScreen() {
                 </View>
               </View>
             </View>
-            <TouchableOpacity onPress={() => handleOptionsPress(post.id)} className="p-2">
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedPost(post);
+                setShowOptionsModal(true);
+              }}
+              className="p-2">
               <Ionicons
                 name="ellipsis-horizontal"
-                size={20}
+                size={24}
                 color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
               />
             </TouchableOpacity>
@@ -612,6 +660,12 @@ export default function FeedScreen() {
               className="aspect-square w-full"
               resizeMode="cover"
             />
+            {isDeleting && (
+              <View className="absolute inset-0 items-center justify-center bg-black/50">
+                <ActivityIndicator size="large" color="white" />
+                <Text className="mt-2 text-white">Deleting...</Text>
+              </View>
+            )}
             <View className="absolute inset-0">
               <LinearGradient
                 colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
@@ -632,7 +686,7 @@ export default function FeedScreen() {
           <View className="mt-[-0.25rem] p-3">
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center space-x-4">
-                <View className="flex-row items-center space-x-1">
+                <View className="flex-row items-center">
                   <TouchableOpacity
                     onPress={() => handleLike(post.id)}
                     className="flex-row items-center">
@@ -653,20 +707,32 @@ export default function FeedScreen() {
                       />
                     </Animated.View>
                   </TouchableOpacity>
-                  <Text
-                    className={`text-base font-semibold ${
-                      colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                    }`}>
-                    {postLikes[post.id] || 0}
-                  </Text>
+                  <View className="w-8">
+                    <Text
+                      className={`text-base font-semibold ${
+                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                      }`}>
+                      {postLikes[post.id] || 0}
+                    </Text>
+                  </View>
                 </View>
-                <TouchableOpacity>
-                  <Ionicons
-                    name="chatbubble-outline"
-                    size={28}
-                    color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                  />
-                </TouchableOpacity>
+                <View className="flex-row items-center">
+                  <TouchableOpacity>
+                    <Ionicons
+                      name="chatbubble-outline"
+                      size={28}
+                      color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                    />
+                  </TouchableOpacity>
+                  <View className="w-8">
+                    <Text
+                      className={`text-base font-semibold ${
+                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                      }`}>
+                      0
+                    </Text>
+                  </View>
+                </View>
                 <TouchableOpacity>
                   <Ionicons
                     name="paper-plane-outline"
@@ -963,7 +1029,8 @@ export default function FeedScreen() {
             loadMore();
           }
         }}
-        scrollEventThrottle={400}>
+        scrollEventThrottle={400}
+        showsVerticalScrollIndicator={false}>
         {allPosts?.length === 0 ? (
           <MotiView
             from={{ opacity: 0, scale: 0.9 }}
@@ -1065,8 +1132,8 @@ export default function FeedScreen() {
       </Animated.View>
 
       {/* Modals */}
-      <OptionsModal />
       <IngredientsModal />
+      <OptionsModal />
     </SafeAreaView>
   );
 }

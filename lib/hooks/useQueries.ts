@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 import * as base64 from 'base64-js';
+import { uploadToCloudinary } from '../cloudinary';
 
 // Types
 type Post = {
@@ -62,16 +63,19 @@ export function usePosts(schoolId: string | undefined, filter: string, page = 1,
         .select(
           `
           id,
+          user_id,
           image_url,
           caption,
           created_at,
           likes_count,
           dish_name,
           ingredients,
-          profiles:user_id (
+          profiles!inner (
             username,
             avatar_url,
-            schools:school_id (
+            school_id,
+            schools!inner (
+              id,
               name
             )
           )
@@ -82,10 +86,16 @@ export function usePosts(schoolId: string | undefined, filter: string, page = 1,
 
       // Apply filters
       if (filter === 'mySchool' && schoolId) {
+        // Show only posts from my school
         query = query.eq('profiles.school_id', schoolId);
       } else if (filter === 'otherSchools' && schoolId) {
+        // Show posts from all schools except mine
         query = query.neq('profiles.school_id', schoolId);
+      } else if (filter === 'friends') {
+        // For now, return empty array as friends feature is not implemented
+        return [];
       }
+      // 'all' filter doesn't need any additional conditions
 
       const { data, error } = await query;
       if (error) throw error;
@@ -144,7 +154,7 @@ export function useCreatePost() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
-      // Upload image
+      // Upload image to Cloudinary
       const response = await fetch(image);
       const blob = await response.blob();
       const reader = new FileReader();
@@ -153,27 +163,16 @@ export function useCreatePost() {
         reader.readAsDataURL(blob);
       });
 
-      const filePath = `${user.id}/${new Date().getTime()}.jpg`;
-      const { error: uploadError } = await supabase.storage
-        .from('post-images')
-        .upload(filePath, base64.toByteArray(base64Image.split(',')[1]), {
-          contentType: 'image/jpeg',
-        });
+      const imageUrl = await uploadToCloudinary(base64Image.split(',')[1], 'post');
 
-      if (uploadError) throw uploadError;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('post-images').getPublicUrl(filePath);
-
-      // Create post
+      // Create post with Cloudinary image URL
       const { error } = await supabase.from('posts').insert([
         {
           user_id: user.id,
           dish_name: dish_name,
           caption: caption,
           ingredients: ingredients,
-          image_url: publicUrl,
+          image_url: imageUrl,
           likes_count: 0,
         },
       ]);
