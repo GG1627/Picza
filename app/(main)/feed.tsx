@@ -559,7 +559,9 @@ export default function FeedScreen() {
                 />
               </View>
               <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between p-3">
-                <View className="flex-row items-center space-x-2">
+                <Pressable
+                  onPress={() => router.push(`/user-profile?userId=${post.user_id}`)}
+                  className="flex-row items-center space-x-2">
                   <View className="h-8 w-8 overflow-hidden rounded-full border-2 border-white">
                     <Image
                       source={
@@ -573,7 +575,7 @@ export default function FeedScreen() {
                   <Text className="text-sm font-semibold text-white">
                     {post.profiles?.username || 'Unknown User'}
                   </Text>
-                </View>
+                </Pressable>
                 <View className="flex-row items-center space-x-3">
                   <View className="flex-row items-center space-x-1">
                     <Ionicons name="heart" size={16} color="white" />
@@ -602,7 +604,9 @@ export default function FeedScreen() {
           } shadow-lg`}>
           {/* Post Header */}
           <View className="mb-[-0.25rem] mt-[-0.25rem] flex-row items-center justify-between p-3">
-            <View className="flex-row items-center">
+            <Pressable
+              onPress={() => router.push(`/user-profile?userId=${post.user_id}`)}
+              className="flex-row items-center">
               <View
                 className={`h-12 w-12 overflow-hidden rounded-full border-2 ${
                   colorScheme === 'dark'
@@ -638,7 +642,7 @@ export default function FeedScreen() {
                   </View>
                 </View>
               </View>
-            </View>
+            </Pressable>
             <TouchableOpacity
               onPress={() => {
                 setSelectedPost(post);
