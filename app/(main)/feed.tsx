@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,11 @@ import {
   Dimensions,
   GestureResponderEvent,
   PanResponder,
+  FlatList,
+  TextInput,
+  KeyboardAvoidingView,
+  Keyboard,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,7 +31,7 @@ import { supabase } from '../../lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import GradientText from '../../components/GradientText';
 import { MotiView } from 'moti';
-import { Easing } from 'react-native-reanimated';
+import { Easing } from 'react-native';
 import { deleteFromCloudinary } from '../../lib/cloudinary';
 
 // Add Post type at the top of the file
@@ -39,6 +44,7 @@ type Post = {
   likes_count: number;
   dish_name: string | null;
   ingredients: string | null;
+  comments: string[] | null;
   profiles: {
     id: string;
     username: string;
@@ -48,6 +54,260 @@ type Post = {
     } | null;
   } | null;
 };
+
+// Move CommentsModal outside of the main component
+const CommentsModal = memo(
+  ({
+    visible,
+    onClose,
+    post,
+    onAddComment,
+    colorScheme,
+  }: {
+    visible: boolean;
+    onClose: () => void;
+    post: Post | null;
+    onAddComment: (comment: string) => void;
+    colorScheme: 'dark' | 'light';
+  }) => {
+    const [newComment, setNewComment] = useState('');
+    const commentsBackdropAnimation = useRef(new Animated.Value(0)).current;
+    const { height: screenHeight } = Dimensions.get('window');
+    const modalHeight = screenHeight * 0.7; // 70% of screen height
+    const translateY = useRef(new Animated.Value(modalHeight)).current;
+    const lastGestureDy = useRef(0);
+
+    const panResponder = useRef(
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          return Math.abs(gestureState.dy) > 5;
+        },
+        onPanResponderGrant: () => {
+          translateY.setOffset(lastGestureDy.current);
+        },
+        onPanResponderMove: (_, gestureState) => {
+          const newDy = Math.max(0, Math.min(modalHeight, gestureState.dy));
+          translateY.setValue(newDy);
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          translateY.flattenOffset();
+          lastGestureDy.current = gestureState.dy;
+
+          if (gestureState.dy > modalHeight * 0.3 || gestureState.vy > 0.5) {
+            // Close modal
+            Animated.parallel([
+              Animated.timing(translateY, {
+                toValue: modalHeight,
+                duration: 300,
+                useNativeDriver: true,
+                easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+              }),
+              Animated.timing(commentsBackdropAnimation, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+              }),
+            ]).start(() => {
+              onClose();
+            });
+          } else {
+            // Return to open position
+            Animated.spring(translateY, {
+              toValue: 0,
+              useNativeDriver: true,
+              damping: 20,
+              mass: 0.5,
+              stiffness: 200,
+            }).start();
+          }
+        },
+      })
+    ).current;
+
+    useEffect(() => {
+      if (visible) {
+        translateY.setValue(modalHeight);
+        lastGestureDy.current = 0;
+        Animated.parallel([
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            damping: 20,
+            mass: 0.5,
+            stiffness: 200,
+          }),
+          Animated.timing(commentsBackdropAnimation, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      } else {
+        Animated.parallel([
+          Animated.timing(translateY, {
+            toValue: modalHeight,
+            duration: 300,
+            useNativeDriver: true,
+            easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+          }),
+          Animated.timing(commentsBackdropAnimation, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    }, [visible, modalHeight]);
+
+    const handleAddComment = useCallback(() => {
+      if (!newComment.trim()) return;
+      onAddComment(newComment);
+      setNewComment('');
+    }, [newComment, onAddComment]);
+
+    if (!post) return null;
+
+    return (
+      <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1">
+          <Animated.View
+            className="flex-1"
+            style={{
+              backgroundColor: commentsBackdropAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.5)'],
+              }),
+            }}>
+            <Pressable
+              className="h-full w-full"
+              onPress={() => {
+                Keyboard.dismiss();
+                onClose();
+              }}>
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: modalHeight,
+                  transform: [
+                    {
+                      translateY: translateY,
+                    },
+                  ],
+                }}
+                className="overflow-hidden">
+                <Pressable
+                  className={`h-full w-full rounded-t-3xl ${
+                    colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-white'
+                  }`}
+                  onPress={(e) => e.stopPropagation()}>
+                  {/* Handle Bar */}
+                  <View {...panResponder.panHandlers} className="items-center py-2">
+                    <View
+                      className={`h-1 w-12 rounded-full ${
+                        colorScheme === 'dark' ? 'bg-gray-600' : 'bg-gray-300'
+                      }`}
+                    />
+                  </View>
+
+                  {/* Header */}
+                  <View
+                    className={`border-b px-4 py-3 ${
+                      colorScheme === 'dark' ? 'border-gray-800' : 'border-gray-100'
+                    }`}>
+                    <Text
+                      className={`text-center text-xl font-bold ${
+                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                      }`}>
+                      Comments
+                    </Text>
+                  </View>
+
+                  {/* Comments List */}
+                  <ScrollView
+                    className="flex-1 px-4"
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}>
+                    <View className="py-4">
+                      {post.comments && post.comments.length > 0 ? (
+                        post.comments.map((comment, index) => (
+                          <View key={index} className="mb-4">
+                            <Text
+                              className={`text-base leading-5 ${
+                                colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                              }`}>
+                              {comment}
+                            </Text>
+                          </View>
+                        ))
+                      ) : (
+                        <Text
+                          className={`text-center text-base ${
+                            colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                          }`}>
+                          No comments yet. Be the first to comment!
+                        </Text>
+                      )}
+                    </View>
+                  </ScrollView>
+
+                  {/* Add Comment Input */}
+                  <View
+                    className={`mb-6 border-t px-4 py-3 ${
+                      colorScheme === 'dark' ? 'border-gray-800' : 'border-gray-100'
+                    }`}>
+                    <View className="flex-row items-center space-x-2">
+                      <TextInput
+                        value={newComment}
+                        onChangeText={setNewComment}
+                        placeholder="Add a comment..."
+                        placeholderTextColor={colorScheme === 'dark' ? '#666' : '#999'}
+                        className={`flex-1 rounded-full px-4 py-3 ${
+                          colorScheme === 'dark'
+                            ? 'bg-[#1a1a1a] text-white'
+                            : 'bg-gray-100 text-black'
+                        }`}
+                        multiline={false}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        spellCheck={false}
+                        keyboardType="default"
+                        returnKeyType="send"
+                        onSubmitEditing={handleAddComment}
+                        blurOnSubmit={false}
+                      />
+                      <TouchableOpacity
+                        onPress={handleAddComment}
+                        disabled={!newComment.trim()}
+                        className={`rounded-full p-2 ${
+                          !newComment.trim()
+                            ? 'bg-gray-300'
+                            : colorScheme === 'dark'
+                              ? 'bg-[#5070fd]'
+                              : 'bg-[#5070fd]'
+                        }`}>
+                        <Ionicons
+                          name="send"
+                          size={20}
+                          color={!newComment.trim() ? '#666' : 'white'}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </Pressable>
+              </Animated.View>
+            </Pressable>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </Modal>
+    );
+  }
+);
 
 export default function FeedScreen() {
   const router = useRouter();
@@ -84,11 +344,16 @@ export default function FeedScreen() {
   const pulseAnimation = useRef(new Animated.Value(1)).current;
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const pageSize = 10;
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const flatListRef = useRef<FlatList>(null);
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
 
   const { data: schoolData } = useSchool(user?.id || '');
   const {
@@ -134,14 +399,20 @@ export default function FeedScreen() {
       if (page === 1) {
         setAllPosts(posts as Post[]);
       } else {
-        setAllPosts((prev) => [...prev, ...(posts as Post[])]);
+        // Filter out any duplicate posts by ID before appending
+        const newPosts = (posts as Post[]).filter(
+          (newPost) => !allPosts.some((existingPost) => existingPost.id === newPost.id)
+        );
+        setAllPosts((prev) => [...prev, ...newPosts]);
       }
       setHasMore((posts as Post[]).length === pageSize);
+      setIsLoadingMore(false);
     }
-  }, [posts]);
+  }, [posts, page]);
 
   const loadMore = async () => {
-    if (!hasMore || isLoading) return;
+    if (!hasMore || isLoading || isLoadingMore) return;
+    setIsLoadingMore(true);
     setPage((prev) => prev + 1);
   };
 
@@ -520,6 +791,44 @@ export default function FeedScreen() {
     );
   };
 
+  const handleShowComments = useCallback((post: Post) => {
+    setSelectedPostForComments(post);
+    setShowCommentsModal(true);
+  }, []);
+
+  const handleCloseComments = useCallback(() => {
+    setShowCommentsModal(false);
+    setTimeout(() => setSelectedPostForComments(null), 200);
+  }, []);
+
+  const handleAddComment = useCallback(
+    async (comment: string) => {
+      if (!selectedPostForComments) return;
+
+      try {
+        const updatedComments = [...(selectedPostForComments.comments || []), comment];
+
+        const { error } = await supabase
+          .from('posts')
+          .update({ comments: updatedComments })
+          .eq('id', selectedPostForComments.id);
+
+        if (error) throw error;
+
+        // Update local state
+        setAllPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post.id === selectedPostForComments.id ? { ...post, comments: updatedComments } : post
+          )
+        );
+      } catch (error) {
+        console.error('Error adding comment:', error);
+        Alert.alert('Error', 'Failed to add comment. Please try again.');
+      }
+    },
+    [selectedPostForComments]
+  );
+
   const renderPost = (post: any, index: number) => {
     const optimizedImageUrl = post.image_url;
     const isOwnPost = post.user_id === user?.id;
@@ -528,7 +837,7 @@ export default function FeedScreen() {
     if (isGridView) {
       return (
         <View
-          key={post.id}
+          key={`${post.id}-${index}`}
           style={{
             width: gridItemWidth,
             marginLeft: index % 2 === 0 ? 16 : 8,
@@ -582,8 +891,17 @@ export default function FeedScreen() {
                     <Text className="text-xs text-white">{post.likes_count}</Text>
                   </View>
                   <View className="flex-row items-center space-x-1">
-                    <Ionicons name="chatbubble" size={16} color="white" />
-                    <Text className="text-xs text-white">0</Text>
+                    <TouchableOpacity onPress={() => handleShowComments(post)}>
+                      <Ionicons name="chatbubble-outline" size={16} color="white" />
+                    </TouchableOpacity>
+                    <View className="w-8">
+                      <Text
+                        className={`text-base font-semibold ${
+                          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                        }`}>
+                        {post.comments?.length || 0}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -594,7 +912,7 @@ export default function FeedScreen() {
     }
 
     return (
-      <View key={post.id} className="mb-6">
+      <View key={`${post.id}-${index}`} className="mb-6">
         <MotiView
           from={{ opacity: 0, translateY: 20 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -721,7 +1039,7 @@ export default function FeedScreen() {
                   </View>
                 </View>
                 <View className="flex-row items-center">
-                  <TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleShowComments(post)}>
                     <Ionicons
                       name="chatbubble-outline"
                       size={28}
@@ -733,7 +1051,7 @@ export default function FeedScreen() {
                       className={`text-base font-semibold ${
                         colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                       }`}>
-                      0
+                      {post.comments?.length || 0}
                     </Text>
                   </View>
                 </View>
@@ -843,6 +1161,9 @@ export default function FeedScreen() {
 
     setIsViewTransitioning(true);
     setActiveFilter(filter);
+    setPage(1); // Reset page when filter changes
+    setAllPosts([]); // Clear existing posts
+    setHasMore(true); // Reset hasMore flag
 
     // If we're in grid view, switch to list view first
     if (isGridView) {
@@ -853,6 +1174,340 @@ export default function FeedScreen() {
     setTimeout(() => {
       setIsViewTransitioning(false);
     }, 500);
+  };
+
+  const renderItem = ({ item: post, index }: { item: Post; index: number }) => {
+    const optimizedImageUrl = post.image_url;
+    const isOwnPost = post.user_id === user?.id;
+    const isDeleting = deletingPostId === post.id;
+
+    if (isGridView) {
+      return (
+        <View
+          style={{
+            width: gridItemWidth,
+            marginLeft: index % 2 === 0 ? 16 : 8,
+            marginRight: index % 2 === 0 ? 8 : 16,
+          }}>
+          <MotiView
+            from={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'timing', duration: 500, delay: index * 100 }}
+            className="mb-4">
+            <View className="aspect-square overflow-hidden rounded-2xl">
+              <Image
+                source={{ uri: optimizedImageUrl }}
+                className="h-full w-full"
+                resizeMode="cover"
+              />
+              {isDeleting && (
+                <View className="absolute inset-0 items-center justify-center bg-black/50">
+                  <ActivityIndicator size="large" color="white" />
+                  <Text className="mt-2 text-white">Deleting...</Text>
+                </View>
+              )}
+              <View className="absolute inset-0">
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
+                  locations={[0, 0.5, 1]}
+                  style={{ flex: 1 }}
+                />
+              </View>
+              <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between p-3">
+                <Pressable
+                  onPress={() => router.push(`/user-profile?userId=${post.user_id}`)}
+                  className="flex-row items-center space-x-2">
+                  <View className="h-8 w-8 overflow-hidden rounded-full border-2 border-white">
+                    <Image
+                      source={
+                        post.profiles?.avatar_url
+                          ? { uri: post.profiles.avatar_url }
+                          : require('../../assets/splash.png')
+                      }
+                      className="h-full w-full"
+                    />
+                  </View>
+                  <Text className="text-sm font-semibold text-white">
+                    {post.profiles?.username || 'Unknown User'}
+                  </Text>
+                </Pressable>
+                <View className="flex-row items-center space-x-3">
+                  <View className="flex-row items-center space-x-1">
+                    <Ionicons name="heart" size={16} color="white" />
+                    <Text className="text-xs text-white">{post.likes_count}</Text>
+                  </View>
+                  <View className="flex-row items-center space-x-1">
+                    <TouchableOpacity onPress={() => handleShowComments(post)}>
+                      <Ionicons name="chatbubble-outline" size={16} color="white" />
+                    </TouchableOpacity>
+                    <View className="w-8">
+                      <Text
+                        className={`text-base font-semibold ${
+                          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                        }`}>
+                        {post.comments?.length || 0}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </MotiView>
+        </View>
+      );
+    }
+
+    return (
+      <View className="mb-6">
+        <MotiView
+          from={{ opacity: 0, translateY: 20 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 500, delay: index * 100 }}
+          className={`overflow-hidden rounded-3xl ${
+            colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-white'
+          } shadow-lg`}>
+          {/* Post Header */}
+          <View className="mb-[-0.25rem] mt-[-0.25rem] flex-row items-center justify-between p-3">
+            <Pressable
+              onPress={() => router.push(`/user-profile?userId=${post.user_id}`)}
+              className="flex-row items-center">
+              <View
+                className={`h-12 w-12 overflow-hidden rounded-full border-2 ${
+                  colorScheme === 'dark'
+                    ? 'border-[#282828] bg-[#282828]'
+                    : 'border-gray-100 bg-gray-50'
+                }`}>
+                <Image
+                  source={
+                    post.profiles?.avatar_url
+                      ? { uri: post.profiles.avatar_url }
+                      : require('../../assets/splash.png')
+                  }
+                  className="h-full w-full"
+                />
+              </View>
+              <View className="ml-3">
+                <Text
+                  className={`text-base font-bold ${
+                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                  }`}>
+                  {post.profiles?.username || 'Unknown User'}
+                </Text>
+                <View className="flex-row items-center">
+                  <Text className="text-xs text-gray-500">{getTimeElapsed(post.created_at)}</Text>
+                  <Text className="mx-1 text-xs text-gray-500">•</Text>
+                  <View className="flex-row items-center">
+                    <Ionicons name="school" size={12} color="#5070fd" />
+                    <GradientText
+                      colors={['#5070fd', '#2f4ccc']}
+                      className="ml-1 text-xs font-medium">
+                      {post.profiles?.schools?.name || 'Unknown School'}
+                    </GradientText>
+                  </View>
+                </View>
+              </View>
+            </Pressable>
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedPost(post);
+                setShowOptionsModal(true);
+              }}
+              className="p-2">
+              <Ionicons
+                name="ellipsis-horizontal"
+                size={24}
+                color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Post Image */}
+          <View className="relative">
+            <Image
+              source={{ uri: optimizedImageUrl }}
+              className="aspect-square w-full"
+              resizeMode="cover"
+            />
+            {isDeleting && (
+              <View className="absolute inset-0 items-center justify-center bg-black/50">
+                <ActivityIndicator size="large" color="white" />
+                <Text className="mt-2 text-white">Deleting...</Text>
+              </View>
+            )}
+            <View className="absolute inset-0">
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
+                locations={[0, 0.5, 1]}
+                style={{ flex: 1 }}
+              />
+            </View>
+            {post.dish_name && (
+              <View className="absolute bottom-0 left-0 right-0 p-4">
+                <Text className="text-2xl font-bold text-white" numberOfLines={2}>
+                  {post.dish_name}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Post Actions */}
+          <View className="mt-[-0.25rem] p-3">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center space-x-4">
+                <View className="flex-row items-center">
+                  <TouchableOpacity
+                    onPress={() => handleLike(post.id)}
+                    className="flex-row items-center">
+                    <Animated.View
+                      style={{
+                        transform: [{ scale: heartAnimations.current[post.id] || 1 }],
+                      }}>
+                      <Ionicons
+                        name={likedPosts.has(post.id) ? 'heart' : 'heart-outline'}
+                        size={28}
+                        color={
+                          likedPosts.has(post.id)
+                            ? '#F00511'
+                            : colorScheme === 'dark'
+                              ? '#E0E0E0'
+                              : '#07020D'
+                        }
+                      />
+                    </Animated.View>
+                  </TouchableOpacity>
+                  <View className="w-8">
+                    <Text
+                      className={`text-base font-semibold ${
+                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                      }`}>
+                      {postLikes[post.id] || 0}
+                    </Text>
+                  </View>
+                </View>
+                <View className="flex-row items-center">
+                  <TouchableOpacity onPress={() => handleShowComments(post)}>
+                    <Ionicons
+                      name="chatbubble-outline"
+                      size={28}
+                      color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                    />
+                  </TouchableOpacity>
+                  <View className="w-8">
+                    <Text
+                      className={`text-base font-semibold ${
+                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                      }`}>
+                      {post.comments?.length || 0}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity>
+                  <Ionicons
+                    name="paper-plane-outline"
+                    size={28}
+                    color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                  />
+                </TouchableOpacity>
+              </View>
+              <View className="flex-row items-center space-x-2">
+                {post.ingredients && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      handleShowIngredients(post.ingredients || 'No ingredients listed')
+                    }
+                    className={`rounded-full border-2 border-[#2DFE54] px-3 py-1.5 ${
+                      colorScheme === 'dark' ? 'bg-[#46584a]' : 'bg-none'
+                    }`}>
+                    <Text
+                      className={`text-sm font-semibold ${
+                        colorScheme === 'dark' ? 'text-[#2DFE54]' : 'text-[#2DFE54]'
+                      }`}>
+                      Ingredients
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity>
+                  <Ionicons
+                    name="bookmark-outline"
+                    size={28}
+                    color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Post Caption */}
+            <View className="mt-1">
+              {post.caption && (
+                <Text
+                  className={`text-base leading-5 ${
+                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                  }`}>
+                  <Text className="font-bold">{post.profiles?.username || 'Unknown User'} </Text>
+                  {post.caption}
+                </Text>
+              )}
+            </View>
+          </View>
+        </MotiView>
+      </View>
+    );
+  };
+
+  const ListEmptyComponent = () => (
+    <MotiView
+      from={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: 'timing', duration: 500 }}
+      className="flex-1 items-center justify-center p-8">
+      <View className="mb-6 h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-[#5070fd] to-[#2f4ccc]">
+        <Ionicons
+          name={
+            activeFilter === 'mySchool' ? 'school' : activeFilter === 'friends' ? 'people' : 'globe'
+          }
+          size={48}
+          color="white"
+        />
+      </View>
+      <Text
+        className={`mb-2 text-center text-2xl font-bold ${
+          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+        }`}>
+        {activeFilter === 'mySchool'
+          ? 'No posts from your school yet'
+          : activeFilter === 'otherSchools'
+            ? 'No posts from other schools yet'
+            : activeFilter === 'friends'
+              ? 'No posts from friends yet'
+              : 'No posts yet'}
+      </Text>
+      {activeFilter === 'mySchool' && (
+        <Text
+          className={`text-center text-base ${
+            colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'
+          }`}>
+          Be the first to share something!
+        </Text>
+      )}
+    </MotiView>
+  );
+
+  const ListFooterComponent = () => {
+    if (!isLoadingMore) return null;
+    return (
+      <View className="w-full items-center py-4">
+        <ActivityIndicator size="small" color="#5070fd" />
+      </View>
+    );
+  };
+
+  const getItemLayout = (data: ArrayLike<Post> | null | undefined, index: number) => {
+    const itemHeight = isGridView ? gridItemWidth : 400; // Approximate height for list items
+    return {
+      length: itemHeight,
+      offset: itemHeight * index,
+      index,
+    };
   };
 
   if (isLoading) {
@@ -1022,80 +1677,41 @@ export default function FeedScreen() {
         </TouchableOpacity>
       </Animated.View>
 
-      <ScrollView
+      <FlatList
+        key={isGridView ? 'grid' : 'list'}
+        ref={flatListRef}
+        data={allPosts}
+        renderItem={renderItem}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-        onScroll={({ nativeEvent }) => {
-          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-          const isCloseToBottom =
-            layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
-
-          if (isCloseToBottom) {
-            loadMore();
-          }
+        ListEmptyComponent={ListEmptyComponent}
+        ListFooterComponent={ListFooterComponent}
+        maintainVisibleContentPosition={{
+          minIndexForVisible: 0,
+          autoscrollToTopThreshold: 10,
         }}
-        scrollEventThrottle={400}
-        showsVerticalScrollIndicator={false}>
-        {allPosts?.length === 0 ? (
-          <MotiView
-            from={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'timing', duration: 500 }}
-            className="flex-1 items-center justify-center p-8">
-            <View className="mb-6 h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-[#5070fd] to-[#2f4ccc]">
-              <Ionicons
-                name={
-                  activeFilter === 'mySchool'
-                    ? 'school'
-                    : activeFilter === 'friends'
-                      ? 'people'
-                      : 'globe'
-                }
-                size={48}
-                color="white"
-              />
-            </View>
-            <Text
-              className={`mb-2 text-center text-2xl font-bold ${
-                colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-              }`}>
-              {activeFilter === 'mySchool'
-                ? 'No posts from your school yet'
-                : activeFilter === 'otherSchools'
-                  ? 'No posts from other schools yet'
-                  : activeFilter === 'friends'
-                    ? 'No posts from friends yet'
-                    : 'No posts yet'}
-            </Text>
-            {activeFilter === 'mySchool' && (
-              <Text
-                className={`text-center text-base ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
-                Be the first to share something!
-              </Text>
-            )}
-          </MotiView>
-        ) : (
-          <View className={`${isGridView ? 'flex-row flex-wrap' : ''} pb-16`}>
-            {allPosts?.map((post, index) => (
-              <MotiView
-                key={post.id}
-                from={{ opacity: 0, translateY: 20 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{
-                  type: 'timing',
-                  duration: 500,
-                  delay: index * 100,
-                }}>
-                {renderPost(post, index)}
-              </MotiView>
-            ))}
-            {isLoading && page > 1 && (
-              <View className="w-full items-center py-4">
-                <ActivityIndicator size="small" color="#5070fd" />
-              </View>
-            )}
-          </View>
-        )}
-      </ScrollView>
+        contentContainerStyle={{
+          paddingHorizontal: isGridView ? 0 : 16,
+          paddingBottom: 16,
+        }}
+        columnWrapperStyle={
+          isGridView
+            ? {
+                paddingHorizontal: 8,
+                justifyContent: 'flex-start',
+              }
+            : undefined
+        }
+        numColumns={isGridView ? 2 : 1}
+        showsVerticalScrollIndicator={false}
+        getItemLayout={getItemLayout}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={true}
+        initialNumToRender={10}
+      />
 
       {/* Create Post Button */}
       <Animated.View
@@ -1138,6 +1754,13 @@ export default function FeedScreen() {
       {/* Modals */}
       <IngredientsModal />
       <OptionsModal />
+      <CommentsModal
+        visible={showCommentsModal}
+        onClose={handleCloseComments}
+        post={selectedPostForComments}
+        onAddComment={handleAddComment}
+        colorScheme={colorScheme}
+      />
     </SafeAreaView>
   );
 }
