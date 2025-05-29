@@ -312,9 +312,9 @@ const CommentsModal = memo(
 export default function FeedScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const [activeFilter, setActiveFilter] = useState<'all' | 'mySchool' | 'otherSchools' | 'friends'>(
-    'all'
-  );
+  const [activeFilter, setActiveFilter] = useState<'all' | 'mySchool' | 'friends'>('all');
+  const [sortBy, setSortBy] = useState<'trending' | 'recent'>('trending');
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [postLikes, setPostLikes] = useState<{ [key: string]: number }>({});
@@ -335,7 +335,9 @@ export default function FeedScreen() {
   const [isViewTransitioning, setIsViewTransitioning] = useState(false);
   const transitionAnim = useRef(new Animated.Value(0)).current;
   const { width: screenWidth } = Dimensions.get('window');
-  const gridItemWidth = (screenWidth - 48) / 2; // 2 columns with proper spacing (16px padding on each side + 16px gap between items)
+  const horizontalPadding = 16; // Padding on the sides of the screen
+  const columnGap = 8; // Gap between columns
+  const gridItemWidth = (screenWidth - horizontalPadding * 2 - columnGap) / 2; // Calculate width accounting for padding and gap
   const lastTouchPoints = useRef({ x: 0, y: 0 });
   const initialDistance = useRef(0);
   const currentProgress = useRef(0);
@@ -360,7 +362,7 @@ export default function FeedScreen() {
     data: posts,
     isLoading,
     refetch,
-  } = usePosts(schoolData?.id, activeFilter, page, pageSize);
+  } = usePosts(schoolData?.id, activeFilter, page, pageSize, sortBy);
   const likePost = useLikePost();
 
   const deletePostMutation = useMutation({
@@ -840,8 +842,8 @@ export default function FeedScreen() {
           key={`${post.id}-${index}`}
           style={{
             width: gridItemWidth,
-            marginLeft: index % 2 === 0 ? 16 : 8,
-            marginRight: index % 2 === 0 ? 8 : 16,
+            marginLeft: index % 2 === 0 ? horizontalPadding : columnGap / 2,
+            marginRight: index % 2 === 0 ? columnGap / 2 : horizontalPadding,
           }}>
           <MotiView
             from={{ opacity: 0, scale: 0.9 }}
@@ -870,38 +872,26 @@ export default function FeedScreen() {
               <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between p-3">
                 <Pressable
                   onPress={() => router.push(`/user-profile?userId=${post.user_id}`)}
-                  className="flex-row items-center space-x-2">
-                  <View className="h-8 w-8 overflow-hidden rounded-full border-2 border-white">
-                    <Image
-                      source={
-                        post.profiles?.avatar_url
-                          ? { uri: post.profiles.avatar_url }
-                          : require('../../assets/splash.png')
-                      }
-                      className="h-full w-full"
-                    />
-                  </View>
-                  <Text className="text-sm font-semibold text-white">
-                    {post.profiles?.username || 'Unknown User'}
-                  </Text>
+                  className="h-8 w-8 overflow-hidden rounded-full border-2 border-white">
+                  <Image
+                    source={
+                      post.profiles?.avatar_url
+                        ? { uri: post.profiles.avatar_url }
+                        : require('../../assets/splash.png')
+                    }
+                    className="h-full w-full"
+                  />
                 </Pressable>
                 <View className="flex-row items-center space-x-3">
                   <View className="flex-row items-center space-x-1">
-                    <Ionicons name="heart" size={16} color="white" />
+                    <Ionicons name="heart" size={20} color="white" />
                     <Text className="text-xs text-white">{post.likes_count}</Text>
                   </View>
                   <View className="flex-row items-center space-x-1">
                     <TouchableOpacity onPress={() => handleShowComments(post)}>
-                      <Ionicons name="chatbubble-outline" size={16} color="white" />
+                      <Ionicons name="chatbubble-outline" size={20} color="white" />
                     </TouchableOpacity>
-                    <View className="w-8">
-                      <Text
-                        className={`text-base font-semibold ${
-                          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                        }`}>
-                        {post.comments?.length || 0}
-                      </Text>
-                    </View>
+                    <Text className="text-xs text-white">{post.comments?.length || 0}</Text>
                   </View>
                 </View>
               </View>
@@ -1156,7 +1146,7 @@ export default function FeedScreen() {
   };
 
   // Add this function to handle filter changes
-  const handleFilterChange = (filter: 'all' | 'mySchool' | 'otherSchools' | 'friends') => {
+  const handleFilterChange = (filter: 'all' | 'mySchool' | 'friends') => {
     if (isViewTransitioning) return;
 
     setIsViewTransitioning(true);
@@ -1176,6 +1166,17 @@ export default function FeedScreen() {
     }, 500);
   };
 
+  // Add this function to handle sort changes
+  const handleSortChange = (sort: 'trending' | 'recent') => {
+    setSortBy(sort);
+    setShowSortDropdown(false);
+    // Reset page and posts when sort changes
+    setPage(1);
+    setAllPosts([]);
+    setHasMore(true);
+    refetch(); // Add this to trigger a refetch with the new sort
+  };
+
   const renderItem = ({ item: post, index }: { item: Post; index: number }) => {
     const optimizedImageUrl = post.image_url;
     const isOwnPost = post.user_id === user?.id;
@@ -1184,10 +1185,11 @@ export default function FeedScreen() {
     if (isGridView) {
       return (
         <View
+          key={`${post.id}-${index}`}
           style={{
             width: gridItemWidth,
-            marginLeft: index % 2 === 0 ? 16 : 8,
-            marginRight: index % 2 === 0 ? 8 : 16,
+            marginLeft: index % 2 === 0 ? horizontalPadding : columnGap / 2,
+            marginRight: index % 2 === 0 ? columnGap / 2 : horizontalPadding,
           }}>
           <MotiView
             from={{ opacity: 0, scale: 0.9 }}
@@ -1216,38 +1218,26 @@ export default function FeedScreen() {
               <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between p-3">
                 <Pressable
                   onPress={() => router.push(`/user-profile?userId=${post.user_id}`)}
-                  className="flex-row items-center space-x-2">
-                  <View className="h-8 w-8 overflow-hidden rounded-full border-2 border-white">
-                    <Image
-                      source={
-                        post.profiles?.avatar_url
-                          ? { uri: post.profiles.avatar_url }
-                          : require('../../assets/splash.png')
-                      }
-                      className="h-full w-full"
-                    />
-                  </View>
-                  <Text className="text-sm font-semibold text-white">
-                    {post.profiles?.username || 'Unknown User'}
-                  </Text>
+                  className="h-8 w-8 overflow-hidden rounded-full border-2 border-white">
+                  <Image
+                    source={
+                      post.profiles?.avatar_url
+                        ? { uri: post.profiles.avatar_url }
+                        : require('../../assets/splash.png')
+                    }
+                    className="h-full w-full"
+                  />
                 </Pressable>
                 <View className="flex-row items-center space-x-3">
                   <View className="flex-row items-center space-x-1">
-                    <Ionicons name="heart" size={16} color="white" />
+                    <Ionicons name="heart" size={20} color="white" />
                     <Text className="text-xs text-white">{post.likes_count}</Text>
                   </View>
                   <View className="flex-row items-center space-x-1">
                     <TouchableOpacity onPress={() => handleShowComments(post)}>
-                      <Ionicons name="chatbubble-outline" size={16} color="white" />
+                      <Ionicons name="chatbubble-outline" size={20} color="white" />
                     </TouchableOpacity>
-                    <View className="w-8">
-                      <Text
-                        className={`text-base font-semibold ${
-                          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                        }`}>
-                        {post.comments?.length || 0}
-                      </Text>
-                    </View>
+                    <Text className="text-xs text-white">{post.comments?.length || 0}</Text>
                   </View>
                 </View>
               </View>
@@ -1475,11 +1465,9 @@ export default function FeedScreen() {
         }`}>
         {activeFilter === 'mySchool'
           ? 'No posts from your school yet'
-          : activeFilter === 'otherSchools'
-            ? 'No posts from other schools yet'
-            : activeFilter === 'friends'
-              ? 'No posts from friends yet'
-              : 'No posts yet'}
+          : activeFilter === 'friends'
+            ? 'No posts from friends yet'
+            : 'No posts yet'}
       </Text>
       {activeFilter === 'mySchool' && (
         <Text
@@ -1613,32 +1601,6 @@ export default function FeedScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => handleFilterChange('otherSchools')}
-          disabled={isViewTransitioning}
-          className={`rounded-2xl px-5 py-2 ${isViewTransitioning ? 'opacity-50' : ''}`}>
-          {activeFilter === 'otherSchools' ? (
-            <GradientText
-              colors={['#5070fd', '#2f4ccc']}
-              className="text-center text-xl font-extrabold"
-              style={{
-                textShadowColor: 'rgba(0, 0, 0, 0.2)',
-                textShadowOffset: { width: 0, height: 1 },
-                textShadowRadius: 3,
-                letterSpacing: 0.5,
-              }}>
-              Other
-            </GradientText>
-          ) : (
-            <Text
-              className={`text-center text-base font-medium ${
-                colorScheme === 'dark' ? 'text-[#515151]' : 'text-gray-600'
-              }`}>
-              Other
-            </Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
           onPress={() => handleFilterChange('friends')}
           disabled={isViewTransitioning}
           className={`rounded-2xl px-5 py-2 ${isViewTransitioning ? 'opacity-50' : ''}`}>
@@ -1664,6 +1626,52 @@ export default function FeedScreen() {
           )}
         </TouchableOpacity>
 
+        {/* Sort Button */}
+        <View className="relative">
+          <TouchableOpacity
+            onPress={() => handleSortChange(sortBy === 'trending' ? 'recent' : 'trending')}
+            className={`w-[5.9rem] rounded-2xl px-2 py-2 ${
+              colorScheme === 'dark' ? 'bg-none' : 'bg-white'
+            }`}>
+            <View className="flex-row items-center justify-between">
+              <View className="w-[5.5rem] flex-row items-center justify-center">
+                <View className="mr-0.5">
+                  {sortBy === 'trending' ? (
+                    <GradientText
+                      colors={['#cc0a0a', '#cc820a']}
+                      className="text-base font-bold"
+                      style={{
+                        textShadowColor: 'rgba(0, 0, 0, 0.2)',
+                        textShadowOffset: { width: 0, height: 1 },
+                        textShadowRadius: 3,
+                        letterSpacing: 0.5,
+                      }}>
+                      Recent
+                    </GradientText>
+                  ) : (
+                    <GradientText
+                      colors={['#cc0a0a', '#cc820a']}
+                      className="text-base font-bold"
+                      style={{
+                        textShadowColor: 'rgba(0, 0, 0, 0.2)',
+                        textShadowOffset: { width: 0, height: 1 },
+                        textShadowRadius: 3,
+                        letterSpacing: 0.5,
+                      }}>
+                      Trending
+                    </GradientText>
+                  )}
+                </View>
+                <Ionicons
+                  name="swap-horizontal"
+                  size={16}
+                  color={colorScheme === 'dark' ? '#cc820a' : '#cc820a'}
+                />
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         {/* View Toggle Button */}
         <TouchableOpacity
           onPress={handleViewSwitch}
@@ -1677,41 +1685,44 @@ export default function FeedScreen() {
         </TouchableOpacity>
       </Animated.View>
 
-      <FlatList
-        key={isGridView ? 'grid' : 'list'}
-        ref={flatListRef}
-        data={allPosts}
-        renderItem={renderItem}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-        ListEmptyComponent={ListEmptyComponent}
-        ListFooterComponent={ListFooterComponent}
-        maintainVisibleContentPosition={{
-          minIndexForVisible: 0,
-          autoscrollToTopThreshold: 10,
-        }}
-        contentContainerStyle={{
-          paddingHorizontal: isGridView ? 0 : 16,
-          paddingBottom: 16,
-        }}
-        columnWrapperStyle={
-          isGridView
-            ? {
-                paddingHorizontal: 8,
-                justifyContent: 'flex-start',
-              }
-            : undefined
-        }
-        numColumns={isGridView ? 2 : 1}
-        showsVerticalScrollIndicator={false}
-        getItemLayout={getItemLayout}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        removeClippedSubviews={true}
-        initialNumToRender={10}
-      />
+      {/* Main Content */}
+      <View className="flex-1">
+        <FlatList
+          key={isGridView ? 'grid' : 'list'}
+          ref={flatListRef}
+          data={allPosts}
+          renderItem={renderItem}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+          ListEmptyComponent={ListEmptyComponent}
+          ListFooterComponent={ListFooterComponent}
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+            autoscrollToTopThreshold: 10,
+          }}
+          contentContainerStyle={{
+            paddingHorizontal: isGridView ? 0 : 16,
+            paddingBottom: 16,
+          }}
+          columnWrapperStyle={
+            isGridView
+              ? {
+                  paddingHorizontal: 0,
+                  justifyContent: 'flex-start',
+                }
+              : undefined
+          }
+          numColumns={isGridView ? 2 : 1}
+          showsVerticalScrollIndicator={false}
+          getItemLayout={getItemLayout}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
+          initialNumToRender={10}
+        />
+      </View>
 
       {/* Create Post Button */}
       <Animated.View

@@ -54,14 +54,18 @@ export const queryKeys = {
 } as const;
 
 // Custom Hooks
-export function usePosts(schoolId: string | undefined, filter: string, page = 1, pageSize = 10) {
+export function usePosts(
+  schoolId: string | undefined,
+  filter: string,
+  page = 1,
+  pageSize = 10,
+  sortBy: 'trending' | 'recent' = 'trending'
+) {
   return useQuery({
-    queryKey: ['posts', schoolId, filter, page],
+    queryKey: ['posts', schoolId, filter, page, sortBy],
     queryFn: async () => {
-      let query = supabase
-        .from('posts')
-        .select(
-          `
+      let query = supabase.from('posts').select(
+        `
           id,
           user_id,
           image_url,
@@ -70,6 +74,7 @@ export function usePosts(schoolId: string | undefined, filter: string, page = 1,
           likes_count,
           dish_name,
           ingredients,
+          comments,
           profiles!inner (
             username,
             avatar_url,
@@ -80,9 +85,7 @@ export function usePosts(schoolId: string | undefined, filter: string, page = 1,
             )
           )
         `
-        )
-        .order('created_at', { ascending: false })
-        .range((page - 1) * pageSize, page * pageSize - 1);
+      );
 
       // Apply filters
       if (filter === 'mySchool' && schoolId) {
@@ -96,6 +99,22 @@ export function usePosts(schoolId: string | undefined, filter: string, page = 1,
         return [];
       }
       // 'all' filter doesn't need any additional conditions
+
+      // For recent sorting (UI shows "Recent"), use trending algorithm
+      if (sortBy === 'recent') {
+        // Don't apply pagination yet for trending
+        const { data: allData, error: allError } = await query;
+        if (allError) throw allError;
+
+        const { getTrendingPosts } = require('../trendingAlgorithm');
+        const trendingPosts = getTrendingPosts(allData || []);
+        // Apply pagination after sorting
+        return trendingPosts.slice((page - 1) * pageSize, page * pageSize);
+      }
+
+      // For trending sorting (UI shows "Trending"), order by created_at and apply pagination
+      query = query.order('created_at', { ascending: false });
+      query = query.range((page - 1) * pageSize, page * pageSize - 1);
 
       const { data, error } = await query;
       if (error) throw error;

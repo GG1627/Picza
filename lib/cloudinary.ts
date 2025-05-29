@@ -1,3 +1,5 @@
+import * as Crypto from 'expo-crypto';
+
 const CLOUD_NAME = 'dwt4c99su';
 const API_KEY = '355173449245645';
 const API_SECRET = 'MWKuC5xcERe8H5AEBSYWuSBRL3g';
@@ -66,10 +68,21 @@ export const deleteFromCloudinary = async (imageUrl: string): Promise<boolean> =
     const urlParts = imageUrl.split('/');
     const publicId = urlParts.slice(-2).join('/').split('.')[0]; // Gets "picza/posts/timestamp" or "picza/avatars/timestamp"
 
+    // Generate timestamp
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    // Create signature using expo-crypto
+    const signatureString = `public_id=${publicId}&timestamp=${timestamp}${API_SECRET}`;
+    const signature = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA1,
+      signatureString
+    );
+
     const formData = new FormData();
     formData.append('public_id', publicId);
     formData.append('api_key', API_KEY);
-    formData.append('cloud_name', CLOUD_NAME);
+    formData.append('timestamp', timestamp.toString());
+    formData.append('signature', signature);
 
     const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/destroy`, {
       method: 'POST',
@@ -90,3 +103,12 @@ export const deleteFromCloudinary = async (imageUrl: string): Promise<boolean> =
     return false;
   }
 };
+
+// Helper function to generate SHA-1 hash
+async function sha1(str: string): Promise<string> {
+  const buffer = new TextEncoder().encode(str);
+  const hashBuffer = await crypto.subtle.digest('SHA-1', buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
