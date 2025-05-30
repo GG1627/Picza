@@ -238,7 +238,8 @@ export default function UserProfileScreen() {
               loadMore();
             }
           }}
-          scrollEventThrottle={400}>
+          scrollEventThrottle={400}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 84 }}>
           <View className="px-6">
             {/* Profile Header */}
             <View className="mt-0 items-center">
@@ -358,23 +359,20 @@ export default function UserProfileScreen() {
               {allPosts.length > 0 ? (
                 <View className="space-y-4">
                   <View className="flex-row items-center justify-between">
-                    <View className="ml-[-20px] flex-row items-center space-x-2">
-                      <Text
-                        className={`text-lg font-semibold ${
-                          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                        }`}>
-                        {profile?.album_name || `${profile?.full_name.split(' ')[0]}'s Food Album`}
-                      </Text>
-                    </View>
+                    <Text
+                      className={`text-lg font-semibold ${
+                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                      }`}>
+                      {profile?.album_name || `${profile?.full_name.split(' ')[0]}'s Food Album`}
+                    </Text>
                   </View>
-                  <View className="-mx-6 flex-row">
+                  <View className="-mx-6 flex-row flex-wrap">
                     {allPosts.map((post, index) => (
-                      <Pressable
-                        key={post.id}
-                        className={`w-1/3 border-b border-r ${
-                          index % 3 === 2 ? 'border-r-0' : ''
-                        } border-[#e0e0e0] dark:border-[#121113]`}>
-                        <View className="aspect-square">
+                      <View key={post.id} className="aspect-square w-1/3">
+                        <View
+                          className={`aspect-square border-b border-r ${
+                            index % 3 !== 2 ? 'border-r' : ''
+                          } ${colorScheme === 'dark' ? 'border-[#121113]' : 'border-[#e0e0e0]'}`}>
                           <Image
                             source={{
                               uri: post.image_url,
@@ -383,18 +381,17 @@ export default function UserProfileScreen() {
                             resizeMode="cover"
                           />
                           <View className="absolute inset-0 bg-black/0 hover:bg-black/20" />
-                          <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between bg-gradient-to-t from-black/60 to-transparent p-2">
-                            <View className="flex-row items-center space-x-1">
-                              <Ionicons name="heart" size={14} color="white" />
-                              <Text className="text-xs text-white">{post.likes_count}</Text>
-                            </View>
-                            <View className="flex-row items-center space-x-1">
-                              <Ionicons name="chatbubble" size={14} color="white" />
-                              <Text className="text-xs text-white">0</Text>
-                            </View>
-                          </View>
+                          <View className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2" />
+                          <Pressable
+                            onPress={() => {
+                              console.log('Post clicked:', post.id);
+                              console.log('Attempting to navigate to post detail...');
+                              router.push(`/post-detail?postId=${post.id}&userId=${profile?.id}`);
+                            }}
+                            className="absolute inset-0"
+                          />
                         </View>
-                      </Pressable>
+                      </View>
                     ))}
                   </View>
                   {loading && page > 1 && (
@@ -404,28 +401,12 @@ export default function UserProfileScreen() {
                   )}
                 </View>
               ) : (
-                <View className="items-center justify-center py-12">
-                  <View
-                    className={`rounded-full p-4 ${
-                      colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-[#f9f9f9]'
-                    }`}>
-                    <Ionicons
-                      name="camera-outline"
-                      size={32}
-                      color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                    />
-                  </View>
+                <View className="items-center justify-center py-8">
                   <Text
-                    className={`mt-4 text-center text-base ${
+                    className={`text-center text-base ${
                       colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                     }`}>
-                    No posts yet
-                  </Text>
-                  <Text
-                    className={`mt-1 text-center text-sm ${
-                      colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'
-                    }`}>
-                    This user hasn't shared any food moments yet
+                    No posts yet. Start sharing your food adventures!
                   </Text>
                 </View>
               )}

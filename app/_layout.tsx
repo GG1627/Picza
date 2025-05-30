@@ -45,7 +45,7 @@ export default function RootLayout() {
               <Stack
                 screenOptions={{
                   headerShown: false, // Hide header for all screens by default
-                  animation: 'ios_from_right',
+                  animation: 'none',
                 }}>
                 <Stack.Screen name="index" options={{ headerShown: false }} />
                 <Stack.Screen name="(auth)" options={{ headerShown: false }} />
@@ -60,7 +60,7 @@ export default function RootLayout() {
 }
 
 const SCREEN_OPTIONS = {
-  animation: 'ios_from_right', // for android
+  animation: 'none', // for android
 } as const;
 
 const INDEX_OPTIONS = {

@@ -13,25 +13,29 @@ export default function AuthLayout() {
 }
 
 const SCREEN_OPTIONS = {
-  animation: 'ios_from_right', // for android
+  animation: 'slide_from_right', // for android
 } as const;
 
 const LOGIN_OPTIONS = {
   headerShown: false,
   title: 'Sign In',
+  animation: 'slide_from_right',
 } as const;
 
 const SIGNUP_OPTIONS = {
   headerShown: false,
   title: 'Sign Up',
+  animation: 'slide_from_right',
 } as const;
 
 const CREATE_PROFILE_OPTIONS = {
   headerShown: false,
   title: 'Create Profile',
+  animation: 'slide_from_right',
 } as const;
 
 const RESET_PASSWORD_OPTIONS = {
   headerShown: false,
   title: 'Reset Password',
+  animation: 'slide_from_right',
 } as const;

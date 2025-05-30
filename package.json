@@ -36,6 +36,7 @@
     "cloudinary": "^2.6.1",
     "cloudinary-react-native": "^1.0.1",
     "clsx": "^2.1.0",
+    "date-fns": "^4.1.0",
     "expo": "^53.0.7",
     "expo-blur": "^14.1.4",
     "expo-constants": "~17.1.4",

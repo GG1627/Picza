@@ -46,7 +46,7 @@ export default function SplashScreen() {
     };
 
     // Add a small delay for better UX
-    const timer = setTimeout(prepare, 700);
+    const timer = setTimeout(prepare, 7000000);
     return () => clearTimeout(timer);
   }, []);
 
