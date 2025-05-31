@@ -941,9 +941,10 @@ export default function FeedScreen() {
                   <Text className="text-xs text-gray-500">{getTimeElapsed(post.created_at)}</Text>
                   <Text className="mx-1 text-xs text-gray-500">•</Text>
                   <View className="flex-row items-center">
-                    <Ionicons name="school" size={12} color="#5070fd" />
+                    <Ionicons name="school" size={12} color="#f77f5e" />
                     <GradientText
-                      colors={['#5070fd', '#2f4ccc']}
+                      colors={['#f77f5e', '#f77f5e', '#f77f5e', '#f77f5e', '#f77f5e']}
+                      locations={[0, 0.3, 0.6, 0.8, 1]}
                       className="ml-1 text-xs font-medium">
                       {post.profiles?.schools?.name || 'Unknown School'}
                     </GradientText>
@@ -1060,7 +1061,7 @@ export default function FeedScreen() {
                       handleShowIngredients(post.ingredients || 'No ingredients listed')
                     }
                     className={`rounded-full border-2 border-[#2DFE54] px-3 py-1.5 ${
-                      colorScheme === 'dark' ? 'bg-[#46584a]' : 'bg-none'
+                      colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-[#dffff2]'
                     }`}>
                     <Text
                       className={`text-sm font-semibold ${
@@ -1287,9 +1288,14 @@ export default function FeedScreen() {
                   <Text className="text-xs text-gray-500">{getTimeElapsed(post.created_at)}</Text>
                   <Text className="mx-1 text-xs text-gray-500">•</Text>
                   <View className="flex-row items-center">
-                    <Ionicons name="school" size={12} color="#5070fd" />
+                    <Ionicons name="school" size={12} color="#f77f5e" />
                     <GradientText
-                      colors={['#5070fd', '#2f4ccc']}
+                      colors={
+                        colorScheme === 'dark'
+                          ? ['#f77f5e', '#f77f5e', '#f77f5e', '#f77f5e', '#f77f5e']
+                          : ['#d66c4f', '#d66c4f', '#d66c4f', '#d66c4f', '#d66c4f']
+                      }
+                      locations={[0, 0.3, 0.6, 0.8, 1]}
                       className="ml-1 text-xs font-medium">
                       {post.profiles?.schools?.name || 'Unknown School'}
                     </GradientText>
@@ -1405,12 +1411,14 @@ export default function FeedScreen() {
                     onPress={() =>
                       handleShowIngredients(post.ingredients || 'No ingredients listed')
                     }
-                    className={`rounded-full border-2 border-[#2DFE54] px-3 py-1.5 ${
-                      colorScheme === 'dark' ? 'bg-[#46584a]' : 'bg-none'
+                    className={`rounded-full border-2 px-3 py-1.5 ${
+                      colorScheme === 'dark'
+                        ? 'border-[#2DFE54] bg-[#131e13]'
+                        : 'border-[#22bd3f] bg-[#dffff2]'
                     }`}>
                     <Text
                       className={`text-sm font-semibold ${
-                        colorScheme === 'dark' ? 'text-[#2DFE54]' : 'text-[#2DFE54]'
+                        colorScheme === 'dark' ? 'text-[#2DFE54]' : 'text-[#22bd3f]'
                       }`}>
                       Ingredients
                     </Text>
@@ -1450,7 +1458,7 @@ export default function FeedScreen() {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: 'timing', duration: 500 }}
       className="flex-1 items-center justify-center p-8">
-      <View className="mb-6 h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-[#5070fd] to-[#2f4ccc]">
+      <View className="mb-6 h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-[#000000] to-[#2f4ccc]">
         <Ionicons
           name={
             activeFilter === 'mySchool' ? 'school' : activeFilter === 'friends' ? 'people' : 'globe'
@@ -1484,7 +1492,7 @@ export default function FeedScreen() {
     if (!isLoadingMore) return null;
     return (
       <View className="w-full items-center py-4">
-        <ActivityIndicator size="small" color="#5070fd" />
+        <ActivityIndicator size="small" color="#f77f5e" />
       </View>
     );
   };
@@ -1503,7 +1511,7 @@ export default function FeedScreen() {
       <SafeAreaView
         className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#5070fd" />
+          <ActivityIndicator size="large" color="#f77f5e" />
         </View>
       </SafeAreaView>
     );
@@ -1544,14 +1552,19 @@ export default function FeedScreen() {
           ],
           opacity: filterAnimation,
         }}
-        className="mb-[-0.75rem] mt-[-0.75rem] flex-row justify-center gap-2 space-x-4 p-4">
+        className="mb-[-0.75rem] mt-[-0.75rem] flex-row justify-center gap-x-[0.3rem] gap-y-2 p-4">
         <TouchableOpacity
           onPress={() => handleFilterChange('all')}
           disabled={isViewTransitioning}
           className={`rounded-2xl px-5 py-2 ${isViewTransitioning ? 'opacity-50' : ''}`}>
           {activeFilter === 'all' ? (
             <GradientText
-              colors={['#5070fd', '#2f4ccc']}
+              colors={
+                colorScheme === 'dark'
+                  ? ['#f77f5e', '#f77f5e', '#f77f5e', '#f7bdad', '#f7bdad']
+                  : ['#f77f5e', '#cc694e', '#e0775a', '#f77f5e', '#f77f5e']
+              }
+              locations={[0, 0.3, 0.6, 0.8, 1]}
               className="text-center text-xl font-extrabold"
               style={{
                 textShadowColor: 'rgba(0, 0, 0, 0.2)',
@@ -1606,7 +1619,12 @@ export default function FeedScreen() {
           className={`rounded-2xl px-5 py-2 ${isViewTransitioning ? 'opacity-50' : ''}`}>
           {activeFilter === 'friends' ? (
             <GradientText
-              colors={['#ff4d6d', '#ff8fa3']}
+              colors={
+                colorScheme === 'dark'
+                  ? ['#e65c8e', '#e65c8e', '#f08db1', '#f2a2bf', '#f2a2bf']
+                  : ['#c44b76', '#c44b76', '#cf517e', '#e65c8e', '#f08db1']
+              }
+              locations={[0, 0.2, 0.6, 0.8, 1]}
               className="text-center text-xl font-extrabold"
               style={{
                 textShadowColor: 'rgba(0, 0, 0, 0.2)',
@@ -1631,14 +1649,16 @@ export default function FeedScreen() {
           <TouchableOpacity
             onPress={() => handleSortChange(sortBy === 'trending' ? 'recent' : 'trending')}
             className={`w-[5.9rem] rounded-2xl px-2 py-2 ${
-              colorScheme === 'dark' ? 'bg-none' : 'bg-white'
+              colorScheme === 'dark' ? 'bg-none' : 'bg-none'
             }`}>
             <View className="flex-row items-center justify-between">
               <View className="w-[5.5rem] flex-row items-center justify-center">
                 <View className="mr-0.5">
                   {sortBy === 'trending' ? (
                     <GradientText
-                      colors={['#cc0a0a', '#cc820a']}
+                      colors={
+                        colorScheme === 'dark' ? ['#E0E0E0', '#E0E0E0'] : ['#07020D', '#07020D']
+                      }
                       className="text-base font-bold"
                       style={{
                         textShadowColor: 'rgba(0, 0, 0, 0.2)',
@@ -1650,7 +1670,9 @@ export default function FeedScreen() {
                     </GradientText>
                   ) : (
                     <GradientText
-                      colors={['#cc0a0a', '#cc820a']}
+                      colors={
+                        colorScheme === 'dark' ? ['#E0E0E0', '#E0E0E0'] : ['#07020D', '#07020D']
+                      }
                       className="text-base font-bold"
                       style={{
                         textShadowColor: 'rgba(0, 0, 0, 0.2)',
@@ -1665,7 +1687,7 @@ export default function FeedScreen() {
                 <Ionicons
                   name="swap-horizontal"
                   size={16}
-                  color={colorScheme === 'dark' ? '#cc820a' : '#cc820a'}
+                  color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
                 />
               </View>
             </View>

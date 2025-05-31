@@ -140,7 +140,7 @@ export default function LogIn() {
                     if (!loading) router.replace('/(auth)/reset-password');
                   }}>
                   <Text
-                    className={`font-medium ${colorScheme === 'dark' ? 'text-[#5070fd]' : 'text-[#5070fd]'}`}>
+                    className={`font-medium ${colorScheme === 'dark' ? 'text-[#f77f5e]' : 'text-[#f77f5e]'}`}>
                     Forgot Password?
                   </Text>
                 </TouchableOpacity>
@@ -150,7 +150,7 @@ export default function LogIn() {
             {/* Button Section */}
             <View className="space-y-4 pt-4">
               <Pressable
-                className={`w-full rounded-2xl ${colorScheme === 'dark' ? 'bg-[#5070fd]' : 'bg-[#5070fd]'} py-4 shadow-sm`}
+                className={`w-full rounded-2xl ${colorScheme === 'dark' ? 'bg-[#f77f5e]' : 'bg-[#f77f5e]'} py-4 shadow-sm`}
                 onPress={signInWithEmail}
                 disabled={loading}>
                 {loading ? (
@@ -187,7 +187,7 @@ export default function LogIn() {
                       if (!loading) router.replace('/(auth)/signup');
                     }}>
                     <Text
-                      className={`ml-1 text-sm font-semibold ${colorScheme === 'dark' ? 'text-[#5070fd]' : 'text-[#5070fd]'}`}>
+                      className={`ml-1 text-sm font-semibold ${colorScheme === 'dark' ? 'text-[#f77f5e]' : 'text-[#f77f5e]'}`}>
                       Create one
                     </Text>
                   </Pressable>

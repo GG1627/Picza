@@ -461,7 +461,7 @@ export default function ProfileScreen() {
             opacity: loadingOpacity,
             transform: [{ scale: loadingScale }],
           }}>
-          <ActivityIndicator size="large" color="#5070fd" />
+          <ActivityIndicator size="large" color="#f77f5e" />
         </Animated.View>
       </View>
     );
@@ -641,8 +641,8 @@ export default function ProfileScreen() {
                           ? 'border-[#BA3B46] bg-[#312728]'
                           : 'border-[#BA3B46] bg-[#f4cdd0]'
                         : colorScheme === 'dark'
-                          ? 'border-[#5070fd] bg-[#1e2236]'
-                          : 'border-[#5070fd] bg-[#bac4f3]'
+                          ? 'border-[#f77f5e] bg-[#2e2725]'
+                          : 'border-[#f77f5e] bg-[#e6d5d0]'
                     }`}>
                     <Text
                       className={`font-semibold ${
@@ -651,8 +651,8 @@ export default function ProfileScreen() {
                             ? 'text-[#BA3B46]'
                             : 'text-[#BA3B46]'
                           : colorScheme === 'dark'
-                            ? 'text-[#5070fd]'
-                            : 'text-[#5070fd]'
+                            ? 'text-[#f77f5e]'
+                            : 'text-[#f77f5e]'
                       }`}>
                       {isEditing ? 'Cancel' : 'Edit Profile'}
                     </Text>
@@ -819,7 +819,7 @@ export default function ProfileScreen() {
                         </View>
                         {loading && page > 1 && (
                           <View className="w-full items-center py-4">
-                            <ActivityIndicator size="small" color="#5070fd" />
+                            <ActivityIndicator size="small" color="#f77f5e" />
                           </View>
                         )}
                       </View>

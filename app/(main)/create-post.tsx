@@ -215,9 +215,9 @@ export default function CreatePostScreen() {
                 }`}>
                 <View
                   className={`rounded-full p-4 ${
-                    colorScheme === 'dark' ? 'bg-[#5070fd]/10' : 'bg-[#5070fd]/10'
+                    colorScheme === 'dark' ? 'bg-[#f77f5e]/10' : 'bg-[#f77f5e]/10'
                   }`}>
-                  <Ionicons name="camera" size={40} color="#5070fd" />
+                  <Ionicons name="camera" size={40} color="#f77f5e" />
                 </View>
                 <Text
                   className={`mt-2 text-base font-medium ${
