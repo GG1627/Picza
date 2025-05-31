@@ -34,6 +34,26 @@ import { MotiView } from 'moti';
 import { Easing } from 'react-native';
 import { deleteFromCloudinary } from '../../lib/cloudinary';
 
+// Animation constants
+const ANIMATION_CONFIG = {
+  MODAL: {
+    DURATION: 300,
+    SPRING: {
+      DAMPING: 20,
+      MASS: 0.5,
+      STIFFNESS: 200,
+    },
+  },
+  HEART: {
+    DURATION: 150,
+    SCALE: 1.3,
+  },
+  PULSE: {
+    DURATION: 1000,
+    SCALE: 1.1,
+  },
+};
+
 // Move Post type to a separate types file
 type Post = {
   id: string;
@@ -99,13 +119,13 @@ const CommentsModal = memo(
             Animated.parallel([
               Animated.timing(translateY, {
                 toValue: modalHeight,
-                duration: 300,
+                duration: ANIMATION_CONFIG.MODAL.DURATION,
                 useNativeDriver: true,
                 easing: Easing.bezier(0.4, 0.0, 0.2, 1),
               }),
               Animated.timing(commentsBackdropAnimation, {
                 toValue: 0,
-                duration: 300,
+                duration: ANIMATION_CONFIG.MODAL.DURATION,
                 useNativeDriver: true,
               }),
             ]).start(() => {
@@ -116,9 +136,9 @@ const CommentsModal = memo(
             Animated.spring(translateY, {
               toValue: 0,
               useNativeDriver: true,
-              damping: 20,
-              mass: 0.5,
-              stiffness: 200,
+              damping: ANIMATION_CONFIG.MODAL.SPRING.DAMPING,
+              mass: ANIMATION_CONFIG.MODAL.SPRING.MASS,
+              stiffness: ANIMATION_CONFIG.MODAL.SPRING.STIFFNESS,
             }).start();
           }
         },
@@ -133,13 +153,13 @@ const CommentsModal = memo(
           Animated.spring(translateY, {
             toValue: 0,
             useNativeDriver: true,
-            damping: 20,
-            mass: 0.5,
-            stiffness: 200,
+            damping: ANIMATION_CONFIG.MODAL.SPRING.DAMPING,
+            mass: ANIMATION_CONFIG.MODAL.SPRING.MASS,
+            stiffness: ANIMATION_CONFIG.MODAL.SPRING.STIFFNESS,
           }),
           Animated.timing(commentsBackdropAnimation, {
             toValue: 1,
-            duration: 300,
+            duration: ANIMATION_CONFIG.MODAL.DURATION,
             useNativeDriver: true,
           }),
         ]).start();
@@ -147,13 +167,13 @@ const CommentsModal = memo(
         Animated.parallel([
           Animated.timing(translateY, {
             toValue: modalHeight,
-            duration: 300,
+            duration: ANIMATION_CONFIG.MODAL.DURATION,
             useNativeDriver: true,
             easing: Easing.bezier(0.4, 0.0, 0.2, 1),
           }),
           Animated.timing(commentsBackdropAnimation, {
             toValue: 0,
-            duration: 300,
+            duration: ANIMATION_CONFIG.MODAL.DURATION,
             useNativeDriver: true,
           }),
         ]).start();
@@ -358,29 +378,39 @@ export default function FeedScreen() {
 
   const deletePostMutation = useMutation({
     mutationFn: async (postId: string) => {
-      // First get the post to get the image URL
-      const { data: post, error: fetchError } = await supabase
-        .from('posts')
-        .select('image_url')
-        .eq('id', postId)
-        .single();
+      try {
+        // First get the post to get the image URL
+        const { data: post, error: fetchError } = await supabase
+          .from('posts')
+          .select('image_url')
+          .eq('id', postId)
+          .single();
 
-      if (fetchError) throw fetchError;
+        if (fetchError) throw new Error(`Failed to fetch post: ${fetchError.message}`);
 
-      // Delete the image from Cloudinary
-      if (post?.image_url) {
-        await deleteFromCloudinary(post.image_url);
+        // Delete the image from Cloudinary
+        if (post?.image_url) {
+          try {
+            await deleteFromCloudinary(post.image_url);
+          } catch (cloudinaryError) {
+            console.error('Error deleting from Cloudinary:', cloudinaryError);
+            // Continue with post deletion even if Cloudinary deletion fails
+          }
+        }
+
+        // Then delete the post from the database
+        const { error: deleteError } = await supabase.from('posts').delete().eq('id', postId);
+
+        if (deleteError) throw new Error(`Failed to delete post: ${deleteError.message}`);
+      } catch (error) {
+        console.error('Error in deletePostMutation:', error);
+        throw error;
       }
-
-      // Then delete the post from the database
-      const { error } = await supabase.from('posts').delete().eq('id', postId);
-
-      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('Error deleting post:', error);
       Alert.alert('Error', 'Failed to delete post. Please try again.', [{ text: 'OK' }]);
     },
@@ -424,19 +454,54 @@ export default function FeedScreen() {
 
     Animated.sequence([
       Animated.timing(heartAnimations.current[postId], {
-        toValue: 1.3,
-        duration: 150,
+        toValue: ANIMATION_CONFIG.HEART.SCALE,
+        duration: ANIMATION_CONFIG.HEART.DURATION,
         useNativeDriver: true,
       }),
       Animated.timing(heartAnimations.current[postId], {
         toValue: 1,
-        duration: 150,
+        duration: ANIMATION_CONFIG.HEART.DURATION,
         useNativeDriver: true,
       }),
     ]).start();
   };
 
+  const fetchLikedPosts = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('post_likes')
+        .select('post_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      const likedPostIds = new Set(data.map((like) => like.post_id));
+      setLikedPosts(likedPostIds);
+    } catch (error) {
+      console.error('Error fetching liked posts:', error);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchLikedPosts();
+    // Initialize postLikes with the actual likes count from posts
+    if (allPosts) {
+      const initialLikes = allPosts.reduce(
+        (acc, post) => {
+          acc[post.id] = post.likes_count;
+          return acc;
+        },
+        {} as { [key: string]: number }
+      );
+      setPostLikes(initialLikes);
+    }
+  }, [fetchLikedPosts, allPosts]);
+
   const handleLike = async (postId: string) => {
+    if (!user?.id) return;
+
     try {
       const isLiked = likedPosts.has(postId);
       const currentLikes = postLikes[postId] || 0;
@@ -461,11 +526,40 @@ export default function FeedScreen() {
         return newSet;
       });
 
-      // Make API call
-      await likePost.mutateAsync({
-        postId,
-        currentLikes: isLiked ? currentLikes - 1 : currentLikes + 1,
-      });
+      // Update database
+      if (isLiked) {
+        // Unlike post
+        const { error: unlikeError } = await supabase
+          .from('post_likes')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('post_id', postId);
+
+        if (unlikeError) throw unlikeError;
+
+        // Update post likes count
+        const { error: updateError } = await supabase
+          .from('posts')
+          .update({ likes_count: currentLikes - 1 })
+          .eq('id', postId);
+
+        if (updateError) throw updateError;
+      } else {
+        // Like post
+        const { error: likeError } = await supabase
+          .from('post_likes')
+          .insert([{ user_id: user.id, post_id: postId }]);
+
+        if (likeError) throw likeError;
+
+        // Update post likes count
+        const { error: updateError } = await supabase
+          .from('posts')
+          .update({ likes_count: currentLikes + 1 })
+          .eq('id', postId);
+
+        if (updateError) throw updateError;
+      }
     } catch (error) {
       // Revert changes if API call fails
       const currentLikes = postLikes[postId] || 0;
@@ -486,6 +580,7 @@ export default function FeedScreen() {
       });
 
       console.error('Error liking post:', error);
+      Alert.alert('Error', 'Failed to update like. Please try again.');
     }
   };
 
@@ -835,14 +930,14 @@ export default function FeedScreen() {
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnimation, {
-          toValue: 1.1,
-          duration: 1000,
+          toValue: ANIMATION_CONFIG.PULSE.SCALE,
+          duration: ANIMATION_CONFIG.PULSE.DURATION,
           useNativeDriver: true,
           easing: Easing.inOut(Easing.ease),
         }),
         Animated.timing(pulseAnimation, {
           toValue: 1,
-          duration: 1000,
+          duration: ANIMATION_CONFIG.PULSE.DURATION,
           useNativeDriver: true,
           easing: Easing.inOut(Easing.ease),
         }),

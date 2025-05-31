@@ -459,14 +459,14 @@ export default function CreateProfileScreen() {
                 <Pressable
                   onPress={handleCreateProfile}
                   disabled={loading}
-                  className={`mt-8 rounded-2xl ${colorScheme === 'dark' ? 'bg-[#5070fd]' : 'bg-[#5070fd]'} py-4 shadow-sm ${
+                  className={`mt-8 rounded-2xl ${colorScheme === 'dark' ? 'bg-[#f77f5e]' : 'bg-[#f77f5e]'} py-4 shadow-sm ${
                     loading ? 'opacity-50' : ''
                   }`}>
                   {loading ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
                     <Text
-                      className={`text-center text-base font-semibold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#E0E0E0]'}`}>
+                      className={`text-center text-base font-semibold ${colorScheme === 'dark' ? 'text-white' : 'text-white'}`}>
                       Create Profile
                     </Text>
                   )}

@@ -245,7 +245,7 @@ export default function SignUp() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text
-                    className={`text-center text-base font-semibold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#E0E0E0]'}`}>
+                    className={`text-center text-base font-semibold ${colorScheme === 'dark' ? 'text-white' : 'text-white'}`}>
                     Create Account
                   </Text>
                 )}
