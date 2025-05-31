@@ -34,7 +34,7 @@ import { MotiView } from 'moti';
 import { Easing } from 'react-native';
 import { deleteFromCloudinary } from '../../lib/cloudinary';
 
-// Add Post type at the top of the file
+// Move Post type to a separate types file
 type Post = {
   id: string;
   user_id: string;
@@ -327,20 +327,12 @@ export default function FeedScreen() {
   const ingredientsModalAnimation = useRef(new Animated.Value(0)).current;
   const ingredientsBackdropAnimation = useRef(new Animated.Value(0)).current;
   const queryClient = useQueryClient();
-  const [viewMode, setViewMode] = useState<'card' | 'grid'>('card');
-  const [pinchDistance, setPinchDistance] = useState(0);
-  const lastPinchDistance = useRef(0);
-  const viewModeAnimation = useRef(new Animated.Value(0)).current;
   const [isGridView, setIsGridView] = useState(false);
   const [isViewTransitioning, setIsViewTransitioning] = useState(false);
-  const transitionAnim = useRef(new Animated.Value(0)).current;
   const { width: screenWidth } = Dimensions.get('window');
-  const horizontalPadding = 16; // Padding on the sides of the screen
-  const columnGap = 8; // Gap between columns
-  const gridItemWidth = (screenWidth - horizontalPadding * 2 - columnGap) / 2; // Calculate width accounting for padding and gap
-  const lastTouchPoints = useRef({ x: 0, y: 0 });
-  const initialDistance = useRef(0);
-  const currentProgress = useRef(0);
+  const horizontalPadding = 16;
+  const columnGap = 8;
+  const gridItemWidth = (screenWidth - horizontalPadding * 2 - columnGap) / 2;
   const createButtonAnimation = useRef(new Animated.Value(0)).current;
   const filterAnimation = useRef(new Animated.Value(0)).current;
   const pulseAnimation = useRef(new Animated.Value(1)).current;
@@ -352,7 +344,6 @@ export default function FeedScreen() {
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
   const flatListRef = useRef<FlatList>(null);
   const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
@@ -831,274 +822,6 @@ export default function FeedScreen() {
     [selectedPostForComments]
   );
 
-  const renderPost = (post: any, index: number) => {
-    const optimizedImageUrl = post.image_url;
-    const isOwnPost = post.user_id === user?.id;
-    const isDeleting = deletingPostId === post.id;
-
-    if (isGridView) {
-      return (
-        <View
-          key={`${post.id}-${index}`}
-          style={{
-            width: gridItemWidth,
-            marginLeft: index % 2 === 0 ? horizontalPadding : columnGap / 2,
-            marginRight: index % 2 === 0 ? columnGap / 2 : horizontalPadding,
-          }}>
-          <MotiView
-            from={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'timing', duration: 500, delay: index * 100 }}
-            className="mb-4">
-            <View className="aspect-square overflow-hidden rounded-2xl">
-              <Image
-                source={{ uri: optimizedImageUrl }}
-                className="h-full w-full"
-                resizeMode="cover"
-              />
-              {isDeleting && (
-                <View className="absolute inset-0 items-center justify-center bg-black/50">
-                  <ActivityIndicator size="large" color="white" />
-                  <Text className="mt-2 text-white">Deleting...</Text>
-                </View>
-              )}
-              <View className="absolute inset-0">
-                <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
-                  locations={[0, 0.5, 1]}
-                  style={{ flex: 1 }}
-                />
-              </View>
-              <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between p-3">
-                <Pressable
-                  onPress={() => router.push(`/user-profile?userId=${post.user_id}`)}
-                  className="h-8 w-8 overflow-hidden rounded-full border-2 border-white">
-                  <Image
-                    source={
-                      post.profiles?.avatar_url
-                        ? { uri: post.profiles.avatar_url }
-                        : require('../../assets/splash.png')
-                    }
-                    className="h-full w-full"
-                  />
-                </Pressable>
-                <View className="flex-row items-center space-x-3">
-                  <View className="flex-row items-center space-x-1">
-                    <Ionicons name="heart" size={20} color="white" />
-                    <Text className="text-xs text-white">{post.likes_count}</Text>
-                  </View>
-                  <View className="flex-row items-center space-x-1">
-                    <TouchableOpacity onPress={() => handleShowComments(post)}>
-                      <Ionicons name="chatbubble-outline" size={20} color="white" />
-                    </TouchableOpacity>
-                    <Text className="text-xs text-white">{post.comments?.length || 0}</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </MotiView>
-        </View>
-      );
-    }
-
-    return (
-      <View key={`${post.id}-${index}`} className="mb-6">
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 500, delay: index * 100 }}
-          className={`overflow-hidden rounded-3xl ${
-            colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-white'
-          } shadow-lg`}>
-          {/* Post Header */}
-          <View className="mb-[-0.25rem] mt-[-0.25rem] flex-row items-center justify-between p-3">
-            <Pressable
-              onPress={() => router.push(`/user-profile?userId=${post.user_id}`)}
-              className="flex-row items-center">
-              <View
-                className={`h-12 w-12 overflow-hidden rounded-full border-2 ${
-                  colorScheme === 'dark'
-                    ? 'border-[#282828] bg-[#282828]'
-                    : 'border-gray-100 bg-gray-50'
-                }`}>
-                <Image
-                  source={
-                    post.profiles?.avatar_url
-                      ? { uri: post.profiles.avatar_url }
-                      : require('../../assets/splash.png')
-                  }
-                  className="h-full w-full"
-                />
-              </View>
-              <View className="ml-3">
-                <Text
-                  className={`text-base font-bold ${
-                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                  }`}>
-                  {post.profiles?.username || 'Unknown User'}
-                </Text>
-                <View className="flex-row items-center">
-                  <Text className="text-xs text-gray-500">{getTimeElapsed(post.created_at)}</Text>
-                  <Text className="mx-1 text-xs text-gray-500">•</Text>
-                  <View className="flex-row items-center">
-                    <Ionicons name="school" size={12} color="#f77f5e" />
-                    <GradientText
-                      colors={['#f77f5e', '#f77f5e', '#f77f5e', '#f77f5e', '#f77f5e']}
-                      locations={[0, 0.3, 0.6, 0.8, 1]}
-                      className="ml-1 text-xs font-medium">
-                      {post.profiles?.schools?.name || 'Unknown School'}
-                    </GradientText>
-                  </View>
-                </View>
-              </View>
-            </Pressable>
-            <TouchableOpacity
-              onPress={() => {
-                setSelectedPost(post);
-                setShowOptionsModal(true);
-              }}
-              className="p-2">
-              <Ionicons
-                name="ellipsis-horizontal"
-                size={24}
-                color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Post Image */}
-          <View className="relative">
-            <Image
-              source={{ uri: optimizedImageUrl }}
-              className="aspect-square w-full"
-              resizeMode="cover"
-            />
-            {isDeleting && (
-              <View className="absolute inset-0 items-center justify-center bg-black/50">
-                <ActivityIndicator size="large" color="white" />
-                <Text className="mt-2 text-white">Deleting...</Text>
-              </View>
-            )}
-            <View className="absolute inset-0">
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
-                locations={[0, 0.5, 1]}
-                style={{ flex: 1 }}
-              />
-            </View>
-            {post.dish_name && (
-              <View className="absolute bottom-0 left-0 right-0 p-4">
-                <Text className="text-2xl font-bold text-white" numberOfLines={2}>
-                  {post.dish_name}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Post Actions */}
-          <View className="mt-[-0.25rem] p-3">
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center space-x-4">
-                <View className="flex-row items-center">
-                  <TouchableOpacity
-                    onPress={() => handleLike(post.id)}
-                    className="flex-row items-center">
-                    <Animated.View
-                      style={{
-                        transform: [{ scale: heartAnimations.current[post.id] || 1 }],
-                      }}>
-                      <Ionicons
-                        name={likedPosts.has(post.id) ? 'heart' : 'heart-outline'}
-                        size={28}
-                        color={
-                          likedPosts.has(post.id)
-                            ? '#F00511'
-                            : colorScheme === 'dark'
-                              ? '#E0E0E0'
-                              : '#07020D'
-                        }
-                      />
-                    </Animated.View>
-                  </TouchableOpacity>
-                  <View className="w-8">
-                    <Text
-                      className={`text-base font-semibold ${
-                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                      }`}>
-                      {postLikes[post.id] || 0}
-                    </Text>
-                  </View>
-                </View>
-                <View className="flex-row items-center">
-                  <TouchableOpacity onPress={() => handleShowComments(post)}>
-                    <Ionicons
-                      name="chatbubble-outline"
-                      size={28}
-                      color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                    />
-                  </TouchableOpacity>
-                  <View className="w-8">
-                    <Text
-                      className={`text-base font-semibold ${
-                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                      }`}>
-                      {post.comments?.length || 0}
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity>
-                  <Ionicons
-                    name="paper-plane-outline"
-                    size={28}
-                    color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                  />
-                </TouchableOpacity>
-              </View>
-              <View className="flex-row items-center space-x-2">
-                {post.ingredients && (
-                  <TouchableOpacity
-                    onPress={() =>
-                      handleShowIngredients(post.ingredients || 'No ingredients listed')
-                    }
-                    className={`rounded-full border-2 border-[#2DFE54] px-3 py-1.5 ${
-                      colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-[#dffff2]'
-                    }`}>
-                    <Text
-                      className={`text-sm font-semibold ${
-                        colorScheme === 'dark' ? 'text-[#2DFE54]' : 'text-[#2DFE54]'
-                      }`}>
-                      Ingredients
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity>
-                  <Ionicons
-                    name="bookmark-outline"
-                    size={28}
-                    color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Post Caption */}
-            <View className="mt-1">
-              {post.caption && (
-                <Text
-                  className={`text-base leading-5 ${
-                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                  }`}>
-                  <Text className="font-bold">{post.profiles?.username || 'Unknown User'} </Text>
-                  {post.caption}
-                </Text>
-              )}
-            </View>
-          </View>
-        </MotiView>
-      </View>
-    );
-  };
-
   useEffect(() => {
     // Initial spring animation
     Animated.spring(createButtonAnimation, {
@@ -1411,14 +1134,12 @@ export default function FeedScreen() {
                     onPress={() =>
                       handleShowIngredients(post.ingredients || 'No ingredients listed')
                     }
-                    className={`rounded-full border-2 px-3 py-1.5 ${
-                      colorScheme === 'dark'
-                        ? 'border-[#2DFE54] bg-[#131e13]'
-                        : 'border-[#22bd3f] bg-[#dffff2]'
+                    className={`rounded-full border-2 border-[#2DFE54] px-3 py-1.5 ${
+                      colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-[#dffff2]'
                     }`}>
                     <Text
                       className={`text-sm font-semibold ${
-                        colorScheme === 'dark' ? 'text-[#2DFE54]' : 'text-[#22bd3f]'
+                        colorScheme === 'dark' ? 'text-[#2DFE54]' : 'text-[#2DFE54]'
                       }`}>
                       Ingredients
                     </Text>
