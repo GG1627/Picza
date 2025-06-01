@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,40 @@ export default function CreatePostScreen() {
   const { colorScheme } = useColorScheme();
   const scrollViewRef = useRef<ScrollView>(null);
   const queryClient = useQueryClient();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [inputPositions, setInputPositions] = useState({
+    dishName: 0,
+    caption: 0,
+    ingredients: 0,
+  });
+
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener('keyboardWillShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const keyboardWillHide = Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
+
+  const measureInputPosition = (ref: any, setter: (position: number) => void) => {
+    if (ref.current) {
+      ref.current.measure(
+        (x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
+          setter(pageY);
+        }
+      );
+    }
+  };
+
+  const dishNameRef = useRef(null);
+  const captionRef = useRef(null);
+  const ingredientsRef = useRef(null);
 
   const hasContent = image || dishName.trim().length > 0 || ingredients.trim().length > 0;
 
@@ -243,9 +277,10 @@ export default function CreatePostScreen() {
                   className={`mb-0 text-sm font-medium ${
                     colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                   }`}>
-                  Dish Name (optional)
+                  Dish Name
                 </Text>
                 <TextInput
+                  ref={dishNameRef}
                   textAlignVertical="center"
                   value={dishName}
                   onChangeText={setDishName}
@@ -258,9 +293,10 @@ export default function CreatePostScreen() {
                   }`}
                   style={{ textAlignVertical: 'center' }}
                   onFocus={() => {
-                    setTimeout(() => {
-                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-                    }, 100);
+                    measureInputPosition(dishNameRef, (position) => {
+                      setInputPositions((prev) => ({ ...prev, dishName: position }));
+                      scrollViewRef.current?.scrollTo({ y: position - 100, animated: true });
+                    });
                   }}
                 />
               </View>
@@ -271,9 +307,10 @@ export default function CreatePostScreen() {
                   className={`mb-0 mt-2 text-sm font-medium ${
                     colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                   }`}>
-                  Caption (optional)
+                  Caption
                 </Text>
                 <TextInput
+                  ref={captionRef}
                   value={caption}
                   onChangeText={setCaption}
                   textAlignVertical="center"
@@ -286,9 +323,10 @@ export default function CreatePostScreen() {
                   }`}
                   style={{ textAlignVertical: 'center' }}
                   onFocus={() => {
-                    setTimeout(() => {
-                      scrollViewRef.current?.scrollTo({ y: 200, animated: true });
-                    }, 100);
+                    measureInputPosition(captionRef, (position) => {
+                      setInputPositions((prev) => ({ ...prev, caption: position }));
+                      scrollViewRef.current?.scrollTo({ y: position - 100, animated: true });
+                    });
                   }}
                 />
               </View>
@@ -299,9 +337,10 @@ export default function CreatePostScreen() {
                   className={`mb-0 mt-2 text-sm font-medium ${
                     colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                   }`}>
-                  Ingredients List (optional)
+                  Ingredients List
                 </Text>
                 <TextInput
+                  ref={ingredientsRef}
                   value={ingredients}
                   onChangeText={setIngredients}
                   placeholder="Enter your ingredients... (e.g. eggs, flour, milk, etc.)"
@@ -321,9 +360,10 @@ export default function CreatePostScreen() {
                     textAlign: 'left',
                   }}
                   onFocus={() => {
-                    setTimeout(() => {
-                      scrollViewRef.current?.scrollTo({ y: 400, animated: true });
-                    }, 100);
+                    measureInputPosition(ingredientsRef, (position) => {
+                      setInputPositions((prev) => ({ ...prev, ingredients: position }));
+                      scrollViewRef.current?.scrollTo({ y: position - 100, animated: true });
+                    });
                   }}
                 />
               </View>

@@ -778,7 +778,7 @@ export default function FeedScreen() {
         animationType="fade"
         onRequestClose={() => setShowOptionsModal(false)}>
         <Pressable
-          className="flex-1 items-center justify-center bg-black/50"
+          className="absolute inset-0 flex-1 items-center justify-center bg-black/50"
           onPress={() => setShowOptionsModal(false)}>
           <Pressable
             className={`w-80 overflow-hidden rounded-3xl ${
@@ -1373,9 +1373,9 @@ export default function FeedScreen() {
     <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
       {/* Animated Header */}
       <MotiView
-        from={{ opacity: 0, translateY: -20 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 500 }}
+        // from={{ opacity: 0, translateY: -20 }}
+        // animate={{ opacity: 1, translateY: 0 }}
+        // transition={{ type: 'timing', duration: 500 }}
         className="mt-[-0.5rem] px-4">
         <Text
           className={`font-pattaya text-[2.5rem] ${
@@ -1404,7 +1404,7 @@ export default function FeedScreen() {
           ],
           opacity: filterAnimation,
         }}
-        className="mb-[-0.75rem] mt-[-1.25rem] flex-row justify-center gap-x-[0.3rem] gap-y-2 p-4">
+        className="mb-[-0.75rem] mt-[-1.5rem] flex-row justify-center gap-x-[0.3rem] gap-y-2 p-4">
         <TouchableOpacity
           onPress={() => handleFilterChange('all')}
           disabled={isViewTransitioning}
