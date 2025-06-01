@@ -69,13 +69,15 @@ export default function CreatePostScreen() {
       });
       setIsSuccess(true);
 
-      // Invalidate posts query to trigger a refetch
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      // Force refetch posts before navigating back
+      await queryClient.invalidateQueries({ queryKey: ['posts'] });
+      await queryClient.refetchQueries({ queryKey: ['posts'] });
 
-      setTimeout(() => {
-        resetForm();
-        router.back();
-      }, 1000);
+      // Wait for the refetch to complete
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      resetForm();
+      router.back();
     } catch (error) {
       console.error('Error creating post:', error);
     }

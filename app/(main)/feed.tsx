@@ -33,6 +33,7 @@ import GradientText from '../../components/GradientText';
 import { MotiView } from 'moti';
 import { Easing } from 'react-native';
 import { deleteFromCloudinary } from '../../lib/cloudinary';
+import { useFocusEffect } from '@react-navigation/native';
 
 // Animation constants
 const ANIMATION_CONFIG = {
@@ -367,6 +368,8 @@ export default function FeedScreen() {
   const flatListRef = useRef<FlatList>(null);
   const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
+  const [isReturningFromProfile, setIsReturningFromProfile] = useState(false);
+  const [hasInitialData, setHasInitialData] = useState(false);
 
   const { data: schoolData } = useSchool(user?.id || '');
   const {
@@ -416,11 +419,12 @@ export default function FeedScreen() {
     },
   });
 
-  // Update posts when new data arrives
+  // Modify the useEffect that updates posts
   useEffect(() => {
     if (posts) {
       if (page === 1) {
         setAllPosts(posts as Post[]);
+        setHasInitialData(true);
       } else {
         // Filter out any duplicate posts by ID before appending
         const newPosts = (posts as Post[]).filter(
@@ -1036,7 +1040,10 @@ export default function FeedScreen() {
               </View>
               <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between p-3">
                 <Pressable
-                  onPress={() => router.push(`/user-profile?userId=${post.user_id}`)}
+                  onPress={() => {
+                    setIsReturningFromProfile(true);
+                    router.push(`/user-profile?userId=${post.user_id}`);
+                  }}
                   className="h-8 w-8 overflow-hidden rounded-full border-2 border-white">
                   <Image
                     source={
@@ -1078,7 +1085,10 @@ export default function FeedScreen() {
           {/* Post Header */}
           <View className="mb-[-0.25rem] mt-[-0.25rem] flex-row items-center justify-between p-3">
             <Pressable
-              onPress={() => router.push(`/user-profile?userId=${post.user_id}`)}
+              onPress={() => {
+                setIsReturningFromProfile(true);
+                router.push(`/user-profile?userId=${post.user_id}`);
+              }}
               className="flex-row items-center">
               <View
                 className={`h-12 w-12 overflow-hidden rounded-full border-2 ${
@@ -1268,41 +1278,55 @@ export default function FeedScreen() {
     );
   };
 
-  const ListEmptyComponent = () => (
-    <MotiView
-      from={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: 'timing', duration: 500 }}
-      className="flex-1 items-center justify-center p-8">
-      <View className="mb-6 h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-[#000000] to-[#2f4ccc]">
-        <Ionicons
-          name={
-            activeFilter === 'mySchool' ? 'school' : activeFilter === 'friends' ? 'people' : 'globe'
-          }
-          size={48}
-          color="white"
-        />
-      </View>
-      <Text
-        className={`mb-2 text-center text-2xl font-bold ${
-          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-        }`}>
-        {activeFilter === 'mySchool'
-          ? 'No posts from your school yet'
-          : activeFilter === 'friends'
-            ? 'No posts from friends yet'
-            : 'No posts yet'}
-      </Text>
-      {activeFilter === 'mySchool' && (
+  const ListEmptyComponent = () => {
+    if (isLoading) {
+      return (
+        <View className="flex-1 items-center justify-center p-8">
+          <ActivityIndicator size="large" color="#f77f5e" />
+        </View>
+      );
+    }
+
+    return (
+      <MotiView
+        from={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: 'timing', duration: 500 }}
+        className="flex-1 items-center justify-center p-8">
+        <View className="mb-6 h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-[#000000] to-[#2f4ccc]">
+          <Ionicons
+            name={
+              activeFilter === 'mySchool'
+                ? 'school'
+                : activeFilter === 'friends'
+                  ? 'people'
+                  : 'globe'
+            }
+            size={48}
+            color="white"
+          />
+        </View>
         <Text
-          className={`text-center text-base ${
-            colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'
+          className={`mb-2 text-center text-2xl font-bold ${
+            colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
           }`}>
-          Be the first to share something!
+          {activeFilter === 'mySchool'
+            ? 'No posts from your school yet'
+            : activeFilter === 'friends'
+              ? 'No posts from friends yet'
+              : 'No posts yet'}
         </Text>
-      )}
-    </MotiView>
-  );
+        {activeFilter === 'mySchool' && (
+          <Text
+            className={`text-center text-base ${
+              colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'
+            }`}>
+            Be the first to share something!
+          </Text>
+        )}
+      </MotiView>
+    );
+  };
 
   const ListFooterComponent = () => {
     if (!isLoadingMore) return null;
@@ -1322,6 +1346,18 @@ export default function FeedScreen() {
     };
   };
 
+  // Modify the useFocusEffect
+  useFocusEffect(
+    useCallback(() => {
+      // Only refetch if we don't have initial data
+      if (!hasInitialData) {
+        setPage(1);
+        setAllPosts([]);
+        refetch();
+      }
+    }, [refetch, hasInitialData])
+  );
+
   if (isLoading) {
     return (
       <SafeAreaView
@@ -1340,19 +1376,19 @@ export default function FeedScreen() {
         from={{ opacity: 0, translateY: -20 }}
         animate={{ opacity: 1, translateY: 0 }}
         transition={{ type: 'timing', duration: 500 }}
-        className="mt-2 px-4">
+        className="mt-[-0.5rem] px-4">
         <Text
           className={`font-pattaya text-[2.5rem] ${
             colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
           }`}>
           Picza
         </Text>
-        <Text
+        {/* <Text
           className={`mt-[-0.60rem] text-base ${
             colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
           }`}>
           Discover amazing food from your community
-        </Text>
+        </Text> */}
       </MotiView>
 
       {/* Filter Buttons */}
@@ -1368,7 +1404,7 @@ export default function FeedScreen() {
           ],
           opacity: filterAnimation,
         }}
-        className="mb-[-0.75rem] mt-[-0.75rem] flex-row justify-center gap-x-[0.3rem] gap-y-2 p-4">
+        className="mb-[-0.75rem] mt-[-1.25rem] flex-row justify-center gap-x-[0.3rem] gap-y-2 p-4">
         <TouchableOpacity
           onPress={() => handleFilterChange('all')}
           disabled={isViewTransitioning}
