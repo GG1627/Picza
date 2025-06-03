@@ -62,65 +62,54 @@ export function usePosts(
   sortBy: 'trending' | 'recent' = 'trending'
 ) {
   return useQuery({
-    queryKey: ['posts', schoolId, filter, page, sortBy],
+    queryKey: ['posts', schoolId, filter, page, pageSize, sortBy],
     queryFn: async () => {
-      let query = supabase.from('posts').select(
-        `
-          id,
-          user_id,
-          image_url,
-          caption,
-          created_at,
-          likes_count,
-          dish_name,
-          ingredients,
-          comments,
-          profiles!inner (
+      let query = supabase.from('posts').select(`
+          *,
+          profiles (
+            id,
             username,
             avatar_url,
-            school_id,
-            schools!inner (
-              id,
+            schools (
               name
             )
-          )
-        `
-      );
+          ),
+          comments:comments(count)
+        `);
 
       // Apply filters
       if (filter === 'mySchool' && schoolId) {
-        // Show only posts from my school
-        query = query.eq('profiles.school_id', schoolId);
+        query = query.eq('profiles.schools.id', schoolId);
       } else if (filter === 'otherSchools' && schoolId) {
         // Show posts from all schools except mine
-        query = query.neq('profiles.school_id', schoolId);
+        query = query.neq('profiles.schools.id', schoolId);
       } else if (filter === 'friends') {
         // For now, return empty array as friends feature is not implemented
         return [];
       }
       // 'all' filter doesn't need any additional conditions
 
-      // For recent sorting (UI shows "Recent"), use trending algorithm
-      if (sortBy === 'recent') {
-        // Don't apply pagination yet for trending
-        const { data: allData, error: allError } = await query;
-        if (allError) throw allError;
-
-        const { getTrendingPosts } = require('../trendingAlgorithm');
-        const trendingPosts = getTrendingPosts(allData || []);
-        // Apply pagination after sorting
-        return trendingPosts.slice((page - 1) * pageSize, page * pageSize);
+      // Apply sorting
+      if (sortBy === 'trending') {
+        query = query.order('likes_count', { ascending: false });
+      } else {
+        query = query.order('created_at', { ascending: false });
       }
 
-      // For trending sorting (UI shows "Trending"), order by created_at and apply pagination
-      query = query.order('created_at', { ascending: false });
-      query = query.range((page - 1) * pageSize, page * pageSize - 1);
+      // Apply pagination
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize - 1;
+      query = query.range(start, end);
 
       const { data, error } = await query;
+
       if (error) throw error;
 
-      // First cast to unknown, then to DatabasePost[]
-      return (data || []) as unknown as DatabasePost[];
+      // Transform the data to include the comment count
+      return data.map((post) => ({
+        ...post,
+        comments_count: post.comments?.[0]?.count || 0,
+      }));
     },
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 30 * 60 * 1000, // Keep data in cache for 30 minutes

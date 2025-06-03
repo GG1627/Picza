@@ -66,7 +66,7 @@ type Post = {
   likes_count: number;
   dish_name: string | null;
   ingredients: string | null;
-  comments: string[] | null;
+  comments_count: number;
   profiles: {
     id: string;
     username: string;
@@ -637,7 +637,7 @@ export default function FeedScreen() {
 
   const handleCloseComments = useCallback(() => {
     setShowCommentsModal(false);
-    setTimeout(() => setSelectedPostForComments(null), 200);
+    setSelectedPostForComments(null);
   }, []);
 
   const handleAddComment = useCallback(
@@ -645,19 +645,23 @@ export default function FeedScreen() {
       if (!selectedPostForComments) return;
 
       try {
-        const updatedComments = [...(selectedPostForComments.comments || []), comment];
-
-        const { error } = await supabase
-          .from('posts')
-          .update({ comments: updatedComments })
-          .eq('id', selectedPostForComments.id);
+        // Insert the comment into the comments table
+        const { error } = await supabase.from('comments').insert([
+          {
+            post_id: selectedPostForComments.id,
+            user_id: user?.id,
+            content: comment,
+          },
+        ]);
 
         if (error) throw error;
 
-        // Update local state
+        // Update the post's comment count in the UI
         setAllPosts((prevPosts) =>
           prevPosts.map((post) =>
-            post.id === selectedPostForComments.id ? { ...post, comments: updatedComments } : post
+            post.id === selectedPostForComments.id
+              ? { ...post, comments_count: (post.comments_count || 0) + 1 }
+              : post
           )
         );
       } catch (error) {
@@ -665,7 +669,7 @@ export default function FeedScreen() {
         Alert.alert('Error', 'Failed to add comment. Please try again.');
       }
     },
-    [selectedPostForComments]
+    [selectedPostForComments, user?.id]
   );
 
   useEffect(() => {
@@ -810,7 +814,7 @@ export default function FeedScreen() {
                     <TouchableOpacity onPress={() => handleShowComments(post)}>
                       <Ionicons name="chatbubble-outline" size={20} color="white" />
                     </TouchableOpacity>
-                    <Text className="text-xs text-white">{post.comments?.length || 0}</Text>
+                    <Text className="text-xs text-white">{post.comments_count || 0}</Text>
                   </View>
                 </View>
               </View>
@@ -968,7 +972,7 @@ export default function FeedScreen() {
                       className={`text-base font-semibold ${
                         colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                       }`}>
-                      {post.comments?.length || 0}
+                      {post.comments_count || 0}
                     </Text>
                   </View>
                 </View>
