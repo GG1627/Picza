@@ -21,6 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
+import { useRouter } from 'expo-router';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MODAL_HEIGHT = SCREEN_HEIGHT * 0.65;
@@ -75,6 +76,8 @@ const CommentsModal = memo(
     const { user } = useAuth();
     const [modalVisible, setModalVisible] = useState(false);
     const [shouldRender, setShouldRender] = useState(false);
+    const router = useRouter();
+    const [isReturningFromProfile, setIsReturningFromProfile] = useState(false);
 
     const modalAnimation = useRef(new Animated.Value(0)).current;
     const backdropAnimation = useRef(new Animated.Value(0)).current;
@@ -287,6 +290,12 @@ const CommentsModal = memo(
       });
     };
 
+    const handleProfilePress = (userId: string) => {
+      setIsReturningFromProfile(true);
+      setModalVisible(false);
+      router.push(`/user-profile?userId=${userId}`);
+    };
+
     if (!shouldRender || !post) return null;
 
     const modalTranslateY = Animated.add(
@@ -421,30 +430,34 @@ const CommentsModal = memo(
                       transition={{ type: 'timing', duration: 500, delay: index * 100 }}
                       style={styles.commentContainer}>
                       <View style={styles.commentHeader}>
-                        <Image
-                          source={
-                            comment.profiles?.avatar_url
-                              ? { uri: comment.profiles.avatar_url }
-                              : require('../assets/default-avatar.png')
-                          }
-                          style={styles.avatar}
-                        />
-                        <View style={styles.commentInfo}>
-                          <Text
-                            style={[
-                              styles.username,
-                              { color: colorScheme === 'dark' ? '#E0E0E0' : '#07020D' },
-                            ]}>
-                            {comment.profiles?.username}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.timestamp,
-                              { color: colorScheme === 'dark' ? '#666' : '#999' },
-                            ]}>
-                            {getTimeElapsed(comment.created_at)}
-                          </Text>
-                        </View>
+                        <Pressable
+                          onPress={() => handleProfilePress(comment.user_id)}
+                          className="flex-row items-center">
+                          <Image
+                            source={
+                              comment.profiles?.avatar_url
+                                ? { uri: comment.profiles.avatar_url }
+                                : require('../assets/default-avatar.png')
+                            }
+                            style={styles.avatar}
+                          />
+                          <View style={styles.commentInfo}>
+                            <Text
+                              style={[
+                                styles.username,
+                                { color: colorScheme === 'dark' ? '#E0E0E0' : '#07020D' },
+                              ]}>
+                              {comment.profiles?.username}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.timestamp,
+                                { color: colorScheme === 'dark' ? '#666' : '#999' },
+                              ]}>
+                              {getTimeElapsed(comment.created_at)}
+                            </Text>
+                          </View>
+                        </Pressable>
                       </View>
                       <View
                         style={[
