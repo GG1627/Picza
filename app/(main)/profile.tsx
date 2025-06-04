@@ -50,6 +50,70 @@ type Profile = {
   competitions_won: number | null;
 };
 
+const getCompetitionTag = (
+  wins: number | null,
+  username?: string
+): { tag: string; color: string; bgColor: string; borderColor: string } => {
+  // Special tag for GG1627
+  if (username === 'GG1627')
+    return {
+      tag: 'CEO 😊',
+      color: '#FFD700',
+      bgColor: '#2e2a1f',
+      borderColor: '#FFD700',
+    };
+
+  if (!wins)
+    return {
+      tag: '🍕 Foodie Freshman',
+      color: '#9ca3af',
+      bgColor: '#2e2e2e',
+      borderColor: '#9ca3af',
+    };
+
+  if (wins >= 50)
+    return {
+      tag: '👑 Culinary Legend',
+      color: '#FFD700',
+      bgColor: '#2e2a1f',
+      borderColor: '#FFD700',
+    };
+  if (wins >= 20)
+    return {
+      tag: '🌟 Master Chef',
+      color: '#FF69B4',
+      bgColor: '#2e1f2a',
+      borderColor: '#FF69B4',
+    };
+  if (wins >= 10)
+    return {
+      tag: '🔥 Food Champion',
+      color: '#FF4500',
+      bgColor: '#2e1f1f',
+      borderColor: '#FF4500',
+    };
+  if (wins >= 5)
+    return {
+      tag: '⭐ Rising Star',
+      color: '#FF8C00',
+      bgColor: '#2e251f',
+      borderColor: '#FF8C00',
+    };
+  if (wins >= 2)
+    return {
+      tag: '🌱 Promising Cook',
+      color: '#32CD32',
+      bgColor: '#1f2e1f',
+      borderColor: '#32CD32',
+    };
+  return {
+    tag: '🍳 Kitchen Newbie',
+    color: '#87CEEB',
+    bgColor: '#1f2a2e',
+    borderColor: '#87CEEB',
+  };
+};
+
 export default function ProfileScreen() {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -57,7 +121,6 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedUsername, setEditedUsername] = useState('');
-  const [editedFullName, setEditedFullName] = useState('');
   const [editedBio, setEditedBio] = useState('');
   const [editedAlbumName, setEditedAlbumName] = useState('');
   const [isEditingAlbumName, setIsEditingAlbumName] = useState(false);
@@ -87,7 +150,6 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (profile) {
       setEditedUsername(profile.username);
-      setEditedFullName(profile.full_name);
       setEditedBio(profile.bio || '');
       setEditedAlbumName(profile.album_name || `${profile.full_name.split(' ')[0]}'s Food Album`);
     }
@@ -250,7 +312,7 @@ export default function ProfileScreen() {
   };
 
   const handleSaveProfile = async () => {
-    if (!editedUsername || !editedFullName) {
+    if (!editedUsername) {
       alert('Please fill in all required fields');
       return;
     }
@@ -284,7 +346,6 @@ export default function ProfileScreen() {
       }
 
       const updateData: any = {
-        full_name: editedFullName,
         bio: editedBio,
         avatar_url: avatarUrl,
         updated_at: new Date().toISOString(),
@@ -565,15 +626,36 @@ export default function ProfileScreen() {
                     </View>
                   </Pressable>
 
-                  <View className="mt-4 items-center">
+                  <View className="mt-2 items-center">
                     <Text
                       className={`text-2xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-                      {profile?.full_name}
-                    </Text>
-                    <Text
-                      className={`text-base ${colorScheme === 'dark' ? 'text-[#b3b3b3]' : 'text-[#07020D]'}`}>
                       @{profile?.username}
                     </Text>
+                    {profile && (
+                      <View className="mb-1 mt-1">
+                        <View
+                          style={{
+                            backgroundColor: getCompetitionTag(
+                              profile.competitions_won,
+                              profile.username
+                            ).bgColor,
+                            borderColor: getCompetitionTag(
+                              profile.competitions_won,
+                              profile.username
+                            ).borderColor,
+                          }}
+                          className="rounded-xl border-2 px-4 py-1">
+                          <Text
+                            style={{
+                              color: getCompetitionTag(profile.competitions_won, profile.username)
+                                .color,
+                            }}
+                            className="text-center text-sm font-semibold">
+                            {getCompetitionTag(profile.competitions_won, profile.username).tag}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
                   </View>
 
                   {/* Bio and School Section */}
@@ -632,36 +714,23 @@ export default function ProfileScreen() {
                       </Text>
                     </View>
                   </View>
-
-                  <Pressable
-                    onPress={() => setIsEditing(!isEditing)}
-                    className={`mt-4 rounded-xl border-2 px-6 py-2 first-line:bg-none ${
-                      isEditing
-                        ? colorScheme === 'dark'
-                          ? 'border-[#BA3B46] bg-[#312728]'
-                          : 'border-[#BA3B46] bg-[#f4cdd0]'
-                        : colorScheme === 'dark'
-                          ? 'border-[#f77f5e] bg-[#2e2725]'
-                          : 'border-[#f77f5e] bg-[#e6d5d0]'
-                    }`}>
-                    <Text
-                      className={`font-semibold ${
-                        isEditing
-                          ? colorScheme === 'dark'
-                            ? 'text-[#BA3B46]'
-                            : 'text-[#BA3B46]'
-                          : colorScheme === 'dark'
-                            ? 'text-[#f77f5e]'
-                            : 'text-[#f77f5e]'
-                      }`}>
-                      {isEditing ? 'Cancel' : 'Edit Profile'}
-                    </Text>
-                  </Pressable>
                 </View>
 
                 {/* Profile Information */}
                 {isEditing ? (
                   <View className="mt-2 space-y-6">
+                    <View className="flex-row items-center justify-between">
+                      <Text
+                        className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                        Edit Profile
+                      </Text>
+                      <Pressable
+                        onPress={() => setIsEditing(false)}
+                        className={`rounded-full p-2 ${colorScheme === 'dark' ? 'bg-[#312728]' : 'bg-[#f4cdd0]'}`}>
+                        <Ionicons name="close" size={24} color="#BA3B46" />
+                      </Pressable>
+                    </View>
+
                     <View>
                       <Text
                         className={` text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
@@ -690,21 +759,6 @@ export default function ProfileScreen() {
                           {getNextUsernameChangeDate()?.toLocaleDateString()}
                         </Text>
                       )}
-                    </View>
-
-                    <View>
-                      <Text
-                        className={`mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-                        Full Name
-                      </Text>
-                      <TextInput
-                        value={editedFullName}
-                        onChangeText={setEditedFullName}
-                        className={`rounded-xl border px-4 py-3 ${colorScheme === 'dark' ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]' : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'}`}
-                        placeholder="Enter full name"
-                        placeholderTextColor="#877B66"
-                        textAlignVertical="center"
-                      />
                     </View>
 
                     <View>
@@ -910,6 +964,28 @@ export default function ProfileScreen() {
                       colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                     }`}>
                     {isDarkColorScheme ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                  </Text>
+                </Pressable>
+
+                {/* Edit Profile Button */}
+                <Pressable
+                  onPress={() => {
+                    setIsEditing(!isEditing);
+                    closeSettings();
+                  }}
+                  className={`flex-row items-center space-x-3 border border-t-0 ${
+                    colorScheme === 'dark' ? 'bg-[#282828]' : 'border-[#b1b9c8] bg-white/80'
+                  } p-4`}>
+                  <Ionicons
+                    name="create-outline"
+                    size={24}
+                    color={colorScheme === 'dark' ? '#f77f5e' : '#f77f5e'}
+                  />
+                  <Text
+                    className={`text-base font-medium ${
+                      colorScheme === 'dark' ? 'text-[#f77f5e]' : 'text-[#f77f5e]'
+                    }`}>
+                    {isEditing ? 'Cancel Editing' : 'Edit Profile'}
                   </Text>
                 </Pressable>
 

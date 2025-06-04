@@ -42,6 +42,70 @@ type Profile = {
   competitions_won: number | null;
 };
 
+const getCompetitionTag = (
+  wins: number | null,
+  username?: string
+): { tag: string; color: string; bgColor: string; borderColor: string } => {
+  // Special tag for GG1627
+  if (username === 'GG1627')
+    return {
+      tag: 'CEO 😊',
+      color: '#FFD700',
+      bgColor: '#2e2a1f',
+      borderColor: '#FFD700',
+    };
+
+  if (!wins)
+    return {
+      tag: '🍕 Foodie Freshman',
+      color: '#9ca3af',
+      bgColor: '#2e2e2e',
+      borderColor: '#9ca3af',
+    };
+
+  if (wins >= 50)
+    return {
+      tag: '👑 Culinary Legend',
+      color: '#FFD700',
+      bgColor: '#2e2a1f',
+      borderColor: '#FFD700',
+    };
+  if (wins >= 20)
+    return {
+      tag: '🌟 Master Chef',
+      color: '#FF69B4',
+      bgColor: '#2e1f2a',
+      borderColor: '#FF69B4',
+    };
+  if (wins >= 10)
+    return {
+      tag: '🔥 Food Champion',
+      color: '#FF4500',
+      bgColor: '#2e1f1f',
+      borderColor: '#FF4500',
+    };
+  if (wins >= 5)
+    return {
+      tag: '⭐ Rising Star',
+      color: '#FF8C00',
+      bgColor: '#2e251f',
+      borderColor: '#FF8C00',
+    };
+  if (wins >= 2)
+    return {
+      tag: '🌱 Promising Cook',
+      color: '#32CD32',
+      bgColor: '#1f2e1f',
+      borderColor: '#32CD32',
+    };
+  return {
+    tag: '🍳 Kitchen Newbie',
+    color: '#87CEEB',
+    bgColor: '#1f2a2e',
+    borderColor: '#87CEEB',
+  };
+};
+
 export default function UserProfileScreen() {
   const { userId } = useLocalSearchParams();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -266,18 +330,41 @@ export default function UserProfileScreen() {
               </View>
 
               <View className="mt-4 items-center">
-                <Text
+                {/* <Text
                   className={`text-2xl font-bold ${
                     colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                   }`}>
                   {profile?.full_name}
-                </Text>
+                </Text> */}
                 <Text
-                  className={`text-base ${
-                    colorScheme === 'dark' ? 'text-[#b3b3b3]' : 'text-[#07020D]'
+                  className={`text-2xl font-bold ${
+                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                   }`}>
                   @{profile?.username}
                 </Text>
+                {profile && (
+                  <View className="mb-1 mt-1">
+                    <View
+                      style={{
+                        backgroundColor: getCompetitionTag(
+                          profile.competitions_won,
+                          profile.username
+                        ).bgColor,
+                        borderColor: getCompetitionTag(profile.competitions_won, profile.username)
+                          .borderColor,
+                      }}
+                      className="rounded-xl border-2 px-4 py-1">
+                      <Text
+                        style={{
+                          color: getCompetitionTag(profile.competitions_won, profile.username)
+                            .color,
+                        }}
+                        className="text-center text-sm font-semibold">
+                        {getCompetitionTag(profile.competitions_won, profile.username).tag}
+                      </Text>
+                    </View>
+                  </View>
+                )}
               </View>
 
               {/* Bio and School Section */}
