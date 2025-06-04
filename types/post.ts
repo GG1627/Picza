@@ -8,6 +8,7 @@ export interface Post {
   dish_name: string | null;
   ingredients: string | null;
   comments: string[] | null;
+  comments_count?: number;
   profiles: {
     id: string;
     username: string;

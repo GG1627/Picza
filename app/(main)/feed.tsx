@@ -177,12 +177,23 @@ export default function FeedScreen() {
         const newPosts = (posts as Post[]).filter(
           (newPost) => !allPosts.some((existingPost) => existingPost.id === newPost.id)
         );
-        setAllPosts((prev) => [...prev, ...newPosts]);
+        // Sort the combined posts based on the current sort type
+        const combinedPosts = [...allPosts, ...newPosts];
+        if (sortBy === 'trending') {
+          // For trending, sort by likes_count in descending order (most likes first)
+          combinedPosts.sort((a, b) => b.likes_count - a.likes_count);
+        } else {
+          // For recent, sort by created_at in descending order (newest first)
+          combinedPosts.sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+        }
+        setAllPosts(combinedPosts);
       }
       setHasMore((posts as Post[]).length === pageSize);
       setIsLoadingMore(false);
     }
-  }, [posts, page]);
+  }, [posts, page, sortBy]);
 
   const loadMore = async () => {
     if (!hasMore || isLoading || isLoadingMore) return;
@@ -1269,7 +1280,7 @@ export default function FeedScreen() {
                         textShadowRadius: 3,
                         letterSpacing: 0.5,
                       }}>
-                      Recent
+                      Trending
                     </GradientText>
                   ) : (
                     <GradientText
@@ -1283,7 +1294,7 @@ export default function FeedScreen() {
                         textShadowRadius: 3,
                         letterSpacing: 0.5,
                       }}>
-                      Trending
+                      Recent
                     </GradientText>
                   )}
                 </View>

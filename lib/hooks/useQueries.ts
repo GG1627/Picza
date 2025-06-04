@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 import * as base64 from 'base64-js';
 import { uploadToCloudinary } from '../cloudinary';
+import { getTrendingPosts } from '../trendingAlgorithm';
 
 // Types
 type Post = {
@@ -90,9 +91,12 @@ export function usePosts(
       // 'all' filter doesn't need any additional conditions
 
       // Apply sorting
-      if (sortBy === 'trending') {
-        query = query.order('likes_count', { ascending: false });
+      if (sortBy === 'recent') {
+        // For recent, sort by created_at in descending order (newest first)
+        query = query.order('created_at', { ascending: false });
       } else {
+        // For trending, we'll fetch all posts and sort them using our algorithm
+        // We'll still order by created_at initially to ensure consistent pagination
         query = query.order('created_at', { ascending: false });
       }
 
@@ -106,10 +110,17 @@ export function usePosts(
       if (error) throw error;
 
       // Transform the data to include the comment count
-      return data.map((post) => ({
+      const transformedData = data.map((post) => ({
         ...post,
         comments_count: post.comments?.[0]?.count || 0,
       }));
+
+      // If sorting by trending, apply our trending algorithm
+      if (sortBy === 'trending') {
+        return getTrendingPosts(transformedData);
+      }
+
+      return transformedData;
     },
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 30 * 60 * 1000, // Keep data in cache for 30 minutes

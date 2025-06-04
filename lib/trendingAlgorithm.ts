@@ -23,7 +23,7 @@ const calculateTrendingScore = (post: Post): number => {
   }
 
   const numLikes = post.likes_count;
-  const numComments = post.comments?.length || 0;
+  const numComments = post.comments_count || 0;
 
   // Base engagement score with balanced weights
   // Comments are worth more but not overwhelmingly so
@@ -60,6 +60,7 @@ const calculateTrendingScore = (post: Post): number => {
   // Recency bonus that decreases over time
   const recencyBonus = 800 / (1 + timeDiffInHours);
 
+  // Return the final score
   return finalScore + velocityBonus + recencyBonus;
 };
 
