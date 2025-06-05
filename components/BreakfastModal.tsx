@@ -87,7 +87,8 @@ export default function BreakfastModal({
               creativity, get votes from the community, and win exciting prizes.
             </Text>
             <Text className="mt-4 text-base font-medium text-[#1A1A1A]">
-              Time remaining: {timeLeft}
+              <Text>Time remaining: </Text>
+              <Text>{timeLeft}</Text>
             </Text>
 
             {error && <Text className="mt-4 text-sm text-red-600">{error}</Text>}

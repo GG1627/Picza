@@ -141,7 +141,9 @@ export default function BreakfastBracketScreen() {
             <Text className="text-base font-medium text-gray-800">{matchup.player1?.name}</Text>
           </View>
           <View className="flex-row items-center space-x-2">
-            <Text className="text-sm text-gray-500">{matchup.player1?.votes} votes</Text>
+            <Text className="text-sm text-gray-500">
+              <Text>{matchup.player1?.votes} votes</Text>
+            </Text>
             {canVote && (
               <TouchableOpacity
                 onPress={() => handleVote(matchup.id, matchup.player1!.id)}
@@ -173,7 +175,9 @@ export default function BreakfastBracketScreen() {
             <Text className="text-base font-medium text-gray-800">{matchup.player2?.name}</Text>
           </View>
           <View className="flex-row items-center space-x-2">
-            <Text className="text-sm text-gray-500">{matchup.player2?.votes} votes</Text>
+            <Text className="text-sm text-gray-500">
+              <Text>{matchup.player2?.votes} votes</Text>
+            </Text>
             {canVote && (
               <TouchableOpacity
                 onPress={() => handleVote(matchup.id, matchup.player2!.id)}
@@ -234,7 +238,11 @@ export default function BreakfastBracketScreen() {
               <Ionicons name="close" size={24} color="#666" />
             </TouchableOpacity>
           </View>
-          {/* Add more details about the selected matchup here */}
+          <Text className="mt-2 text-base text-gray-600">
+            <Text>
+              Round {selectedMatchup.round} - Match {selectedMatchup.position}
+            </Text>
+          </Text>
         </View>
       )}
     </View>

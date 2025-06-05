@@ -32,8 +32,12 @@ export default function ViewerModal({ isVisible, onClose, timeLeft }: ViewerModa
           {/* Content */}
           <View className="mb-6">
             <Text className="text-base text-[#ffffff]">
-              Our competitors are currently working on their breakfast masterpieces! Come back in{' '}
-              <Text className="font-bold">{timeLeft}</Text> to vote for your favorite creation.
+              <Text>
+                Our competitors are currently working on their breakfast masterpieces! Come back
+                in{' '}
+              </Text>
+              <Text className="font-bold">{timeLeft.replace(' remaining', '')}</Text>
+              <Text> to vote for your favorite creation.</Text>
             </Text>
           </View>
 

@@ -1,12 +1,18 @@
 // app/(screens)/breakfastCompetition.tsx
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Alert } from 'react-native';
 import { useColorScheme } from '../../lib/useColorScheme';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../lib/useAuth';
-import { getCompetitionPhase, getTimeUntilNextPhase } from '../../lib/competitions';
+import {
+  getCompetitionPhase,
+  getTimeUntilNextPhase,
+  submitBreakfastPhoto,
+} from '../../lib/competitions';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, router } from 'expo-router';
+import { uploadToCloudinary } from '../../lib/cloudinary';
+import * as FileSystem from 'expo-file-system';
 
 export default function BreakfastCompetitionScreen() {
   const { colorScheme } = useColorScheme();
@@ -18,6 +24,44 @@ export default function BreakfastCompetitionScreen() {
   >('competition');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  const formatTimeLeft = (timeString: string) => {
+    // Convert the time string (milliseconds) to a number
+    const totalMilliseconds = parseInt(timeString);
+    if (isNaN(totalMilliseconds)) return timeString;
+
+    const totalSeconds = Math.floor(totalMilliseconds / 1000);
+
+    if (totalSeconds <= 0) {
+      router.push('/breakfastBracket');
+      return "Time's up!";
+    }
+
+    if (totalSeconds < 60) {
+      // Less than 1 minute, show seconds
+      return `${totalSeconds}s`;
+    } else if (totalSeconds < 300) {
+      // Less than 5 minutes, show minutes and seconds
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      return `${mins}m ${secs}s`;
+    } else if (totalSeconds < 3600) {
+      // Less than 1 hour, show minutes and seconds
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      return `${mins}m ${secs}s`;
+    } else if (totalSeconds < 86400) {
+      // Less than 1 day
+      const hours = Math.floor(totalSeconds / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      return `${hours}h ${mins}m`;
+    } else {
+      // More than 1 day
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      return `${days}d ${hours}h`;
+    }
+  };
 
   useEffect(() => {
     const fetchCompetitionData = async () => {
@@ -37,46 +81,16 @@ export default function BreakfastCompetitionScreen() {
         }
 
         const timeUntilNext = await getTimeUntilNextPhase(competitionId as string);
-        setTimeLeft(timeUntilNext);
+        setTimeLeft(formatTimeLeft(timeUntilNext));
       } catch (error) {
         console.error('Error fetching competition data:', error);
       }
     };
 
     fetchCompetitionData();
-    const interval = setInterval(fetchCompetitionData, 1000); // Update every second
+    const interval = setInterval(fetchCompetitionData, 100); // Update every 100ms for smoother countdown
     return () => clearInterval(interval);
   }, [competitionId]);
-
-  const formatTimeLeft = (timeString: string) => {
-    // Extract hours, minutes, and seconds from the time string
-    const match = timeString.match(/(\d+)h (\d+)m/);
-    if (!match) return timeString;
-
-    const hours = parseInt(match[1]);
-    const minutes = parseInt(match[2]);
-    const totalSeconds = hours * 3600 + minutes * 60;
-
-    if (totalSeconds <= 0) {
-      router.push('/breakfastBracket');
-      return "Time's up!";
-    }
-
-    if (totalSeconds < 60) {
-      return `${totalSeconds}s remaining`;
-    } else if (totalSeconds < 300) {
-      // Less than 5 minutes
-      const mins = Math.floor(totalSeconds / 60);
-      const secs = totalSeconds % 60;
-      return `${mins}m ${secs}s remaining`;
-    } else if (totalSeconds < 3600) {
-      // Less than 1 hour
-      const mins = Math.floor(totalSeconds / 60);
-      return `${mins}m remaining`;
-    } else {
-      return timeString;
-    }
-  };
 
   const handleImagePick = async () => {
     try {
@@ -92,18 +106,53 @@ export default function BreakfastCompetitionScreen() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
   const handleUpload = async () => {
-    if (!selectedImage) return;
+    if (!selectedImage || !user || !competitionId) return;
 
     try {
       setIsUploading(true);
-      // TODO: Implement image upload to storage and submission to competition
-      console.log('Uploading image:', selectedImage);
+
+      // Convert image to base64
+      const base64 = await FileSystem.readAsStringAsync(selectedImage, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Upload to Cloudinary
+      const imageUrl = await uploadToCloudinary(base64, 'post');
+
+      // Submit to competition
+      const success = await submitBreakfastPhoto(
+        competitionId as string,
+        user.id,
+        imageUrl,
+        'My breakfast creation'
+      );
+
+      if (success) {
+        Alert.alert('Success!', 'Your breakfast photo has been submitted successfully.', [
+          {
+            text: 'OK',
+            onPress: () => router.push('/breakfastBracket'),
+          },
+        ]);
+      } else {
+        Alert.alert(
+          'Error',
+          'You must join the competition before submitting a photo. Please go back and join the competition first.',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      }
     } catch (error) {
-      console.error('Error uploading image:', error);
+      Alert.alert('Error', 'Failed to upload image. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -139,7 +188,10 @@ export default function BreakfastCompetitionScreen() {
       <View className="mt-8 items-center">
         <View className="flex-row items-center space-x-2 rounded-full bg-[#FFD700] px-6 py-3">
           <Ionicons name="time-outline" size={24} color="#FF8C00" />
-          <Text className="text-lg font-semibold text-[#1A1A1A]">{formatTimeLeft(timeLeft)}</Text>
+          <Text className="text-lg font-semibold text-[#1A1A1A]">
+            {timeLeft}
+            <Text> left to submit</Text>
+          </Text>
         </View>
       </View>
 

@@ -93,12 +93,12 @@ export default function CompetitionsScreen() {
 
     const totalSeconds = Math.floor(totalMilliseconds / 1000);
 
-    if (totalSeconds <= 0) {
+    if (totalSeconds < 0) {
       return `${timeLeft} until voting`;
     }
 
-    if (totalSeconds < 60) {
-      // Less than 1 minute, show seconds
+    if (totalSeconds <= 60) {
+      // Less than or equal to 1 minute, show seconds
       return `${totalSeconds}s remaining`;
     } else if (totalSeconds < 300) {
       // Less than 5 minutes, show minutes and seconds
@@ -231,63 +231,66 @@ export default function CompetitionsScreen() {
 
           {/* Content */}
           <View className="flex-1 p-4">
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center space-x-2">
-                <Ionicons name="sunny" size={24} color="#FF8C00" />
-                <Text className="ml-1 text-lg font-semibold text-[#1A1A1A]">
-                  Breakfast Challenge
-                </Text>
+            {competitionPhase === 'completed' ? (
+              // Winner Display
+              <View className="flex-1 items-center justify-center">
+                <Text className="text-center text-2xl font-bold text-[#1A1A1A]">Winner!</Text>
+                <View className="mt-2 flex-row items-center space-x-2">
+                  <Ionicons name="trophy" size={24} color="#FF8C00" />
+                  <Text className="text-lg font-semibold text-[#1A1A1A]">John Doe</Text>
+                </View>
+                <Text className="mt-1 text-sm text-[#1A1A1A]">with "Amazing Pancakes"</Text>
               </View>
-              {competitionPhase === 'registration' && hasJoined && (
-                <View className="rounded-full bg-green-500 px-3 py-1">
-                  <Text className="text-sm font-medium text-white">Joined</Text>
-                </View>
-              )}
-              {competitionPhase === 'competition' && (
-                <View className="rounded-full bg-green-500 px-3 py-1">
-                  <Text className="text-sm font-medium text-white">In Progress</Text>
-                </View>
-              )}
-              {competitionPhase === 'voting' && (
-                <View className="rounded-full bg-[#FF8C00] px-3 py-1">
-                  <Text className="text-sm font-medium text-white">Vote Now!</Text>
-                </View>
-              )}
-            </View>
-
-            <View className="mt-2 flex-1 items-center justify-center">
-              {competitionPhase === 'completed' ? (
-                <View className="items-center">
-                  <Text className="text-center text-2xl font-bold text-[#1A1A1A]">Winner!</Text>
-                  <View className="mt-2 flex-row items-center space-x-2">
-                    <Ionicons name="trophy" size={24} color="#FF8C00" />
-                    <Text className="text-lg font-semibold text-[#1A1A1A]">John Doe</Text>
+            ) : (
+              // Regular Competition Display
+              <>
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center space-x-2">
+                    <Ionicons name="sunny" size={24} color="#FF8C00" />
+                    <Text className="ml-1 text-lg font-semibold text-[#1A1A1A]">
+                      Breakfast Challenge
+                    </Text>
                   </View>
-                  <Text className="mt-1 text-sm text-[#1A1A1A]">with "Amazing Pancakes"</Text>
+                  {competitionPhase === 'registration' && hasJoined && (
+                    <View className="rounded-full bg-green-500 px-3 py-1">
+                      <Text className="text-sm font-medium text-white">Joined</Text>
+                    </View>
+                  )}
+                  {competitionPhase === 'competition' && (
+                    <View className="rounded-full bg-green-500 px-3 py-1">
+                      <Text className="text-sm font-medium text-white">In Progress</Text>
+                    </View>
+                  )}
+                  {competitionPhase === 'voting' && (
+                    <View className="rounded-full bg-[#FF8C00] px-3 py-1">
+                      <Text className="text-sm font-medium text-white">Vote Now!</Text>
+                    </View>
+                  )}
                 </View>
-              ) : (
-                <Text className="text-center text-2xl font-bold text-[#1A1A1A]">
-                  {currentCompetition?.theme || 'Loading...'}
-                </Text>
-              )}
-            </View>
 
-            <View className="mt-2 flex-row items-center justify-between">
-              <View className="flex-row items-center space-x-1 rounded-full bg-white/30 px-3 py-1">
-                <Ionicons name="time-outline" size={16} color="#FF8C00" />
-                <Text className="text-sm text-[#1A1A1A]">
-                  {competitionPhase === 'registration' && `${timeLeft} to join`}
-                  {competitionPhase === 'competition' && `${timeLeft} until voting`}
-                  {competitionPhase === 'voting' && `${timeLeft} to vote`}
-                  {competitionPhase === 'completed' && 'Competition Ended'}
-                </Text>
-              </View>
-              <View className="rounded-full bg-white/30 px-3 py-1">
-                <Text className="text-sm font-medium text-[#1A1A1A]">
-                  {participantCount}/16 participants
-                </Text>
-              </View>
-            </View>
+                <View className="mt-2 flex-1 items-center justify-center">
+                  <Text className="text-center text-2xl font-bold text-[#1A1A1A]">
+                    {currentCompetition?.theme || 'Loading...'}
+                  </Text>
+                </View>
+
+                <View className="mt-2 flex-row items-center justify-between">
+                  <View className="flex-row items-center space-x-1 rounded-full bg-white/30 px-3 py-1">
+                    <Ionicons name="time-outline" size={16} color="#FF8C00" />
+                    <Text className="ml-1 text-sm text-[#1A1A1A]">
+                      {competitionPhase === 'registration' && `${timeLeft} to join`}
+                      {competitionPhase === 'competition' && `${timeLeft} until voting`}
+                      {competitionPhase === 'voting' && `${timeLeft} to vote`}
+                    </Text>
+                  </View>
+                  <View className="rounded-full bg-white/30 px-3 py-1">
+                    <Text className="text-sm font-medium text-[#1A1A1A]">
+                      {participantCount}/16 participants
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
           </View>
         </TouchableOpacity>
 

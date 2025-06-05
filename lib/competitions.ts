@@ -32,22 +32,51 @@ export async function joinBreakfastCompetition(competitionId: string, userId: st
   return data;
 }
 
-export async function submitBreakfastPhoto(
+export async function hasUserJoinedCompetition(competitionId: string, userId: string) {
+  const { data, error } = await supabase
+    .from('breakfast_participants')
+    .select('id')
+    .eq('competition_id', competitionId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw error;
+  }
+  return data?.id || null;
+}
+
+export const submitBreakfastPhoto = async (
   competitionId: string,
   userId: string,
   imageUrl: string,
   caption: string
-) {
-  const { data, error } = await supabase.rpc('submit_breakfast_photo', {
-    competition_id: competitionId,
-    user_id: userId,
-    image_url: imageUrl,
-    caption,
-  });
+): Promise<boolean> => {
+  try {
+    const participantId = await hasUserJoinedCompetition(competitionId, userId);
 
-  if (error) throw error;
-  return data;
-}
+    if (!participantId) {
+      return false;
+    }
+
+    const { error } = await supabase.from('breakfast_submissions').insert({
+      competition_id: competitionId,
+      participant_id: participantId,
+      image_url: imageUrl,
+      caption: caption,
+      status: 'pending',
+    });
+
+    if (error) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
 
 export async function voteBreakfastSubmission(submissionId: string, voterId: string) {
   const { data, error } = await supabase.rpc('vote_breakfast_submission', {
@@ -238,20 +267,4 @@ export async function checkAndUpdateCompetitionStatus() {
   }
 
   return currentCompetition;
-}
-
-// Function to check if user has joined a competition
-export async function hasUserJoinedCompetition(competitionId: string, userId: string) {
-  const { data, error } = await supabase
-    .from('breakfast_participants')
-    .select('id')
-    .eq('competition_id', competitionId)
-    .eq('user_id', userId)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') return false; // No rows returned
-    throw error;
-  }
-  return !!data;
 }
