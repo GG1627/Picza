@@ -35,6 +35,7 @@ import { Easing } from 'react-native';
 import { deleteFromCloudinary } from '../../lib/cloudinary';
 import { useFocusEffect } from '@react-navigation/native';
 import CommentsModal from '../../components/CommentsModal';
+import { getCompetitionTag } from '../../lib/competitionTags';
 
 // Animation constants
 const ANIMATION_CONFIG = {
@@ -71,6 +72,7 @@ type Post = {
     id: string;
     username: string;
     avatar_url: string | null;
+    competitions_won: number | null;
     schools: {
       name: string;
     } | null;
@@ -868,12 +870,42 @@ export default function FeedScreen() {
                 />
               </View>
               <View className="ml-3">
-                <Text
-                  className={`text-base font-bold ${
-                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                  }`}>
-                  {post.profiles?.username || 'Unknown User'}
-                </Text>
+                <View className="flex-row items-center space-x-2">
+                  <Text
+                    className={`text-base font-bold ${
+                      colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                    }`}>
+                    {post.profiles?.username || 'Unknown User'}
+                  </Text>
+                  {post.profiles && (
+                    <View
+                      style={{
+                        backgroundColor: getCompetitionTag(
+                          post.profiles.competitions_won,
+                          post.profiles.username
+                        ).bgColor,
+                        borderColor: getCompetitionTag(
+                          post.profiles.competitions_won,
+                          post.profiles.username
+                        ).borderColor,
+                      }}
+                      className="ml-1 rounded-xl border px-2 py-0.5">
+                      <Text
+                        style={{
+                          color: getCompetitionTag(
+                            post.profiles.competitions_won,
+                            post.profiles.username
+                          ).color,
+                        }}
+                        className="text-center text-xs font-semibold">
+                        {
+                          getCompetitionTag(post.profiles.competitions_won, post.profiles.username)
+                            .tag
+                        }
+                      </Text>
+                    </View>
+                  )}
+                </View>
                 <View className="flex-row items-center">
                   <Text className="text-xs text-gray-500">{getTimeElapsed(post.created_at)}</Text>
                   <Text className="mx-1 text-xs text-gray-500">•</Text>
