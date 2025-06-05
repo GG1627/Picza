@@ -3,6 +3,7 @@ import { useColorScheme } from '../../lib/useColorScheme';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../lib/useAuth';
+import { router } from 'expo-router';
 
 // Types for our bracket data
 type Matchup = {
@@ -190,14 +191,26 @@ export default function BreakfastBracketScreen() {
     <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
       {/* Header */}
       <View className="mt-20 px-4">
-        <Text
-          className={`text-center text-3xl font-bold ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-          Breakfast Bracket
-        </Text>
-        <Text
-          className={`mt-1 text-center text-base ${colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
-          Vote for your favorite breakfast!
-        </Text>
+        <View className="flex-row items-center justify-between">
+          <TouchableOpacity onPress={() => router.back()} className="rounded-full bg-white/20 p-2">
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={colorScheme === 'dark' ? 'white' : 'black'}
+            />
+          </TouchableOpacity>
+          <View className="flex-1 items-center">
+            <Text
+              className={`text-center text-3xl font-bold ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              Breakfast Bracket
+            </Text>
+            <Text
+              className={`mt-1 text-center text-base ${colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+              Vote for your favorite breakfast!
+            </Text>
+          </View>
+          <View className="w-10" /> {/* Spacer to balance the back button */}
+        </View>
       </View>
 
       {/* Bracket Content */}

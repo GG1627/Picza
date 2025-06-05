@@ -205,10 +205,7 @@ export async function getTimeUntilNextPhase(competitionId: string): Promise<stri
   }
 
   const difference = targetTime.getTime() - now.getTime();
-  const hours = Math.floor(difference / (1000 * 60 * 60));
-  const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-
-  return `${hours}h ${minutes}m until ${phase}`;
+  return `${difference}`; // Return raw milliseconds
 }
 
 // Function to check and update competition status
@@ -223,9 +220,9 @@ export async function checkAndUpdateCompetitionStatus() {
     .single();
 
   if (fetchError) {
-    // If no active competition exists, create a new one
+    // If no active competition exists, return null
     if (fetchError.code === 'PGRST116') {
-      return await createNewBreakfastCompetition();
+      return null;
     }
     throw fetchError;
   }
@@ -233,15 +230,11 @@ export async function checkAndUpdateCompetitionStatus() {
   // Check if competition has ended
   const votingEndTime = new Date(currentCompetition.voting_end_time);
   if (now > votingEndTime) {
-    // Competition has ended, create new one
-    // First, mark the old one as completed
+    // Competition has ended, mark it as completed
     await supabase
       .from('breakfast_competitions')
       .update({ status: 'completed' })
       .eq('id', currentCompetition.id);
-
-    // Create new competition
-    return await createNewBreakfastCompetition();
   }
 
   return currentCompetition;

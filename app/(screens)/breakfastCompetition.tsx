@@ -30,6 +30,12 @@ export default function BreakfastCompetitionScreen() {
         const phase = await getCompetitionPhase(competitionId as string);
         setCompetitionPhase(phase);
 
+        // If phase is voting, redirect to bracket screen
+        if (phase === 'voting') {
+          router.push('/breakfastBracket');
+          return;
+        }
+
         const timeUntilNext = await getTimeUntilNextPhase(competitionId as string);
         setTimeLeft(timeUntilNext);
       } catch (error) {
@@ -38,9 +44,39 @@ export default function BreakfastCompetitionScreen() {
     };
 
     fetchCompetitionData();
-    const interval = setInterval(fetchCompetitionData, 60000); // Update every minute
+    const interval = setInterval(fetchCompetitionData, 1000); // Update every second
     return () => clearInterval(interval);
   }, [competitionId]);
+
+  const formatTimeLeft = (timeString: string) => {
+    // Extract hours, minutes, and seconds from the time string
+    const match = timeString.match(/(\d+)h (\d+)m/);
+    if (!match) return timeString;
+
+    const hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    const totalSeconds = hours * 3600 + minutes * 60;
+
+    if (totalSeconds <= 0) {
+      router.push('/breakfastBracket');
+      return "Time's up!";
+    }
+
+    if (totalSeconds < 60) {
+      return `${totalSeconds}s remaining`;
+    } else if (totalSeconds < 300) {
+      // Less than 5 minutes
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      return `${mins}m ${secs}s remaining`;
+    } else if (totalSeconds < 3600) {
+      // Less than 1 hour
+      const mins = Math.floor(totalSeconds / 60);
+      return `${mins}m remaining`;
+    } else {
+      return timeString;
+    }
+  };
 
   const handleImagePick = async () => {
     try {
@@ -103,7 +139,7 @@ export default function BreakfastCompetitionScreen() {
       <View className="mt-8 items-center">
         <View className="flex-row items-center space-x-2 rounded-full bg-[#FFD700] px-6 py-3">
           <Ionicons name="time-outline" size={24} color="#FF8C00" />
-          <Text className="text-lg font-semibold text-[#1A1A1A]">{timeLeft}</Text>
+          <Text className="text-lg font-semibold text-[#1A1A1A]">{formatTimeLeft(timeLeft)}</Text>
         </View>
       </View>
 

@@ -81,71 +81,70 @@ export default function CompetitionsScreen() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isViewerModalVisible, setIsViewerModalVisible] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
-  const [isTimeUp, setIsTimeUp] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
   const [currentCompetition, setCurrentCompetition] = useState<any>(null);
   const [hasJoined, setHasJoined] = useState(false);
   const [competitionPhase, setCompetitionPhase] = useState<CompetitionPhase>('registration');
 
-  useEffect(() => {
-    const fetchCompetitionData = async () => {
-      try {
-        const competition = await checkAndUpdateCompetitionStatus();
-        setCurrentCompetition(competition);
+  const formatTimeLeft = (timeString: string) => {
+    // Convert the time string (milliseconds) to a number
+    const totalMilliseconds = parseInt(timeString);
+    if (isNaN(totalMilliseconds)) return timeString;
 
-        if (competition) {
-          const count = await getBreakfastParticipantCount(competition.id);
-          setParticipantCount(count || 0);
+    const totalSeconds = Math.floor(totalMilliseconds / 1000);
 
-          // Check if user has joined
-          if (user) {
-            const joined = await hasUserJoinedCompetition(competition.id, user.id);
-            setHasJoined(joined);
-          }
+    if (totalSeconds <= 0) {
+      return `${timeLeft} until voting`;
+    }
 
-          // Get competition phase
-          const phase = await getCompetitionPhase(competition.id);
-          setCompetitionPhase(phase);
-
-          // Get time until next phase
-          const timeUntilNext = await getTimeUntilNextPhase(competition.id);
-          setTimeLeft(timeUntilNext);
-        }
-      } catch (error) {
-        console.error('Error fetching competition data:', error);
-      }
-    };
-
-    fetchCompetitionData();
-    const interval = setInterval(fetchCompetitionData, 60000);
-    return () => clearInterval(interval);
-  }, [user]);
+    if (totalSeconds < 60) {
+      // Less than 1 minute, show seconds
+      return `${totalSeconds}s remaining`;
+    } else if (totalSeconds < 300) {
+      // Less than 5 minutes, show minutes and seconds
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      return `${mins}m ${secs}s remaining`;
+    } else if (totalSeconds < 3600) {
+      // Less than 1 hour, show minutes and seconds
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      return `${mins}m ${secs}s remaining`;
+    } else if (totalSeconds < 86400) {
+      // Less than 1 day
+      const hours = Math.floor(totalSeconds / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      return `${hours}h ${mins}m remaining`;
+    } else {
+      // More than 1 day
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      return `${days}d ${hours}h remaining`;
+    }
+  };
 
   const handleBreakfastPress = () => {
-    if (competitionPhase === 'completed') {
-      router.push({
-        pathname: '/breakfastCompetition',
-        params: { competitionId: currentCompetition.id },
-      });
+    if (!currentCompetition) {
+      console.log('No active competition found');
       return;
     }
 
-    // During registration phase, always show the modal
+    // During registration phase, show the breakfast modal
     if (competitionPhase === 'registration') {
       setIsModalVisible(true);
       return;
     }
 
-    // During competition phase, redirect competitors to competition screen
+    // During competition phase, show viewer modal only for non-competitors
     if (competitionPhase === 'competition') {
-      if (hasJoined) {
+      if (!hasJoined) {
+        setIsViewerModalVisible(true);
+      } else {
         router.push({
           pathname: '/breakfastCompetition',
           params: { competitionId: currentCompetition.id },
         });
-        return;
       }
-      setIsViewerModalVisible(true);
       return;
     }
 
@@ -154,7 +153,54 @@ export default function CompetitionsScreen() {
       router.push('/breakfastBracket');
       return;
     }
+
+    // During completed phase, do nothing (winner is shown in the box)
+    if (competitionPhase === 'completed') {
+      return;
+    }
   };
+
+  useEffect(() => {
+    const fetchCompetitionData = async () => {
+      try {
+        const competition = await checkAndUpdateCompetitionStatus();
+        if (!competition) {
+          console.log('No active competition found');
+          setTimeLeft('No active competition');
+          setParticipantCount(0);
+          setHasJoined(false);
+          return;
+        }
+        setCurrentCompetition(competition);
+
+        const count = await getBreakfastParticipantCount(competition.id);
+        setParticipantCount(count || 0);
+
+        // Check if user has joined
+        if (user) {
+          const joined = await hasUserJoinedCompetition(competition.id, user.id);
+          setHasJoined(joined);
+        }
+
+        // Get competition phase
+        const phase = await getCompetitionPhase(competition.id);
+        setCompetitionPhase(phase);
+
+        // Get time until next phase
+        const timeUntilNext = await getTimeUntilNextPhase(competition.id);
+        setTimeLeft(formatTimeLeft(timeUntilNext));
+      } catch (error) {
+        console.error('Error fetching competition data:', error);
+        setTimeLeft('Loading...');
+        setParticipantCount(0);
+        setHasJoined(false);
+      }
+    };
+
+    fetchCompetitionData();
+    const interval = setInterval(fetchCompetitionData, 100); // Update every 100ms for smoother countdown
+    return () => clearInterval(interval);
+  }, [user]);
 
   return (
     <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
@@ -172,7 +218,7 @@ export default function CompetitionsScreen() {
         </Text>
       </View>
 
-      {/* Competition Boxes Container - Now takes 70% of screen height with bottom padding */}
+      {/* Competition Boxes Container */}
       <View className="h-[65%] px-4 pb-5">
         {/* Box 1 - Breakfast Competition */}
         <TouchableOpacity
@@ -188,25 +234,53 @@ export default function CompetitionsScreen() {
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center space-x-2">
                 <Ionicons name="sunny" size={24} color="#FF8C00" />
-                <Text className="text-lg font-semibold text-[#1A1A1A]">Breakfast Challenge</Text>
+                <Text className="ml-1 text-lg font-semibold text-[#1A1A1A]">
+                  Breakfast Challenge
+                </Text>
               </View>
-              {hasJoined && (
+              {competitionPhase === 'registration' && hasJoined && (
                 <View className="rounded-full bg-green-500 px-3 py-1">
                   <Text className="text-sm font-medium text-white">Joined</Text>
+                </View>
+              )}
+              {competitionPhase === 'competition' && (
+                <View className="rounded-full bg-green-500 px-3 py-1">
+                  <Text className="text-sm font-medium text-white">In Progress</Text>
+                </View>
+              )}
+              {competitionPhase === 'voting' && (
+                <View className="rounded-full bg-[#FF8C00] px-3 py-1">
+                  <Text className="text-sm font-medium text-white">Vote Now!</Text>
                 </View>
               )}
             </View>
 
             <View className="mt-2 flex-1 items-center justify-center">
-              <Text className="text-center text-2xl font-bold text-[#1A1A1A]">
-                {currentCompetition?.theme || 'Loading...'}
-              </Text>
+              {competitionPhase === 'completed' ? (
+                <View className="items-center">
+                  <Text className="text-center text-2xl font-bold text-[#1A1A1A]">Winner!</Text>
+                  <View className="mt-2 flex-row items-center space-x-2">
+                    <Ionicons name="trophy" size={24} color="#FF8C00" />
+                    <Text className="text-lg font-semibold text-[#1A1A1A]">John Doe</Text>
+                  </View>
+                  <Text className="mt-1 text-sm text-[#1A1A1A]">with "Amazing Pancakes"</Text>
+                </View>
+              ) : (
+                <Text className="text-center text-2xl font-bold text-[#1A1A1A]">
+                  {currentCompetition?.theme || 'Loading...'}
+                </Text>
+              )}
             </View>
 
             <View className="mt-2 flex-row items-center justify-between">
               <View className="flex-row items-center space-x-1 rounded-full bg-white/30 px-3 py-1">
                 <Ionicons name="time-outline" size={16} color="#FF8C00" />
-                <Text className="text-sm text-[#1A1A1A]">{timeLeft}</Text>
+                <Text className="text-sm text-[#1A1A1A]">
+                  {competitionPhase === 'registration' && `${timeLeft} to join`}
+                  {competitionPhase === 'competition' && `${timeLeft} until voting`}
+                  {competitionPhase === 'voting' && `${timeLeft} to vote`}
+                  {competitionPhase === 'completed' && 'Competition Ended'}
+                </Text>
               </View>
               <View className="rounded-full bg-white/30 px-3 py-1">
                 <Text className="text-sm font-medium text-[#1A1A1A]">
@@ -217,7 +291,7 @@ export default function CompetitionsScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Box 2 */}
+        {/* Other competition boxes */}
         <TouchableOpacity
           className={`mb-4 h-1/4 w-full items-center justify-center rounded-xl ${
             colorScheme === 'dark' ? 'bg-gray-800' : 'bg-white'
@@ -228,7 +302,6 @@ export default function CompetitionsScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* Box 3 */}
         <TouchableOpacity
           className={`mb-4 h-1/4 w-full items-center justify-center rounded-xl ${
             colorScheme === 'dark' ? 'bg-gray-800' : 'bg-white'
@@ -239,7 +312,6 @@ export default function CompetitionsScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* Box 4 */}
         <TouchableOpacity
           className={`h-1/4 w-full items-center justify-center rounded-xl ${
             colorScheme === 'dark' ? 'bg-gray-800' : 'bg-white'
@@ -251,23 +323,20 @@ export default function CompetitionsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Breakfast Modal */}
+      {/* Modals */}
       <BreakfastModal
         isVisible={isModalVisible}
         onClose={() => setIsModalVisible(false)}
         timeLeft={timeLeft}
-        isTimeUp={isTimeUp}
         competitionId={currentCompetition?.id}
         onJoin={() => setHasJoined(true)}
         hasJoined={hasJoined}
       />
 
-      {/* Viewer Modal */}
       <ViewerModal
         isVisible={isViewerModalVisible}
         onClose={() => setIsViewerModalVisible(false)}
         timeLeft={timeLeft}
-        phase={competitionPhase}
       />
     </View>
   );

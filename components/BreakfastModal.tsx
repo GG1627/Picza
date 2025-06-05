@@ -10,7 +10,6 @@ type BreakfastModalProps = {
   isVisible: boolean;
   onClose: () => void;
   timeLeft: string;
-  isTimeUp: boolean;
   competitionId: string;
   onJoin: () => void;
   hasJoined: boolean;
@@ -20,7 +19,6 @@ export default function BreakfastModal({
   isVisible,
   onClose,
   timeLeft,
-  isTimeUp,
   competitionId,
   onJoin,
   hasJoined: initialHasJoined,
@@ -36,11 +34,6 @@ export default function BreakfastModal({
   }, [initialHasJoined]);
 
   const handleJoin = async () => {
-    if (isTimeUp) {
-      router.push('/breakfastCompetition');
-      return;
-    }
-
     if (!user) {
       setError('Please sign in to join the competition');
       return;
@@ -68,7 +61,7 @@ export default function BreakfastModal({
 
   return (
     <Modal animationType="fade" transparent={true} visible={isVisible} onRequestClose={onClose}>
-      <View className="flex-1 items-center justify-center bg-black/70">
+      <View className="flex-1 items-center justify-center bg-black/80">
         <View
           className={`w-[90%] max-w-[400px] rounded-2xl p-6 ${
             colorScheme === 'dark' ? 'bg-[#FFD700]' : 'bg-[#FFD700]'
@@ -86,31 +79,16 @@ export default function BreakfastModal({
 
           {/* Content */}
           <View className="mb-6">
-            {isTimeUp ? (
-              <>
-                <Text className="mb-4 text-lg font-semibold text-[#1A1A1A]">
-                  Time's Up! Check Out the Results
-                </Text>
-                <Text className="text-base text-[#1A1A1A]">
-                  The breakfast competition has ended. Click below to see who won and check out all
-                  the amazing breakfast creations!
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text className="mb-4 text-lg font-semibold text-[#1A1A1A]">
-                  Ready to Show Off Your Breakfast Skills?
-                </Text>
-                <Text className="text-base text-[#1A1A1A]">
-                  Compete against others and create the most amazing breakfast dish! Share your
-                  culinary creativity, get votes from the community, and win exciting prizes. The
-                  competition ends every Monday at 8 AM.
-                </Text>
-                <Text className="mt-4 text-base font-medium text-[#1A1A1A]">
-                  Time remaining: {timeLeft}
-                </Text>
-              </>
-            )}
+            <Text className="mb-4 text-lg font-semibold text-[#1A1A1A]">
+              Ready to Show Off Your Breakfast Skills?
+            </Text>
+            <Text className="text-base text-[#1A1A1A]">
+              Compete against others and create the most amazing breakfast dish! Share your culinary
+              creativity, get votes from the community, and win exciting prizes.
+            </Text>
+            <Text className="mt-4 text-base font-medium text-[#1A1A1A]">
+              Time remaining: {timeLeft}
+            </Text>
 
             {error && <Text className="mt-4 text-sm text-red-600">{error}</Text>}
           </View>
@@ -127,13 +105,7 @@ export default function BreakfastModal({
               className={`rounded-full px-4 py-2 ${hasJoined ? 'bg-green-500' : 'bg-[#FF8C00]'}`}
               disabled={isJoining || hasJoined}>
               <Text className="font-medium text-white">
-                {isJoining
-                  ? 'Joining...'
-                  : hasJoined
-                    ? 'Joined!'
-                    : isTimeUp
-                      ? 'View Results'
-                      : 'Join Now'}
+                {isJoining ? 'Joining...' : hasJoined ? 'Joined!' : 'Join Now'}
               </Text>
             </TouchableOpacity>
           </View>
