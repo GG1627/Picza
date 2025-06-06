@@ -48,6 +48,7 @@ export default function BreakfastModal({
       if (success) {
         setHasJoined(true);
         onJoin();
+        onClose();
       } else {
         setError('Failed to join competition. It might be full or you might have already joined.');
       }
@@ -104,7 +105,7 @@ export default function BreakfastModal({
             <TouchableOpacity
               onPress={handleJoin}
               className={`rounded-full px-4 py-2 ${hasJoined ? 'bg-green-500' : 'bg-[#FF8C00]'}`}
-              disabled={isJoining || hasJoined}>
+              disabled={Boolean(isJoining || hasJoined)}>
               <Text className="font-medium text-white">
                 {isJoining ? 'Joining...' : hasJoined ? 'Joined!' : 'Join Now'}
               </Text>

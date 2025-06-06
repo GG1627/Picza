@@ -1,4 +1,4 @@
-import { View, Text, StatusBar, TouchableOpacity, Button } from 'react-native';
+import { View, Text, StatusBar, TouchableOpacity, Button, Alert } from 'react-native';
 import { useColorScheme } from '../../lib/useColorScheme';
 import { generateRandomBreakfastName } from '../../lib/generateRandomName';
 import { router } from 'expo-router';
@@ -16,6 +16,7 @@ import {
   CompetitionPhase,
 } from '../../lib/competitions';
 import { useAuth } from '../../lib/useAuth';
+import { supabase } from '../../lib/supabase';
 
 // function for getting a random breakfast name
 const getRandomBreakfastName = () => {
@@ -80,16 +81,16 @@ export default function CompetitionsScreen() {
   const { user } = useAuth();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isViewerModalVisible, setIsViewerModalVisible] = useState(false);
-  const [timeLeft, setTimeLeft] = useState('');
+  const [timeLeft, setTimeLeft] = useState('Loading...');
   const [participantCount, setParticipantCount] = useState(0);
   const [currentCompetition, setCurrentCompetition] = useState<any>(null);
   const [hasJoined, setHasJoined] = useState(false);
   const [competitionPhase, setCompetitionPhase] = useState<CompetitionPhase>('registration');
+  const [isLoading, setIsLoading] = useState(true);
 
   const formatTimeLeft = (timeString: string) => {
-    // Convert the time string (milliseconds) to a number
     const totalMilliseconds = parseInt(timeString);
-    if (isNaN(totalMilliseconds)) return timeString;
+    if (isNaN(totalMilliseconds)) return 'Loading...';
 
     const totalSeconds = Math.floor(totalMilliseconds / 1000);
 
@@ -98,25 +99,20 @@ export default function CompetitionsScreen() {
     }
 
     if (totalSeconds <= 60) {
-      // Less than or equal to 1 minute, show seconds
       return `${totalSeconds}s remaining`;
     } else if (totalSeconds < 300) {
-      // Less than 5 minutes, show minutes and seconds
       const mins = Math.floor(totalSeconds / 60);
       const secs = totalSeconds % 60;
       return `${mins}m ${secs}s remaining`;
     } else if (totalSeconds < 3600) {
-      // Less than 1 hour, show minutes and seconds
       const mins = Math.floor(totalSeconds / 60);
       const secs = totalSeconds % 60;
       return `${mins}m ${secs}s remaining`;
     } else if (totalSeconds < 86400) {
-      // Less than 1 day
       const hours = Math.floor(totalSeconds / 3600);
       const mins = Math.floor((totalSeconds % 3600) / 60);
       return `${hours}h ${mins}m remaining`;
     } else {
-      // More than 1 day
       const days = Math.floor(totalSeconds / 86400);
       const hours = Math.floor((totalSeconds % 86400) / 3600);
       return `${days}d ${hours}h remaining`;
@@ -140,10 +136,46 @@ export default function CompetitionsScreen() {
       if (!hasJoined) {
         setIsViewerModalVisible(true);
       } else {
-        router.push({
-          pathname: '/breakfastCompetition',
-          params: { competitionId: currentCompetition.id },
-        });
+        // Check if user has already submitted
+        const checkSubmission = async () => {
+          try {
+            const { data: participant } = await supabase
+              .from('breakfast_participants')
+              .select('id')
+              .eq('competition_id', currentCompetition.id)
+              .eq('user_id', user?.id)
+              .single();
+
+            if (participant) {
+              const { data: submission } = await supabase
+                .from('breakfast_submissions')
+                .select('id')
+                .eq('competition_id', currentCompetition.id)
+                .eq('participant_id', participant.id)
+                .single();
+
+              if (submission) {
+                Alert.alert(
+                  'Already Submitted',
+                  'You have already submitted your entry for this competition. Your submission has been counted!'
+                );
+                return;
+              }
+            }
+            router.push({
+              pathname: '/breakfastCompetition',
+              params: { competitionId: currentCompetition.id },
+            });
+          } catch (error) {
+            // If there's an error checking submission, proceed with navigation
+            router.push({
+              pathname: '/breakfastCompetition',
+              params: { competitionId: currentCompetition.id },
+            });
+          }
+        };
+
+        checkSubmission();
       }
       return;
     }
@@ -165,10 +197,10 @@ export default function CompetitionsScreen() {
       try {
         const competition = await checkAndUpdateCompetitionStatus();
         if (!competition) {
-          console.log('No active competition found');
           setTimeLeft('No active competition');
           setParticipantCount(0);
           setHasJoined(false);
+          setIsLoading(false);
           return;
         }
         setCurrentCompetition(competition);
@@ -176,29 +208,27 @@ export default function CompetitionsScreen() {
         const count = await getBreakfastParticipantCount(competition.id);
         setParticipantCount(count || 0);
 
-        // Check if user has joined
         if (user) {
           const joined = await hasUserJoinedCompetition(competition.id, user.id);
           setHasJoined(joined);
         }
 
-        // Get competition phase
         const phase = await getCompetitionPhase(competition.id);
         setCompetitionPhase(phase);
 
-        // Get time until next phase
         const timeUntilNext = await getTimeUntilNextPhase(competition.id);
         setTimeLeft(formatTimeLeft(timeUntilNext));
       } catch (error) {
-        console.error('Error fetching competition data:', error);
         setTimeLeft('Loading...');
         setParticipantCount(0);
         setHasJoined(false);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchCompetitionData();
-    const interval = setInterval(fetchCompetitionData, 100); // Update every 100ms for smoother countdown
+    const interval = setInterval(fetchCompetitionData, 100);
     return () => clearInterval(interval);
   }, [user]);
 
@@ -242,7 +272,6 @@ export default function CompetitionsScreen() {
                 <Text className="mt-1 text-sm text-[#1A1A1A]">with "Amazing Pancakes"</Text>
               </View>
             ) : (
-              // Regular Competition Display
               <>
                 <View className="flex-row items-center justify-between">
                   <View className="flex-row items-center space-x-2">

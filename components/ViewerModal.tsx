@@ -22,7 +22,7 @@ export default function ViewerModal({ isVisible, onClose, timeLeft }: ViewerModa
           <View className="mb-4 flex-row items-center justify-between">
             <View className="flex-row items-center space-x-2">
               <Ionicons name="people-outline" size={24} color="#FF8C00" />
-              <Text className="ml-1 text-xl font-bold text-[#ffffff]">Competition in Progress</Text>
+              <Text className="ml-1 text-xl font-bold text-[#1A1A1A]">Competition in Progress</Text>
             </View>
             <Pressable onPress={onClose}>
               <Ionicons name="close" size={24} color="#1A1A1A" />
@@ -31,12 +31,12 @@ export default function ViewerModal({ isVisible, onClose, timeLeft }: ViewerModa
 
           {/* Content */}
           <View className="mb-6">
-            <Text className="text-base text-[#ffffff]">
+            <Text className="text-base text-[#1A1A1A]">
               <Text>
                 Our competitors are currently working on their breakfast masterpieces! Come back
                 in{' '}
               </Text>
-              <Text className="font-bold">{timeLeft.replace(' remaining', '')}</Text>
+              <Text className="font-bold">{timeLeft}</Text>
               <Text> to vote for your favorite creation.</Text>
             </Text>
           </View>
