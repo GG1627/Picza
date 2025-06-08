@@ -1,4 +1,4 @@
-import { View, Text, StatusBar, TouchableOpacity, Button, Alert } from 'react-native';
+import { View, Text, StatusBar, TouchableOpacity, Button, Alert, Image, Modal } from 'react-native';
 import { useColorScheme } from '../../lib/useColorScheme';
 import { router } from 'expo-router';
 import { useState, useEffect } from 'react';
@@ -18,6 +18,12 @@ import {
 } from '~/lib/competitions';
 import MorningCompModal from '~/components/MorningCompModal';
 
+type Winner = {
+  username: string;
+  image_url: string;
+  vote_count: number;
+} | null;
+
 const getRandomMorningLunchCompetitionName = () => {
   return generateRandomMorningLunchCompetitionName();
 };
@@ -26,17 +32,80 @@ export default function CompetitionsScreen() {
   const { colorScheme } = useColorScheme();
   const { user } = useAuth();
   const [isMorningModalVisible, setIsMorningModalVisible] = useState(false);
+  const [winner, setWinner] = useState<Winner>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [competitionsStatus, setCompetitionsStatus] = useState<AllCompetitionsStatus>({
     morning: { phase: 'completed', timeRemaining: 0, nextPhaseTime: null, name: null, id: null },
     noon: { phase: 'completed', timeRemaining: 0, nextPhaseTime: null, name: null, id: null },
     night: { phase: 'completed', timeRemaining: 0, nextPhaseTime: null, name: null, id: null },
   });
 
+  // Fetch winner when competition is completed
+  const fetchWinner = async (competitionId: string) => {
+    try {
+      // First get all submissions with their vote counts
+      const { data: submissions, error: subError } = await supabase
+        .from('submissions')
+        .select(
+          `
+          id,
+          image_url,
+          user_id
+        `
+        )
+        .eq('competition_id', competitionId);
+
+      if (subError) throw subError;
+
+      // Get vote counts for each submission
+      const submissionsWithVotes = await Promise.all(
+        submissions?.map(async (submission) => {
+          const { count } = await supabase
+            .from('votes')
+            .select('*', { count: 'exact', head: true })
+            .eq('submission_id', submission.id);
+
+          return {
+            ...submission,
+            vote_count: count || 0,
+          };
+        }) || []
+      );
+
+      // Find the submission with the highest vote count
+      const winningSubmission = submissionsWithVotes.reduce((prev, current) => {
+        return current.vote_count > prev.vote_count ? current : prev;
+      });
+
+      if (winningSubmission) {
+        // Get the username for the winning submission
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', winningSubmission.user_id)
+          .single();
+
+        setWinner({
+          username: profile?.username || 'Unknown',
+          image_url: winningSubmission.image_url,
+          vote_count: winningSubmission.vote_count,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching winner:', error);
+    }
+  };
+
   // Move fetchStatus outside useEffect
   const fetchStatus = async () => {
     try {
       const status = await getAllCompetitionsStatus();
       setCompetitionsStatus(status);
+
+      // If morning competition is completed, fetch the winner
+      if (status.morning.phase === 'completed' && status.morning.id) {
+        fetchWinner(status.morning.id);
+      }
     } catch (error) {
       console.error('Error fetching competition status:', error);
     }
@@ -68,6 +137,22 @@ export default function CompetitionsScreen() {
     return () => clearInterval(timer);
   }, []);
 
+  // Get phase-specific message
+  const getPhaseMessage = (phase: string) => {
+    switch (phase) {
+      case 'registration':
+        return 'Time left to join:';
+      case 'competing':
+        return 'Time left til voting begins:';
+      case 'voting':
+        return 'Time left to vote:';
+      case 'completed':
+        return 'Next comp in:';
+      default:
+        return '';
+    }
+  };
+
   // Helper function to format time remaining
   const formatTimeRemaining = (seconds: number) => {
     if (seconds <= 0) return "Time's up!";
@@ -77,26 +162,6 @@ export default function CompetitionsScreen() {
     const remainingSeconds = seconds % 60;
 
     return `${hours}h ${minutes}m ${remainingSeconds}s`;
-  };
-
-  // Get phase-specific message
-  const getPhaseMessage = (phase: string) => {
-    switch (phase) {
-      case 'registration':
-        console.log('registration');
-        return 'Time left to join:';
-      case 'competing':
-        console.log('competing');
-        return 'Time left til voting begins:';
-      case 'voting':
-        // console.log('voting');
-        return 'Time left to vote:';
-      case 'completed':
-        // console.log('completed');
-        return 'Competition completed';
-      default:
-        return '';
-    }
   };
 
   const handleMorningCompetitionPress = async () => {
@@ -123,6 +188,12 @@ export default function CompetitionsScreen() {
         // show viewer modal
         // setIsViewerModalVisible(true);
       }
+    } else if (competitionsStatus.morning.phase === 'voting') {
+      router.push('/morningVoting');
+    } else if (competitionsStatus.morning.phase === 'completed') {
+      // show the results page and update states
+    } else {
+      Alert.alert('Error', 'Competition not found');
     }
   };
 
@@ -174,17 +245,53 @@ export default function CompetitionsScreen() {
             <Ionicons name="sunny-outline" size={24} color="black" />
             <Text className="text-lg font-bold text-black">Morning Competition</Text>
           </View>
-          <View className="items center absolute bottom-0 left-0 p-2">
-            <Text className="text-lg font-bold text-black">
-              {getPhaseMessage(competitionsStatus.morning.phase)}
-              {competitionsStatus.morning.phase !== 'completed' &&
-                ` ${formatTimeRemaining(competitionsStatus.morning.timeRemaining)}`}
-            </Text>
-          </View>
-          <Text
-            className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-black' : 'text-gray-900'}`}>
-            {competitionsStatus.morning.name || 'No active competition'}
-          </Text>
+
+          {competitionsStatus.morning.phase === 'completed' && winner ? (
+            <View className="w-full flex-1">
+              {/* Winner Info and Image */}
+              <View className="flex-1 flex-row items-center justify-between px-4">
+                {/* Left side - Winner Info */}
+                <View className="ml-[3.5rem] flex-1 items-start space-y-2">
+                  <Text className="text-2xl font-bold text-black">Winner!</Text>
+                  <Text className="text-xl text-black">{winner.username}</Text>
+                  <Text className="text-lg text-black">with {winner.vote_count} votes</Text>
+                </View>
+
+                {/* Right side - Image */}
+                <TouchableOpacity
+                  onPress={() => setSelectedImage(winner.image_url)}
+                  className="h-36 w-36 overflow-hidden rounded-lg border-2 border-black">
+                  <Image
+                    source={{ uri: winner.image_url }}
+                    className="h-full w-full"
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Bottom - Timer */}
+              <View className="absolute bottom-0 left-0 p-2">
+                <Text className="text-lg font-bold text-black">
+                  {getPhaseMessage(competitionsStatus.morning.phase)}
+                  {` ${formatTimeRemaining(competitionsStatus.morning.timeRemaining)}`}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <>
+              <View className="items center absolute bottom-0 left-0 p-2">
+                <Text className="text-lg font-bold text-black">
+                  {getPhaseMessage(competitionsStatus.morning.phase)}
+                  {competitionsStatus.morning.phase !== 'completed' &&
+                    ` ${formatTimeRemaining(competitionsStatus.morning.timeRemaining)}`}
+                </Text>
+              </View>
+              <Text
+                className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-black' : 'text-gray-900'}`}>
+                {competitionsStatus.morning.name || 'No active competition'}
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
 
         {/* Noon Competition */}
@@ -231,6 +338,22 @@ export default function CompetitionsScreen() {
           </Text> */}
         </TouchableOpacity>
       </View>
+
+      {/* Image Preview Modal */}
+      <Modal
+        visible={!!selectedImage}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedImage(null)}>
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setSelectedImage(null)}
+          className="flex-1 items-center justify-center bg-black/90">
+          {selectedImage && (
+            <Image source={{ uri: selectedImage }} className="h-3/4 w-full" resizeMode="contain" />
+          )}
+        </TouchableOpacity>
+      </Modal>
 
       {/* Modals */}
       <MorningCompModal

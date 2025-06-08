@@ -94,6 +94,14 @@ export const getCompetitionStatus = async (type: string): Promise<CompetitionSta
         name: data.name,
         id: data.id,
       };
+    } else if (now < compEnd) {
+      return {
+        phase: 'completed',
+        timeRemaining: Math.floor((compEnd.getTime() - now.getTime()) / 1000),
+        nextPhaseTime: compEnd,
+        name: data.name,
+        id: data.id,
+      };
     } else {
       return {
         phase: 'completed',
@@ -149,10 +157,10 @@ export const createCompetition = async (type: string, user: User | null) => {
       throw new Error('Invalid competition type');
     }
 
-    const joinEndTime = new Date(now.getTime() + 1000 * 60 * 1); // 1 hour from now
-    const submitEndTime = new Date(now.getTime() + 1000 * 60 * 10); // 2 hours from now
-    const voteEndTime = new Date(now.getTime() + 1000 * 60 * 15); // 3 hours from now
-    const compEndTime = new Date(now.getTime() + 1000 * 60 * 20); // 4 hours from now
+    const joinEndTime = new Date(now.getTime() + 1000 * 60 * 1); // 1 minute from now
+    const submitEndTime = new Date(now.getTime() + 1000 * 60 * 3); // 2 hours from now
+    const voteEndTime = new Date(now.getTime() + 1000 * 60 * 6); // 3 hours from now
+    const compEndTime = new Date(now.getTime() + 1000 * 60 * 60); // 4 hours from now
 
     // const joinEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60); // 1 hour from now
     // const submitEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 2); // 2 hours from now
