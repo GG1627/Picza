@@ -57,9 +57,15 @@ export default function CompetitionsScreen() {
 
       if (subError) throw subError;
 
+      // If no submissions, set winner to null
+      if (!submissions || submissions.length === 0) {
+        setWinner(null);
+        return;
+      }
+
       // Get vote counts for each submission
       const submissionsWithVotes = await Promise.all(
-        submissions?.map(async (submission) => {
+        submissions.map(async (submission) => {
           const { count } = await supabase
             .from('votes')
             .select('*', { count: 'exact', head: true })
@@ -69,7 +75,7 @@ export default function CompetitionsScreen() {
             ...submission,
             vote_count: count || 0,
           };
-        }) || []
+        })
       );
 
       // Find the submission with the highest vote count
@@ -93,6 +99,7 @@ export default function CompetitionsScreen() {
       }
     } catch (error) {
       console.error('Error fetching winner:', error);
+      setWinner(null);
     }
   };
 
@@ -185,13 +192,15 @@ export default function CompetitionsScreen() {
       if (isParticipant) {
         router.push('/morningCompetition');
       } else {
-        // show viewer modal
-        // setIsViewerModalVisible(true);
+        Alert.alert(
+          'Competition in Progress',
+          'The competition has begun. Come back in a bit for voting!'
+        );
       }
     } else if (competitionsStatus.morning.phase === 'voting') {
       router.push('/morningVoting');
     } else if (competitionsStatus.morning.phase === 'completed') {
-      // show the results page and update states
+      router.push('/morningResults');
     } else {
       Alert.alert('Error', 'Competition not found');
     }
@@ -246,28 +255,37 @@ export default function CompetitionsScreen() {
             <Text className="text-lg font-bold text-black">Morning Competition</Text>
           </View>
 
-          {competitionsStatus.morning.phase === 'completed' && winner ? (
+          {competitionsStatus.morning.phase === 'completed' ? (
             <View className="w-full flex-1">
-              {/* Winner Info and Image */}
-              <View className="flex-1 flex-row items-center justify-between px-4">
-                {/* Left side - Winner Info */}
-                <View className="ml-[3.5rem] flex-1 items-start space-y-2">
-                  <Text className="text-2xl font-bold text-black">Winner!</Text>
-                  <Text className="text-xl text-black">{winner.username}</Text>
-                  <Text className="text-lg text-black">with {winner.vote_count} votes</Text>
-                </View>
+              {winner ? (
+                <>
+                  {/* Winner Info and Image */}
+                  <View className="flex-1 flex-row items-center justify-between px-4">
+                    {/* Left side - Winner Info */}
+                    <View className="ml-[3.5rem] flex-1 items-start space-y-2">
+                      <Text className="text-2xl font-bold text-black">Winner!</Text>
+                      <Text className="text-xl text-black">{winner.username}</Text>
+                      <Text className="text-lg text-black">with {winner.vote_count} votes</Text>
+                    </View>
 
-                {/* Right side - Image */}
-                <TouchableOpacity
-                  onPress={() => setSelectedImage(winner.image_url)}
-                  className="h-36 w-36 overflow-hidden rounded-lg border-2 border-black">
-                  <Image
-                    source={{ uri: winner.image_url }}
-                    className="h-full w-full"
-                    resizeMode="cover"
-                  />
-                </TouchableOpacity>
-              </View>
+                    {/* Right side - Image */}
+                    <TouchableOpacity
+                      onPress={() => setSelectedImage(winner.image_url)}
+                      className="h-36 w-36 overflow-hidden rounded-lg border-2 border-black">
+                      <Image
+                        source={{ uri: winner.image_url }}
+                        className="h-full w-full"
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <View className="flex-1 items-center justify-center">
+                  <Text className="text-xl font-semibold text-black">No Participants</Text>
+                  <Text className="mt-2 text-black">This competition had no submissions</Text>
+                </View>
+              )}
 
               {/* Bottom - Timer */}
               <View className="absolute bottom-0 left-0 p-2">
@@ -282,8 +300,11 @@ export default function CompetitionsScreen() {
               <View className="items center absolute bottom-0 left-0 p-2">
                 <Text className="text-lg font-bold text-black">
                   {getPhaseMessage(competitionsStatus.morning.phase)}
-                  {competitionsStatus.morning.phase !== 'completed' &&
-                    ` ${formatTimeRemaining(competitionsStatus.morning.timeRemaining)}`}
+                  {competitionsStatus.morning.phase === 'registration' ||
+                  competitionsStatus.morning.phase === 'competing' ||
+                  competitionsStatus.morning.phase === 'voting'
+                    ? ` ${formatTimeRemaining(competitionsStatus.morning.timeRemaining)}`
+                    : ''}
                 </Text>
               </View>
               <Text

@@ -200,14 +200,31 @@ export const deleteCompetition = async (type: string, user: User | null) => {
   }
 
   try {
-    const { error } = await supabase.from('competitions').delete().eq('type', type);
+    // First get the competition ID
+    const { data: competition, error: compError } = await supabase
+      .from('competitions')
+      .select('id')
+      .eq('type', type)
+      .single();
 
-    if (error) throw error;
+    if (compError) throw compError;
+    if (!competition) {
+      Alert.alert('Error', 'Competition not found');
+      return false;
+    }
 
-    Alert.alert('Success', `${type} competition deleted successfully!`);
+    // Delete all related data in a transaction
+    const { error: deleteError } = await supabase.rpc('delete_competition_data', {
+      comp_id: competition.id,
+    });
+
+    if (deleteError) throw deleteError;
+
+    Alert.alert('Success', `${type} competition and all related data deleted successfully!`);
     return true;
   } catch (error) {
     console.error('Error deleting competition:', error);
+    Alert.alert('Error', 'Failed to delete competition');
     return false;
   }
 };

@@ -1,7 +1,7 @@
 import { View, Text, Modal, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useColorScheme } from '../lib/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
-import { joinCompetition } from '~/lib/competitions';
+import { joinCompetition, getCompetitionStatus } from '~/lib/competitions';
 import { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { supabase } from '~/lib/supabase';
@@ -43,9 +43,30 @@ export default function MorningCompModal({
     }
   };
 
+  // Check competition status and close modal if registration phase ends
+  const checkCompetitionStatus = async () => {
+    if (!isVisible) return;
+
+    try {
+      const status = await getCompetitionStatus('morning');
+      if (status.phase !== 'registration') {
+        onClose();
+        Alert.alert(
+          'Registration Closed',
+          'The registration period for this competition has ended.'
+        );
+      }
+    } catch (error) {
+      console.error('Error checking competition status:', error);
+    }
+  };
+
   useEffect(() => {
     if (isVisible) {
       checkParticipationStatus();
+      // Set up interval to check competition status
+      const timer = setInterval(checkCompetitionStatus, 1000);
+      return () => clearInterval(timer);
     }
   }, [isVisible]);
 

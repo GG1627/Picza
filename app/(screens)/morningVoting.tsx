@@ -111,7 +111,25 @@ export default function MorningVotingScreen() {
 
     fetchData();
     const timer = setInterval(() => {
-      setTimeRemaining((prev) => Math.max(0, prev - 1));
+      setTimeRemaining((prev) => {
+        const newTime = Math.max(0, prev - 1);
+        if (newTime === 0) {
+          // Clear the interval when time is up
+          clearInterval(timer);
+          // Show alert and navigate back
+          Alert.alert(
+            'Voting Ended',
+            'The voting period has ended. Check the results in the competitions screen!',
+            [
+              {
+                text: 'OK',
+                onPress: () => router.replace('/competitions'),
+              },
+            ]
+          );
+        }
+        return newTime;
+      });
     }, 1000);
 
     return () => clearInterval(timer);
