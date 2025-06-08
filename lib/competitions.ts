@@ -227,6 +227,7 @@ export const joinCompetition = async (competitionId: string, user: User | null) 
     const { error } = await supabase.from('participants').insert({
       competition_id: competitionId,
       user_id: user.id,
+      status: 'joined',
     });
 
     if (error) {

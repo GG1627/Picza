@@ -1,8 +1,10 @@
-import { View, Text, Modal, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useColorScheme } from '../lib/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { joinCompetition } from '~/lib/competitions';
 import { User } from '@supabase/supabase-js';
+import { useEffect, useState } from 'react';
+import { supabase } from '~/lib/supabase';
 
 type MorningCompModalProps = {
   isVisible: boolean;
@@ -20,6 +22,32 @@ export default function MorningCompModal({
   user,
 }: MorningCompModalProps) {
   const { colorScheme } = useColorScheme();
+  const [isJoining, setIsJoining] = useState(false);
+  const [hasJoined, setHasJoined] = useState(false);
+
+  const checkParticipationStatus = async () => {
+    if (!user || !competitionId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('participants')
+        .select('status')
+        .eq('user_id', user.id)
+        .eq('competition_id', competitionId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setHasJoined(!!data && data.status === 'joined');
+    } catch (error) {
+      console.error('Error checking participation status:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isVisible) {
+      checkParticipationStatus();
+    }
+  }, [isVisible]);
 
   const handleJoin = async () => {
     if (!competitionId || !user) {
@@ -27,9 +55,17 @@ export default function MorningCompModal({
       return;
     }
 
-    const success = await joinCompetition(competitionId, user);
-    if (success) {
-      onClose();
+    setIsJoining(true);
+    try {
+      const success = await joinCompetition(competitionId, user);
+      if (success) {
+        setHasJoined(true);
+        onClose();
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to join competition. Please try again.');
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -58,12 +94,30 @@ export default function MorningCompModal({
 
           {/* Buttons */}
           <View className="gap-3">
-            <TouchableOpacity onPress={handleJoin} className="rounded-lg bg-black p-4">
-              <Text className="text-center font-semibold text-white">Join Now</Text>
-            </TouchableOpacity>
+            {hasJoined ? (
+              <View className="items-center rounded-lg bg-gray-200 p-4">
+                <Ionicons name="checkmark-circle" size={24} color="black" />
+                <Text className="mt-2 text-center font-semibold text-black">
+                  You have joined this competition
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={handleJoin}
+                disabled={isJoining}
+                className="rounded-lg bg-black p-4">
+                {isJoining ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-center font-semibold text-white">Join Now</Text>
+                )}
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity onPress={onClose} className="rounded-lg bg-gray-200 p-4">
-              <Text className="text-center font-semibold text-black">Maybe Later</Text>
+              <Text className="text-center font-semibold text-black">
+                {hasJoined ? 'Close' : 'Maybe Later'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
