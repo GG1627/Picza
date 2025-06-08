@@ -1,270 +1,276 @@
+import { Alert } from 'react-native';
 import { supabase } from './supabase';
-import { generateRandomBreakfastName } from './generateRandomName';
+import { User } from '@supabase/supabase-js';
+import {
+  generateRandomDinnerCompetitionName,
+  generateRandomLateNightCompetitionName,
+  generateRandomMorningLunchCompetitionName,
+} from './generateRandomName';
 
-export async function createBreakfastCompetition(
-  startTime: Date,
-  endTime: Date,
-  theme: string,
-  competitionNumber: number,
-  weekNumber: number,
-  year: number
-) {
-  const { data, error } = await supabase.rpc('create_breakfast_competition', {
-    start_time: startTime.toISOString(),
-    end_time: endTime.toISOString(),
-    theme,
-    competition_number: competitionNumber,
-    week_number: weekNumber,
-    year,
-  });
+export type CompetitionPhase = 'registration' | 'competing' | 'voting' | 'completed';
 
-  if (error) throw error;
-  return data;
-}
+export type CompetitionStatus = {
+  phase: CompetitionPhase;
+  timeRemaining: number; // in seconds
+  nextPhaseTime: Date | null;
+  name: string | null;
+  id: string | null;
+};
 
-export async function joinBreakfastCompetition(competitionId: string, userId: string) {
-  const { data, error } = await supabase.rpc('join_breakfast_competition', {
-    p_competition_id: competitionId,
-    p_user_id: userId,
-  });
+export type AllCompetitionsStatus = {
+  morning: CompetitionStatus;
+  noon: CompetitionStatus;
+  night: CompetitionStatus;
+};
 
-  if (error) throw error;
-  return data;
-}
+// Add this function to get status for all competitions
+export const getAllCompetitionsStatus = async (): Promise<AllCompetitionsStatus> => {
+  try {
+    const [morningStatus, noonStatus, nightStatus] = await Promise.all([
+      getCompetitionStatus('morning'),
+      getCompetitionStatus('noon'),
+      getCompetitionStatus('night'),
+    ]);
 
-export async function hasUserJoinedCompetition(competitionId: string, userId: string) {
-  const { data, error } = await supabase
-    .from('breakfast_participants')
-    .select('id')
-    .eq('competition_id', competitionId)
-    .eq('user_id', userId)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') return null;
+    return {
+      morning: morningStatus,
+      noon: noonStatus,
+      night: nightStatus,
+    };
+  } catch (error) {
+    console.error('Error getting all competitions status:', error);
     throw error;
   }
-  return data?.id || null;
-}
+};
 
-export const submitBreakfastPhoto = async (
-  competitionId: string,
-  userId: string,
-  imageUrl: string,
-  caption: string
-): Promise<boolean> => {
+export const getCompetitionStatus = async (type: string): Promise<CompetitionStatus> => {
   try {
-    const participantId = await hasUserJoinedCompetition(competitionId, userId);
+    const { data, error } = await supabase
+      .from('competitions')
+      .select(
+        'id, comp_start_time, join_end_time, submit_end_time, vote_end_time, comp_end_time, name'
+      )
+      .eq('type', type)
+      .single();
 
-    if (!participantId) {
-      return false;
+    if (error || !data) {
+      // Return completed status if competition doesn't exist
+      return {
+        phase: 'completed',
+        timeRemaining: 0,
+        nextPhaseTime: null,
+        name: null,
+        id: null,
+      };
     }
 
-    const { error } = await supabase.from('breakfast_submissions').insert({
-      competition_id: competitionId,
-      participant_id: participantId,
-      image_url: imageUrl,
-      caption: caption,
-      status: 'pending',
-    });
+    const now = new Date();
+    const joinEnd = new Date(data.join_end_time);
+    const submitEnd = new Date(data.submit_end_time);
+    const voteEnd = new Date(data.vote_end_time);
+    const compEnd = new Date(data.comp_end_time);
 
-    if (error) {
-      return false;
+    if (now < joinEnd) {
+      return {
+        phase: 'registration',
+        timeRemaining: Math.floor((joinEnd.getTime() - now.getTime()) / 1000),
+        nextPhaseTime: joinEnd,
+        name: data.name,
+        id: data.id,
+      };
+    } else if (now < submitEnd) {
+      return {
+        phase: 'competing',
+        timeRemaining: Math.floor((submitEnd.getTime() - now.getTime()) / 1000),
+        nextPhaseTime: submitEnd,
+        name: data.name,
+        id: data.id,
+      };
+    } else if (now < voteEnd) {
+      return {
+        phase: 'voting',
+        timeRemaining: Math.floor((voteEnd.getTime() - now.getTime()) / 1000),
+        nextPhaseTime: voteEnd,
+        name: data.name,
+        id: data.id,
+      };
+    } else {
+      return {
+        phase: 'completed',
+        timeRemaining: 0,
+        nextPhaseTime: null,
+        name: data.name,
+        id: data.id,
+      };
+    }
+  } catch (error) {
+    console.error('Error getting competition status:', error);
+    // Return completed status on error
+    return {
+      phase: 'completed',
+      timeRemaining: 0,
+      nextPhaseTime: null,
+      name: null,
+      id: null,
+    };
+  }
+};
+
+export const createCompetition = async (type: string, user: User | null) => {
+  if (!user) {
+    Alert.alert('Please login to create a competition');
+    return;
+  }
+
+  try {
+    const now = new Date();
+    let compStartTime: Date;
+    let competitionName: string;
+
+    if (type === 'morning') {
+      compStartTime = new Date(now);
+      // set stat time to Mondays at 8am
+      compStartTime.setDate(now.getDate() + ((1 + 7 - now.getDay()) % 7));
+      compStartTime.setHours(8, 0, 0, 0);
+      competitionName = generateRandomMorningLunchCompetitionName();
+    } else if (type === 'noon') {
+      compStartTime = new Date(now);
+      // set stat time to Mondays at 4pm
+      compStartTime.setDate(now.getDate() + ((1 + 7 - now.getDay()) % 7));
+      compStartTime.setHours(16, 0, 0, 0);
+      competitionName = generateRandomDinnerCompetitionName();
+    } else if (type === 'night') {
+      compStartTime = new Date(now);
+      // set stat time to Mondays at 10pm
+      compStartTime.setDate(now.getDate() + ((1 + 7 - now.getDay()) % 7));
+      compStartTime.setHours(22, 0, 0, 0);
+      competitionName = generateRandomLateNightCompetitionName();
+    } else {
+      throw new Error('Invalid competition type');
     }
 
+    const joinEndTime = new Date(now.getTime() + 1000 * 60 * 1); // 1 hour from now
+    const submitEndTime = new Date(now.getTime() + 1000 * 60 * 10); // 2 hours from now
+    const voteEndTime = new Date(now.getTime() + 1000 * 60 * 15); // 3 hours from now
+    const compEndTime = new Date(now.getTime() + 1000 * 60 * 20); // 4 hours from now
+
+    // const joinEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60); // 1 hour from now
+    // const submitEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 2); // 2 hours from now
+    // const voteEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 3); // 3 hours from now
+    // const compEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 4); // 4 hours from now
+
+    const { data, error } = await supabase
+      .from('competitions')
+      .insert({
+        type: type,
+        name: competitionName,
+        comp_start_time: now.toISOString(),
+        // comp_start_time: compStartTime.toISOString(),
+        join_end_time: joinEndTime.toISOString(),
+        submit_end_time: submitEndTime.toISOString(),
+        vote_end_time: voteEndTime.toISOString(),
+        comp_end_time: compEndTime.toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    Alert.alert('Success', `${type} competition created successfully!`);
     return true;
   } catch (error) {
+    console.error('Error creating competition:', error);
+    Alert.alert('Error', 'Failed to create competition');
     return false;
   }
 };
 
-export async function voteBreakfastSubmission(submissionId: string, voterId: string) {
-  const { data, error } = await supabase.rpc('vote_breakfast_submission', {
-    submission_id: submissionId,
-    voter_id: voterId,
-  });
-
-  if (error) throw error;
-  return data;
-}
-
-// Function to get current competition
-export async function getCurrentBreakfastCompetition() {
-  const { data, error } = await supabase
-    .from('breakfast_competitions')
-    .select('*')
-    .eq('status', 'active')
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-// Function to get participant count
-export async function getBreakfastParticipantCount(competitionId: string) {
-  const { count, error } = await supabase
-    .from('breakfast_participants')
-    .select('*', { count: 'exact', head: true })
-    .eq('competition_id', competitionId);
-
-  if (error) throw error;
-  return count;
-}
-
-// Function to get the current week number
-function getWeekNumber(date: Date): number {
-  const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-  const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
-  return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-}
-
-// Function to create a new competition
-export async function createNewBreakfastCompetition() {
-  const now = new Date();
-  const weekNumber = getWeekNumber(now);
-  const year = now.getFullYear();
-
-  // Determine competition number (1 or 2) based on current date
-  const competitionNumber = now.getDay() <= 3 ? 1 : 2;
-
-  // Set registration start time (now)
-  const registrationStartTime = new Date();
-
-  // Set competition start time (1 day after registration starts)
-  const competitionStartTime = new Date(registrationStartTime);
-  competitionStartTime.setDate(competitionStartTime.getDate() + 1);
-
-  // Set competition end time (4 hours after competition starts)
-  const competitionEndTime = new Date(competitionStartTime);
-  competitionEndTime.setHours(competitionEndTime.getHours() + 4);
-
-  // Set voting start time (same as competition end time)
-  const votingStartTime = new Date(competitionEndTime);
-
-  // Set voting end time (1 day after voting starts)
-  const votingEndTime = new Date(votingStartTime);
-  votingEndTime.setDate(votingEndTime.getDate() + 1);
-
-  // Generate a random breakfast theme
-  const theme = generateRandomBreakfastName();
+export const deleteCompetition = async (type: string, user: User | null) => {
+  if (!user) {
+    Alert.alert('Please login to delete a competition');
+    return;
+  }
 
   try {
-    const { data, error } = await supabase.rpc('create_breakfast_competition', {
-      registration_start_time: registrationStartTime.toISOString(),
-      competition_start_time: competitionStartTime.toISOString(),
-      competition_end_time: competitionEndTime.toISOString(),
-      voting_start_time: votingStartTime.toISOString(),
-      voting_end_time: votingEndTime.toISOString(),
-      theme,
-      competition_number: competitionNumber,
-      week_number: weekNumber,
-      year,
-    });
+    const { error } = await supabase.from('competitions').delete().eq('type', type);
 
     if (error) throw error;
-    return data;
+
+    Alert.alert('Success', `${type} competition deleted successfully!`);
+    return true;
   } catch (error) {
-    console.error('Error creating new competition:', error);
-    throw error;
+    console.error('Error deleting competition:', error);
+    return false;
   }
-}
+};
 
-// Function to get competition phase
-export type CompetitionPhase = 'registration' | 'competition' | 'voting' | 'completed';
-
-export async function getCompetitionPhase(competitionId: string): Promise<CompetitionPhase> {
-  const { data: competition, error } = await supabase
-    .from('breakfast_competitions')
-    .select('*')
-    .eq('id', competitionId)
-    .single();
-
-  if (error) throw error;
-
-  const now = new Date();
-  const registrationStart = new Date(competition.registration_start_time);
-  const competitionStart = new Date(competition.competition_start_time);
-  const competitionEnd = new Date(competition.competition_end_time);
-  const votingStart = new Date(competition.voting_start_time);
-  const votingEnd = new Date(competition.voting_end_time);
-
-  // Check phases in order
-  if (now < competitionStart) {
-    return 'registration';
-  } else if (now < competitionEnd) {
-    return 'competition';
-  } else if (now < votingEnd) {
-    return 'voting';
-  } else {
-    return 'completed';
-  }
-}
-
-// Function to get time until next phase
-export async function getTimeUntilNextPhase(competitionId: string): Promise<string> {
-  const { data: competition, error } = await supabase
-    .from('breakfast_competitions')
-    .select('*')
-    .eq('id', competitionId)
-    .single();
-
-  if (error) throw error;
-
-  const now = new Date();
-  const registrationStart = new Date(competition.registration_start_time);
-  const competitionStart = new Date(competition.competition_start_time);
-  const competitionEnd = new Date(competition.competition_end_time);
-  const votingStart = new Date(competition.voting_start_time);
-  const votingEnd = new Date(competition.voting_end_time);
-
-  let targetTime: Date;
-  let phase: string;
-
-  if (now < competitionStart) {
-    targetTime = competitionStart;
-    phase = 'competition';
-  } else if (now < competitionEnd) {
-    targetTime = competitionEnd;
-    phase = 'voting';
-  } else if (now < votingEnd) {
-    targetTime = votingEnd;
-    phase = 'results';
-  } else {
-    return 'Competition completed';
+export const joinCompetition = async (competitionId: string, user: User | null) => {
+  if (!user) {
+    Alert.alert('Please login to join a competition');
+    return false;
   }
 
-  const difference = targetTime.getTime() - now.getTime();
-  return `${difference}`; // Return raw milliseconds
-}
+  try {
+    // first check if the competition is in the registration phase
+    const { data: competition } = await supabase
+      .from('competitions')
+      .select('join_end_time')
+      .eq('id', competitionId)
+      .single();
 
-// Function to check and update competition status
-export async function checkAndUpdateCompetitionStatus() {
-  const now = new Date();
-
-  // Get the current active competition
-  const { data: currentCompetition, error: fetchError } = await supabase
-    .from('breakfast_competitions')
-    .select('*')
-    .eq('status', 'active')
-    .single();
-
-  if (fetchError) {
-    // If no active competition exists, return null
-    if (fetchError.code === 'PGRST116') {
-      return null;
+    if (!competition) {
+      Alert.alert('Error', 'Competition not found');
+      return false;
     }
-    throw fetchError;
-  }
 
-  // Check if competition has ended
-  const votingEndTime = new Date(currentCompetition.voting_end_time);
-  if (now > votingEndTime) {
-    // Competition has ended, mark it as completed
-    await supabase
-      .from('breakfast_competitions')
-      .update({ status: 'completed' })
-      .eq('id', currentCompetition.id);
-  }
+    // now insert the participant
+    const { error } = await supabase.from('participants').insert({
+      competition_id: competitionId,
+      user_id: user.id,
+    });
 
-  return currentCompetition;
-}
+    if (error) {
+      if (error.code === '23505') {
+        // Unique violation
+        Alert.alert('Error', 'You have already joined this competition');
+      } else {
+        throw error;
+      }
+      return false;
+    }
+
+    Alert.alert('Success', 'You have joined the competition!');
+    return true;
+  } catch (error) {
+    console.error('Error joining competition:', error);
+    Alert.alert('Error', 'Failed to join competition');
+    return false;
+  }
+};
+
+export const isUserParticipant = async (
+  competitionId: string,
+  userId: string
+): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('participants')
+      .select('id')
+      .eq('competition_id', competitionId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // no rows returned
+        return false;
+      }
+      throw error;
+    }
+
+    return !!data;
+  } catch (error) {
+    console.error('Error checking if user is participant:', error);
+    return false;
+  }
+};

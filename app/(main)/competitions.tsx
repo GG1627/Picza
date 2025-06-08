@@ -1,241 +1,134 @@
 import { View, Text, StatusBar, TouchableOpacity, Button, Alert } from 'react-native';
 import { useColorScheme } from '../../lib/useColorScheme';
-import { generateRandomBreakfastName } from '../../lib/generateRandomName';
 import { router } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import BreakfastModal from '../../components/BreakfastModal';
 import ViewerModal from '../../components/ViewerModal';
-import {
-  getCurrentBreakfastCompetition,
-  getBreakfastParticipantCount,
-  checkAndUpdateCompetitionStatus,
-  hasUserJoinedCompetition,
-  getCompetitionPhase,
-  getTimeUntilNextPhase,
-  CompetitionPhase,
-} from '../../lib/competitions';
 import { useAuth } from '../../lib/useAuth';
 import { supabase } from '../../lib/supabase';
+import { generateRandomMorningLunchCompetitionName } from '~/lib/generateRandomName';
+import {
+  CompetitionStatus,
+  createCompetition,
+  deleteCompetition,
+  getAllCompetitionsStatus,
+  AllCompetitionsStatus,
+  joinCompetition,
+  isUserParticipant,
+} from '~/lib/competitions';
+import MorningCompModal from '~/components/MorningCompModal';
 
-// function for getting a random breakfast name
-const getRandomBreakfastName = () => {
-  return generateRandomBreakfastName();
-};
-
-// Timer component
-const CountdownTimer = () => {
-  const [timeLeft, setTimeLeft] = useState('');
-  const [isTimeUp, setIsTimeUp] = useState(false);
-
-  useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date();
-      const target = new Date();
-
-      // Set target to next Monday at 8 AM
-      target.setHours(8, 0, 0, 0);
-      target.setDate(now.getDate() + ((8 - now.getDay() + 7) % 7));
-
-      // If we're past Monday 8 AM, set to next Monday
-      if (now > target) {
-        target.setDate(target.getDate() + 7);
-      }
-
-      const difference = target.getTime() - now.getTime();
-
-      // Check if time is up (less than 1 minute remaining)
-      if (difference < 60000) {
-        setIsTimeUp(true);
-        setTimeLeft("Time's Up!");
-        return;
-      }
-
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((difference / 1000 / 60) % 60);
-
-      // Format the time display based on remaining time
-      if (days > 0) {
-        setTimeLeft(`${days}d ${hours}h until breakfast`);
-      } else {
-        setTimeLeft(`${hours}h ${minutes}m until breakfast`);
-      }
-    };
-
-    // Update immediately
-    calculateTimeLeft();
-
-    // Update every minute instead of every second
-    const timer = setInterval(calculateTimeLeft, 60000);
-
-    // Cleanup on unmount
-    return () => clearInterval(timer);
-  }, []);
-
-  return <Text className="text-sm text-[#1A1A1A]">{timeLeft}</Text>;
+const getRandomMorningLunchCompetitionName = () => {
+  return generateRandomMorningLunchCompetitionName();
 };
 
 export default function CompetitionsScreen() {
   const { colorScheme } = useColorScheme();
   const { user } = useAuth();
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isViewerModalVisible, setIsViewerModalVisible] = useState(false);
-  const [timeLeft, setTimeLeft] = useState('Loading...');
-  const [participantCount, setParticipantCount] = useState(0);
-  const [currentCompetition, setCurrentCompetition] = useState<any>(null);
-  const [hasJoined, setHasJoined] = useState(false);
-  const [competitionPhase, setCompetitionPhase] = useState<CompetitionPhase>('registration');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isMorningModalVisible, setIsMorningModalVisible] = useState(false);
+  const [competitionsStatus, setCompetitionsStatus] = useState<AllCompetitionsStatus>({
+    morning: { phase: 'completed', timeRemaining: 0, nextPhaseTime: null, name: null, id: null },
+    noon: { phase: 'completed', timeRemaining: 0, nextPhaseTime: null, name: null, id: null },
+    night: { phase: 'completed', timeRemaining: 0, nextPhaseTime: null, name: null, id: null },
+  });
 
-  const formatTimeLeft = (timeString: string) => {
-    const totalMilliseconds = parseInt(timeString);
-    if (isNaN(totalMilliseconds)) return 'Loading...';
-
-    const totalSeconds = Math.floor(totalMilliseconds / 1000);
-
-    if (totalSeconds < 0) {
-      return `${timeLeft} until voting`;
-    }
-
-    if (totalSeconds <= 60) {
-      return `${totalSeconds}s remaining`;
-    } else if (totalSeconds < 300) {
-      const mins = Math.floor(totalSeconds / 60);
-      const secs = totalSeconds % 60;
-      return `${mins}m ${secs}s remaining`;
-    } else if (totalSeconds < 3600) {
-      const mins = Math.floor(totalSeconds / 60);
-      const secs = totalSeconds % 60;
-      return `${mins}m ${secs}s remaining`;
-    } else if (totalSeconds < 86400) {
-      const hours = Math.floor(totalSeconds / 3600);
-      const mins = Math.floor((totalSeconds % 3600) / 60);
-      return `${hours}h ${mins}m remaining`;
-    } else {
-      const days = Math.floor(totalSeconds / 86400);
-      const hours = Math.floor((totalSeconds % 86400) / 3600);
-      return `${days}d ${hours}h remaining`;
-    }
-  };
-
-  const handleBreakfastPress = () => {
-    if (!currentCompetition) {
-      console.log('No active competition found');
-      return;
-    }
-
-    // During registration phase, show the breakfast modal
-    if (competitionPhase === 'registration') {
-      setIsModalVisible(true);
-      return;
-    }
-
-    // During competition phase, show viewer modal only for non-competitors
-    if (competitionPhase === 'competition') {
-      if (!hasJoined) {
-        setIsViewerModalVisible(true);
-      } else {
-        // Check if user has already submitted
-        const checkSubmission = async () => {
-          try {
-            const { data: participant } = await supabase
-              .from('breakfast_participants')
-              .select('id')
-              .eq('competition_id', currentCompetition.id)
-              .eq('user_id', user?.id)
-              .single();
-
-            if (participant) {
-              const { data: submission } = await supabase
-                .from('breakfast_submissions')
-                .select('id')
-                .eq('competition_id', currentCompetition.id)
-                .eq('participant_id', participant.id)
-                .single();
-
-              if (submission) {
-                Alert.alert(
-                  'Already Submitted',
-                  'You have already submitted your entry for this competition. Your submission has been counted!'
-                );
-                return;
-              }
-            }
-            router.push({
-              pathname: '/breakfastCompetition',
-              params: { competitionId: currentCompetition.id },
-            });
-          } catch (error) {
-            // If there's an error checking submission, proceed with navigation
-            router.push({
-              pathname: '/breakfastCompetition',
-              params: { competitionId: currentCompetition.id },
-            });
-          }
-        };
-
-        checkSubmission();
-      }
-      return;
-    }
-
-    // During voting phase, redirect everyone to bracket screen
-    if (competitionPhase === 'voting') {
-      router.push('/breakfastBracket');
-      return;
-    }
-
-    // During completed phase, do nothing (winner is shown in the box)
-    if (competitionPhase === 'completed') {
-      return;
+  // Move fetchStatus outside useEffect
+  const fetchStatus = async () => {
+    try {
+      const status = await getAllCompetitionsStatus();
+      setCompetitionsStatus(status);
+    } catch (error) {
+      console.error('Error fetching competition status:', error);
     }
   };
 
   useEffect(() => {
-    const fetchCompetitionData = async () => {
-      try {
-        const competition = await checkAndUpdateCompetitionStatus();
-        if (!competition) {
-          setTimeLeft('No active competition');
-          setParticipantCount(0);
-          setHasJoined(false);
-          setIsLoading(false);
-          return;
-        }
-        setCurrentCompetition(competition);
+    // Initial fetch
+    fetchStatus();
 
-        const count = await getBreakfastParticipantCount(competition.id);
-        setParticipantCount(count || 0);
+    // Set up interval for both status updates and countdown
+    const timer = setInterval(() => {
+      fetchStatus();
+      setCompetitionsStatus((prev) => ({
+        morning: {
+          ...prev.morning,
+          timeRemaining: Math.max(0, prev.morning.timeRemaining - 1),
+        },
+        noon: {
+          ...prev.noon,
+          timeRemaining: Math.max(0, prev.noon.timeRemaining - 1),
+        },
+        night: {
+          ...prev.night,
+          timeRemaining: Math.max(0, prev.night.timeRemaining - 1),
+        },
+      }));
+    }, 1000);
 
-        if (user) {
-          const joined = await hasUserJoinedCompetition(competition.id, user.id);
-          setHasJoined(joined);
-        }
+    return () => clearInterval(timer);
+  }, []);
 
-        const phase = await getCompetitionPhase(competition.id);
-        setCompetitionPhase(phase);
+  // Helper function to format time remaining
+  const formatTimeRemaining = (seconds: number) => {
+    if (seconds <= 0) return "Time's up!";
 
-        const timeUntilNext = await getTimeUntilNextPhase(competition.id);
-        setTimeLeft(formatTimeLeft(timeUntilNext));
-      } catch (error) {
-        setTimeLeft('Loading...');
-        setParticipantCount(0);
-        setHasJoined(false);
-      } finally {
-        setIsLoading(false);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    return `${hours}h ${minutes}m ${remainingSeconds}s`;
+  };
+
+  // Get phase-specific message
+  const getPhaseMessage = (phase: string) => {
+    switch (phase) {
+      case 'registration':
+        console.log('registration');
+        return 'Time left to join:';
+      case 'competing':
+        console.log('competing');
+        return 'Time left til voting begins:';
+      case 'voting':
+        // console.log('voting');
+        return 'Time left to vote:';
+      case 'completed':
+        // console.log('completed');
+        return 'Competition completed';
+      default:
+        return '';
+    }
+  };
+
+  const handleMorningCompetitionPress = async () => {
+    if (competitionsStatus.morning.phase === 'registration') {
+      console.log('registration');
+      setIsMorningModalVisible(true);
+    } else if (competitionsStatus.morning.phase === 'competing') {
+      // check if user is a participant in the competition
+      if (!user) {
+        Alert.alert('Please login to join a competition');
+        return;
       }
-    };
 
-    fetchCompetitionData();
-    const interval = setInterval(fetchCompetitionData, 100);
-    return () => clearInterval(interval);
-  }, [user]);
+      if (!competitionsStatus.morning.id) {
+        Alert.alert('Error', 'Competition not found');
+        return;
+      }
+
+      const isParticipant = await isUserParticipant(competitionsStatus.morning.id, user.id);
+
+      if (isParticipant) {
+        router.push('/morningCompetition');
+      } else {
+        // show viewer modal
+        // setIsViewerModalVisible(true);
+      }
+    }
+  };
 
   return (
     <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-
       {/* Title Section */}
       <View className="mb-8 mt-20 px-4 pt-2">
         <Text
@@ -247,128 +140,105 @@ export default function CompetitionsScreen() {
           Challenge yourself against others
         </Text>
       </View>
-
+      <View className="flex-row justify-center gap-4">
+        <Button
+          title="Make Comp"
+          onPress={async () => {
+            const success = await createCompetition('morning', user);
+            if (success) {
+              fetchStatus();
+            }
+          }}
+        />
+        <Button
+          title="Delete Comp"
+          onPress={async () => {
+            const success = await deleteCompetition('morning', user);
+            if (success) {
+              fetchStatus();
+            }
+          }}
+        />
+      </View>
       {/* Competition Boxes Container */}
-      <View className="h-[65%] px-4 pb-5">
-        {/* Box 1 - Breakfast Competition */}
+      <View className="h-[65%] px-4 pb-0">
+        {/* Morning Competition */}
         <TouchableOpacity
-          onPress={handleBreakfastPress}
-          className={`mb-4 h-1/4 w-full overflow-hidden rounded-2xl ${
-            colorScheme === 'dark' ? 'bg-[#FFD700]' : 'bg-[#FFD700]'
+          onPress={() => {
+            handleMorningCompetitionPress();
+          }}
+          className={`mb-4 w-full flex-1 items-center justify-center rounded-xl ${
+            colorScheme === 'dark' ? 'bg-[#fa6f48]' : 'bg-white'
           }`}>
-          {/* Gradient overlay */}
-          <View className="absolute inset-0 bg-gradient-to-br from-[#FFD700]/80 via-[#FFE44D]/60 to-[#FFD700]/40" />
-
-          {/* Content */}
-          <View className="flex-1 p-4">
-            {competitionPhase === 'completed' ? (
-              // Winner Display
-              <View className="flex-1 items-center justify-center">
-                <Text className="text-center text-2xl font-bold text-[#1A1A1A]">Winner!</Text>
-                <View className="mt-2 flex-row items-center space-x-2">
-                  <Ionicons name="trophy" size={24} color="#FF8C00" />
-                  <Text className="text-lg font-semibold text-[#1A1A1A]">John Doe</Text>
-                </View>
-                <Text className="mt-1 text-sm text-[#1A1A1A]">with "Amazing Pancakes"</Text>
-              </View>
-            ) : (
-              <>
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-row items-center space-x-2">
-                    <Ionicons name="sunny" size={24} color="#FF8C00" />
-                    <Text className="ml-1 text-lg font-semibold text-[#1A1A1A]">
-                      Breakfast Challenge
-                    </Text>
-                  </View>
-                  {competitionPhase === 'registration' && hasJoined && (
-                    <View className="rounded-full bg-green-500 px-3 py-1">
-                      <Text className="text-sm font-medium text-white">Joined</Text>
-                    </View>
-                  )}
-                  {competitionPhase === 'competition' && (
-                    <View className="rounded-full bg-green-500 px-3 py-1">
-                      <Text className="text-sm font-medium text-white">In Progress</Text>
-                    </View>
-                  )}
-                  {competitionPhase === 'voting' && (
-                    <View className="rounded-full bg-[#FF8C00] px-3 py-1">
-                      <Text className="text-sm font-medium text-white">Vote Now!</Text>
-                    </View>
-                  )}
-                </View>
-
-                <View className="mt-2 flex-1 items-center justify-center">
-                  <Text className="text-center text-2xl font-bold text-[#1A1A1A]">
-                    {currentCompetition?.theme || 'Loading...'}
-                  </Text>
-                </View>
-
-                <View className="mt-2 flex-row items-center justify-between">
-                  <View className="flex-row items-center space-x-1 rounded-full bg-white/30 px-3 py-1">
-                    <Ionicons name="time-outline" size={16} color="#FF8C00" />
-                    <Text className="ml-1 text-sm text-[#1A1A1A]">
-                      {competitionPhase === 'registration' && `${timeLeft} to join`}
-                      {competitionPhase === 'competition' && `${timeLeft} until voting`}
-                      {competitionPhase === 'voting' && `${timeLeft} to vote`}
-                    </Text>
-                  </View>
-                  <View className="rounded-full bg-white/30 px-3 py-1">
-                    <Text className="text-sm font-medium text-[#1A1A1A]">
-                      {participantCount}/16 participants
-                    </Text>
-                  </View>
-                </View>
-              </>
-            )}
+          <View className="absolute left-0 top-0 flex-row items-center gap-2 p-2">
+            <Ionicons name="sunny-outline" size={24} color="black" />
+            <Text className="text-lg font-bold text-black">Morning Competition</Text>
           </View>
-        </TouchableOpacity>
-
-        {/* Other competition boxes */}
-        <TouchableOpacity
-          className={`mb-4 h-1/4 w-full items-center justify-center rounded-xl ${
-            colorScheme === 'dark' ? 'bg-gray-800' : 'bg-white'
-          }`}>
+          <View className="items center absolute bottom-0 left-0 p-2">
+            <Text className="text-lg font-bold text-black">
+              {getPhaseMessage(competitionsStatus.morning.phase)}
+              {competitionsStatus.morning.phase !== 'completed' &&
+                ` ${formatTimeRemaining(competitionsStatus.morning.timeRemaining)}`}
+            </Text>
+          </View>
           <Text
-            className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-            Competition 2
+            className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-black' : 'text-gray-900'}`}>
+            {competitionsStatus.morning.name || 'No active competition'}
           </Text>
         </TouchableOpacity>
 
+        {/* Noon Competition */}
         <TouchableOpacity
-          className={`mb-4 h-1/4 w-full items-center justify-center rounded-xl ${
-            colorScheme === 'dark' ? 'bg-gray-800' : 'bg-white'
+          className={`mb-4 w-full flex-1 items-center justify-center rounded-xl ${
+            colorScheme === 'dark' ? 'bg-[#fa8f48]' : 'bg-white'
           }`}>
+          {/* <View className="absolute left-0 top-0 flex-row items-center gap-2 p-2">
+            <Ionicons name="sunny-outline" size={24} color="black" />
+            <Text className="text-lg font-bold text-black">Noon Competition</Text>
+          </View>
+          <View className="items center absolute bottom-0 left-0 p-2">
+            <Text className="text-lg font-bold text-black">
+              {getPhaseMessage(competitionsStatus.noon.phase)}
+              {competitionsStatus.noon.phase !== 'completed' &&
+                ` ${formatTimeRemaining(competitionsStatus.noon.timeRemaining)}`}
+            </Text>
+          </View>
           <Text
-            className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-            Competition 3
-          </Text>
+            className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-black' : 'text-gray-900'}`}>
+            {competitionsStatus.noon.name || 'No active competition'}
+          </Text> */}
         </TouchableOpacity>
 
+        {/* Night Competition */}
         <TouchableOpacity
-          className={`h-1/4 w-full items-center justify-center rounded-xl ${
-            colorScheme === 'dark' ? 'bg-gray-800' : 'bg-white'
+          className={`mb-4 w-full flex-1 items-center justify-center rounded-xl ${
+            colorScheme === 'dark' ? 'bg-[#faa448]' : 'bg-white'
           }`}>
+          {/* <View className="absolute left-0 top-0 flex-row items-center gap-2 p-2">
+            <Ionicons name="moon-outline" size={24} color="black" />
+            <Text className="text-lg font-bold text-black">Night Competition</Text>
+          </View>
+          <View className="items center absolute bottom-0 left-0 p-2">
+            <Text className="text-lg font-bold text-black">
+              {getPhaseMessage(competitionsStatus.night.phase)}
+              {competitionsStatus.night.phase !== 'completed' &&
+                ` ${formatTimeRemaining(competitionsStatus.night.timeRemaining)}`}
+            </Text>
+          </View>
           <Text
-            className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-            Competition 4
-          </Text>
+            className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-black' : 'text-gray-900'}`}>
+            {competitionsStatus.night.name || 'No active competition'}
+          </Text> */}
         </TouchableOpacity>
       </View>
 
       {/* Modals */}
-      <BreakfastModal
-        isVisible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
-        timeLeft={timeLeft}
-        competitionId={currentCompetition?.id}
-        onJoin={() => setHasJoined(true)}
-        hasJoined={hasJoined}
-      />
-
-      <ViewerModal
-        isVisible={isViewerModalVisible}
-        onClose={() => setIsViewerModalVisible(false)}
-        timeLeft={timeLeft}
+      <MorningCompModal
+        isVisible={isMorningModalVisible}
+        onClose={() => setIsMorningModalVisible(false)}
+        competitionName={competitionsStatus.morning.name}
+        competitionId={competitionsStatus.morning.id}
+        user={user}
       />
     </View>
   );
