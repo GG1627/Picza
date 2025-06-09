@@ -157,10 +157,10 @@ export const createCompetition = async (type: string, user: User | null) => {
       throw new Error('Invalid competition type');
     }
 
-    const joinEndTime = new Date(now.getTime() + 1000 * 60 * 1); // 1 minute from now
-    const submitEndTime = new Date(now.getTime() + 1000 * 60 * 2); // 2 hours from now
-    const voteEndTime = new Date(now.getTime() + 1000 * 60 * 3); // 3 hours from now
-    const compEndTime = new Date(now.getTime() + 1000 * 60 * 60); // 4 hours from now
+    const joinEndTime = new Date(now.getTime() + 1000 * 60 * 1); // 20 minutes from now
+    const submitEndTime = new Date(now.getTime() + 1000 * 60 * 2); // 25 minutes from now
+    const voteEndTime = new Date(now.getTime() + 1000 * 60 * 3); // 30 minutes from now
+    const compEndTime = new Date(now.getTime() + 1000 * 60 * 60); // 1 hour from now
 
     // const joinEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60); // 1 hour from now
     // const submitEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 2); // 2 hours from now
@@ -298,5 +298,20 @@ export const isUserParticipant = async (
   } catch (error) {
     console.error('Error checking if user is participant:', error);
     return false;
+  }
+};
+
+export const getParticipantCount = async (competitionId: string): Promise<number> => {
+  try {
+    const { count, error } = await supabase
+      .from('participants')
+      .select('*', { count: 'exact', head: true })
+      .eq('competition_id', competitionId);
+
+    if (error) throw error;
+    return count || 0;
+  } catch (error) {
+    console.error('Error getting participant count:', error);
+    return 0;
   }
 };

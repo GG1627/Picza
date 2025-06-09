@@ -216,7 +216,7 @@ export default function MorningCompetitionScreen() {
       </View>
 
       {/* Timer Section */}
-      <View className="mb-8 items-center">
+      <View className="mb-[-8rem] items-center">
         <Text
           className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
           Time until voting:
@@ -243,7 +243,7 @@ export default function MorningCompetitionScreen() {
             </Text>
           </View>
         ) : hasSubmitted ? (
-          <View className="items-center">
+          <View className="mt-[-5rem] items-center">
             <Ionicons
               name="checkmark-circle"
               size={64}
@@ -264,7 +264,7 @@ export default function MorningCompetitionScreen() {
           </View>
         ) : selectedImage ? (
           <View className="items-center">
-            <Image source={{ uri: selectedImage }} className="mb-4 h-64 w-64 rounded-lg" />
+            <Image source={{ uri: selectedImage }} className="mb-4 h-80 w-80 rounded-lg" />
             <TouchableOpacity
               onPress={handleUpload}
               disabled={isUploading}
@@ -274,28 +274,30 @@ export default function MorningCompetitionScreen() {
               {isUploading ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text className="font-semibold text-white">Submit Image</Text>
+                <Text className="text-lg font-semibold text-white">Submit Image</Text>
               )}
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity
-            onPress={pickImage}
-            className={`h-64 w-64 items-center justify-center rounded-lg border-2 border-dashed ${
-              colorScheme === 'dark' ? 'border-gray-600' : 'border-gray-400'
-            }`}>
-            <Ionicons
-              name="cloud-upload-outline"
-              size={48}
-              color={colorScheme === 'dark' ? '#fff' : '#000'}
-            />
-            <Text
-              className={`mt-2 text-center ${
-                colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+          <View className="flex-1 items-center justify-center">
+            <TouchableOpacity
+              onPress={pickImage}
+              className={`h-80 w-80 items-center justify-center rounded-lg border-2 border-dashed ${
+                colorScheme === 'dark' ? 'border-gray-600' : 'border-gray-400'
               }`}>
-              Tap to select an image
-            </Text>
-          </TouchableOpacity>
+              <Ionicons
+                name="cloud-upload-outline"
+                size={64}
+                color={colorScheme === 'dark' ? '#fff' : '#000'}
+              />
+              <Text
+                className={`mt-4 text-center text-lg ${
+                  colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                }`}>
+                Tap to select an image
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </View>

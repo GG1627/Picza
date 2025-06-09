@@ -1,7 +1,7 @@
 import { View, Text, Modal, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useColorScheme } from '../lib/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
-import { joinCompetition, getCompetitionStatus } from '~/lib/competitions';
+import { joinCompetition, getCompetitionStatus, getParticipantCount } from '~/lib/competitions';
 import { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { supabase } from '~/lib/supabase';
@@ -12,6 +12,7 @@ type MorningCompModalProps = {
   competitionName: string | null;
   competitionId: string | null;
   user: User | null;
+  numberOfParticipants: number;
 };
 
 export default function MorningCompModal({
@@ -20,10 +21,13 @@ export default function MorningCompModal({
   competitionName,
   competitionId,
   user,
+  numberOfParticipants,
 }: MorningCompModalProps) {
   const { colorScheme } = useColorScheme();
   const [isJoining, setIsJoining] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
+  const [currentParticipantCount, setCurrentParticipantCount] = useState(numberOfParticipants);
+  const isCompetitionFull = currentParticipantCount >= 9;
 
   const checkParticipationStatus = async () => {
     if (!user || !competitionId) return;
@@ -60,6 +64,21 @@ export default function MorningCompModal({
       console.error('Error checking competition status:', error);
     }
   };
+
+  // Update participant count when modal opens
+  useEffect(() => {
+    if (isVisible && competitionId) {
+      const fetchLatestCount = async () => {
+        try {
+          const count = await getParticipantCount(competitionId);
+          setCurrentParticipantCount(count);
+        } catch (error) {
+          console.error('Error fetching participant count:', error);
+        }
+      };
+      fetchLatestCount();
+    }
+  }, [isVisible, competitionId]);
 
   useEffect(() => {
     if (isVisible) {
@@ -120,6 +139,16 @@ export default function MorningCompModal({
                 <Ionicons name="checkmark-circle" size={24} color="black" />
                 <Text className="mt-2 text-center font-semibold text-black">
                   You have joined this competition
+                </Text>
+              </View>
+            ) : isCompetitionFull ? (
+              <View className="items-center rounded-lg bg-gray-200 p-4">
+                <Ionicons name="people" size={24} color="black" />
+                <Text className="mt-2 text-center font-semibold text-black">
+                  Competition is Full
+                </Text>
+                <Text className="mt-1 text-center text-sm text-black/60">
+                  {currentParticipantCount}/9 participants
                 </Text>
               </View>
             ) : (

@@ -285,6 +285,10 @@ export default function MorningVotingScreen() {
           className={`mt-1 text-center text-base ${colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
           Choose your favorite submission!
         </Text>
+        <Text
+          className={`mt-2 text-center text-sm ${colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+          Tap any image to view it larger
+        </Text>
       </View>
 
       {/* Timer Section */}
@@ -335,7 +339,9 @@ export default function MorningVotingScreen() {
               <TouchableOpacity
                 onPress={() => setIsSelecting(true)}
                 className="rounded-full bg-[#fa6f48] px-6 py-3">
-                <Text className="text-center font-semibold text-white">Select Your Choice</Text>
+                <Text className="text-center text-lg font-semibold text-white">
+                  Select Your Choice
+                </Text>
               </TouchableOpacity>
             ) : (
               <>
@@ -345,12 +351,12 @@ export default function MorningVotingScreen() {
                   className={`rounded-full px-6 py-3 ${
                     votedSubmissionId ? 'bg-[#fa6f48]' : 'bg-gray-400'
                   }`}>
-                  <Text className="text-center font-semibold text-white">Vote</Text>
+                  <Text className="text-center text-lg font-semibold text-white">Vote</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleUndo}
                   className="mt-2 rounded-full bg-gray-500 px-6 py-3">
-                  <Text className="text-center font-semibold text-white">Undo</Text>
+                  <Text className="text-center text-lg font-semibold text-white">Undo</Text>
                 </TouchableOpacity>
               </>
             )}

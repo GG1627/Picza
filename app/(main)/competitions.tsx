@@ -3,6 +3,7 @@ import { useColorScheme } from '../../lib/useColorScheme';
 import { router } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import ViewerModal from '../../components/ViewerModal';
 import { useAuth } from '../../lib/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -15,6 +16,7 @@ import {
   AllCompetitionsStatus,
   joinCompetition,
   isUserParticipant,
+  getParticipantCount,
 } from '~/lib/competitions';
 import MorningCompModal from '~/components/MorningCompModal';
 
@@ -34,6 +36,7 @@ export default function CompetitionsScreen() {
   const [isMorningModalVisible, setIsMorningModalVisible] = useState(false);
   const [winner, setWinner] = useState<Winner>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [numberOfParticipants, setNumberOfParticipants] = useState(0);
   const [competitionsStatus, setCompetitionsStatus] = useState<AllCompetitionsStatus>({
     morning: { phase: 'completed', timeRemaining: 0, nextPhaseTime: null, name: null, id: null },
     noon: { phase: 'completed', timeRemaining: 0, nextPhaseTime: null, name: null, id: null },
@@ -111,6 +114,15 @@ export default function CompetitionsScreen() {
       const status = await getAllCompetitionsStatus();
       setCompetitionsStatus(status);
 
+      // If morning competition is in registration or competing phase, fetch participant count
+      if (
+        status.morning.id &&
+        (status.morning.phase === 'registration' || status.morning.phase === 'competing')
+      ) {
+        const count = await getParticipantCount(status.morning.id);
+        setNumberOfParticipants(count);
+      }
+
       // If morning competition is completed, fetch the winner
       if (status.morning.phase === 'completed' && status.morning.id) {
         fetchWinner(status.morning.id);
@@ -150,13 +162,13 @@ export default function CompetitionsScreen() {
   const getPhaseMessage = (phase: string) => {
     switch (phase) {
       case 'registration':
-        return 'Time left to join:';
+        return 'Entry ends in:';
       case 'competing':
-        return 'Time left til voting begins:';
+        return 'Cooking ends in:';
       case 'voting':
-        return 'Time left to vote:';
+        return 'Voting closes in:';
       case 'completed':
-        return 'Next comp in:';
+        return 'Next competition::';
       default:
         return '';
     }
@@ -166,11 +178,23 @@ export default function CompetitionsScreen() {
   const formatTimeRemaining = (seconds: number) => {
     if (seconds <= 0) return "Time's up!";
 
+    const days = Math.floor(seconds / 86400);
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
 
-    return `${hours}h ${minutes}m ${remainingSeconds}s`;
+    // if more than 1 day, return days
+    if (days > 1) {
+      return `${days}d`;
+    } else if (hours > 1) {
+      return `${hours}h`;
+    } else if (minutes > 1) {
+      return `${minutes}m`;
+    } else if (remainingSeconds > 1) {
+      return `${remainingSeconds}s`;
+    }
+
+    return "Time's up!";
   };
 
   const handleMorningCompetitionPress = async () => {
@@ -249,31 +273,76 @@ export default function CompetitionsScreen() {
           onPress={() => {
             handleMorningCompetitionPress();
           }}
-          className={`mb-4 w-full flex-1 items-center justify-center rounded-xl ${
+          className={`mb-4 w-full flex-1 items-center justify-center overflow-hidden rounded-2xl ${
             colorScheme === 'dark' ? 'bg-[#fa6f48]' : 'bg-white'
           }`}>
-          <View className="absolute left-0 top-0 flex-row items-center gap-2 p-2">
-            <Ionicons name="sunny-outline" size={24} color="black" />
+          {/* Header Section */}
+          <View className="absolute left-0 top-0 flex-row items-center gap-2 p-4">
+            <View className="rounded-full bg-white/20 p-2">
+              <Ionicons name="sunny" size={24} color="black" />
+            </View>
             <Text className="text-lg font-bold text-black">Morning Competition</Text>
           </View>
+
+          {/* Status Badges */}
+          {competitionsStatus.morning.phase === 'registration' ? (
+            <>
+              <View className="absolute right-0 top-0 p-4">
+                <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
+                  <Text className="text-base font-bold text-black">Join Now!</Text>
+                </View>
+              </View>
+              <View className="absolute bottom-0 right-0 p-4">
+                <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
+                  <Text className="text-base font-bold text-black">{numberOfParticipants}/9</Text>
+                </View>
+              </View>
+            </>
+          ) : competitionsStatus.morning.phase === 'competing' ? (
+            <>
+              <View className="absolute right-0 top-0 p-4">
+                <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
+                  <Text className="text-base font-bold text-black">In Progress!</Text>
+                </View>
+              </View>
+              <View className="absolute bottom-0 right-0 p-4">
+                <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
+                  <Text className="text-base font-bold text-black">{numberOfParticipants}/9</Text>
+                </View>
+              </View>
+            </>
+          ) : competitionsStatus.morning.phase === 'voting' ? (
+            <>
+              <View className="absolute right-0 top-0 p-4">
+                <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
+                  <Text className="text-base font-bold text-black">Vote Now!</Text>
+                </View>
+              </View>
+              <View className="absolute bottom-0 right-0 p-4">
+                <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
+                  <Text className="text-base font-bold text-black">{numberOfParticipants}/9</Text>
+                </View>
+              </View>
+            </>
+          ) : null}
 
           {competitionsStatus.morning.phase === 'completed' ? (
             <View className="w-full flex-1">
               {winner ? (
                 <>
                   {/* Winner Info and Image */}
-                  <View className="flex-1 flex-row items-center justify-between px-4">
+                  <View className="flex-1 flex-row items-center justify-between px-6">
                     {/* Left side - Winner Info */}
-                    <View className="ml-[3.5rem] flex-1 items-start space-y-2">
+                    <View className="flex-1 items-center space-y-3">
                       <Text className="text-2xl font-bold text-black">Winner!</Text>
-                      <Text className="text-xl text-black">{winner.username}</Text>
-                      <Text className="text-lg text-black">with {winner.vote_count} votes</Text>
+                      <Text className="text-2xl text-black">{winner.username}</Text>
+                      <Text className="text-lg text-black/80">with {winner.vote_count} votes</Text>
                     </View>
 
                     {/* Right side - Image */}
                     <TouchableOpacity
                       onPress={() => setSelectedImage(winner.image_url)}
-                      className="h-36 w-36 overflow-hidden rounded-lg border-2 border-black">
+                      className="h-32 w-32 overflow-hidden rounded-xl border-2 border-black shadow-lg">
                       <Image
                         source={{ uri: winner.image_url }}
                         className="h-full w-full"
@@ -284,13 +353,13 @@ export default function CompetitionsScreen() {
                 </>
               ) : (
                 <View className="flex-1 items-center justify-center">
-                  <Text className="text-xl font-semibold text-black">No Submissions</Text>
-                  <Text className="mt-2 text-black">This competition had no submissions</Text>
+                  <Text className="text-2xl font-semibold text-black">No Submissions</Text>
+                  <Text className="mt-2 text-black/80">This competition had no submissions</Text>
                 </View>
               )}
 
               {/* Bottom - Timer */}
-              <View className="absolute bottom-0 left-0 p-2">
+              <View className="absolute bottom-0 left-0 p-4">
                 <Text className="text-lg font-bold text-black">
                   {getPhaseMessage(competitionsStatus.morning.phase)}
                   {` ${formatTimeRemaining(competitionsStatus.morning.timeRemaining)}`}
@@ -299,7 +368,7 @@ export default function CompetitionsScreen() {
             </View>
           ) : (
             <>
-              <View className="items center absolute bottom-0 left-0 p-2">
+              <View className="absolute bottom-0 left-0 p-4">
                 <Text className="text-lg font-bold text-black">
                   {getPhaseMessage(competitionsStatus.morning.phase)}
                   {competitionsStatus.morning.phase === 'registration' ||
@@ -310,11 +379,11 @@ export default function CompetitionsScreen() {
                 </Text>
               </View>
               <Text
-                className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-black' : 'text-gray-900'}`}>
+                className={`text-3xl font-bold ${colorScheme === 'dark' ? 'text-black' : 'text-gray-900'}`}>
                 {competitionsStatus.morning.name || 'No active competition'}
               </Text>
               {competitionsStatus.morning.phase === 'competing' && (
-                <Text className="mt-2 text-center text-black">Time to submit your entry!</Text>
+                <Text className="mt-2 text-center text-black/80">Time to submit your entry!</Text>
               )}
             </>
           )}
@@ -388,6 +457,7 @@ export default function CompetitionsScreen() {
         competitionName={competitionsStatus.morning.name}
         competitionId={competitionsStatus.morning.id}
         user={user}
+        numberOfParticipants={numberOfParticipants}
       />
     </View>
   );
