@@ -194,13 +194,10 @@ export default function CompetitionsScreen() {
       if (isParticipant) {
         router.push('/morningCompetition');
       } else {
-        // Allow joining the competition during competing phase
-        const success = await joinCompetition(competitionsStatus.morning.id, user);
-        if (success) {
-          router.push('/morningCompetition');
-        } else {
-          Alert.alert('Error', 'Failed to join competition');
-        }
+        Alert.alert(
+          'Competition in Progress',
+          'The competition has begun. Come back in a bit for voting!'
+        );
       }
     } else if (competitionsStatus.morning.phase === 'voting') {
       router.push('/morningVoting');
