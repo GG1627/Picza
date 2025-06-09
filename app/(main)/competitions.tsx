@@ -393,45 +393,13 @@ export default function CompetitionsScreen() {
         <TouchableOpacity
           className={`mb-4 w-full flex-1 items-center justify-center rounded-xl ${
             colorScheme === 'dark' ? 'bg-[#fa8f48]' : 'bg-white'
-          }`}>
-          {/* <View className="absolute left-0 top-0 flex-row items-center gap-2 p-2">
-            <Ionicons name="sunny-outline" size={24} color="black" />
-            <Text className="text-lg font-bold text-black">Noon Competition</Text>
-          </View>
-          <View className="items center absolute bottom-0 left-0 p-2">
-            <Text className="text-lg font-bold text-black">
-              {getPhaseMessage(competitionsStatus.noon.phase)}
-              {competitionsStatus.noon.phase !== 'completed' &&
-                ` ${formatTimeRemaining(competitionsStatus.noon.timeRemaining)}`}
-            </Text>
-          </View>
-          <Text
-            className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-black' : 'text-gray-900'}`}>
-            {competitionsStatus.noon.name || 'No active competition'}
-          </Text> */}
-        </TouchableOpacity>
+          }`}></TouchableOpacity>
 
         {/* Night Competition */}
         <TouchableOpacity
           className={`mb-4 w-full flex-1 items-center justify-center rounded-xl ${
-            colorScheme === 'dark' ? 'bg-[#faa448]' : 'bg-white'
-          }`}>
-          {/* <View className="absolute left-0 top-0 flex-row items-center gap-2 p-2">
-            <Ionicons name="moon-outline" size={24} color="black" />
-            <Text className="text-lg font-bold text-black">Night Competition</Text>
-          </View>
-          <View className="items center absolute bottom-0 left-0 p-2">
-            <Text className="text-lg font-bold text-black">
-              {getPhaseMessage(competitionsStatus.night.phase)}
-              {competitionsStatus.night.phase !== 'completed' &&
-                ` ${formatTimeRemaining(competitionsStatus.night.timeRemaining)}`}
-            </Text>
-          </View>
-          <Text
-            className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-black' : 'text-gray-900'}`}>
-            {competitionsStatus.night.name || 'No active competition'}
-          </Text> */}
-        </TouchableOpacity>
+            colorScheme === 'dark' ? 'bg-[#faa748]' : 'bg-white'
+          }`}></TouchableOpacity>
       </View>
 
       {/* Image Preview Modal */}
