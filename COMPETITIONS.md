@@ -1,67 +1,130 @@
-# Building the Competitions Page (Caitlin's Page)
+# Building Competition Page - Caitlin's Task
 
-# Overview
+> **Note:** Read the entire document before starting
 
-There will be 4 competitions every 3 days, day 1 is for allowing everyone to sign up and prepare for competitions, day 2 is the actual compeition, and day 3 is for voting/seeing results, then on the 4th day new competitions will appear
+> **Note:** Get a markdown reader extension to view this properly
 
-# Main Page View
+## Summary of How a Competition Works
 
-4 rounded rectangular container, each represents a competiton (Breakfest, Lunch, Dinner, Crazy), each competition will have like a short name entailing what it is like "Breakfest Bash etc," try to change up the names so like during one cycle, the breakfest one will be Breakfest bash but on another cycle it would be "The Sunrise Scramble" (use ChatGPT or Gemini or other models to come up with creative names that make sense). Each competition will have 16 total people allowed to have like a counter as to how many people there are joined, like 0/15 or 4/16, if 16/16 then add some text that says "Full", use a realtime database so that the numbers update in realtime (i feel like that would be cool)
+1. **Registration Phase**
 
-# Crazy Compeition (4th option)
+   - Users can only join a competition during this phase by clicking on the box and selecting "Join Now" in the modal
+   - Once registration time ends, no one else can join
+   - Maximum of 9 participants per competition (for now)
 
-so the crazy competition is more of a fun, no limit, no bounrdairies, just fun and unhinged competition, make up really random crazy names (Flavor Free-for-All, etc.)
+2. **Competing Phase**
 
-# Timers
+   - After registration ends, the competition enters the competing phase
+   - Participants can click on the box to navigate to `morningCompetition.tsx` screen
+   - Participants can upload and submit an image before the time runs out
+   - If a viewer (non-participant) clicks on the box in `competitions.tsx`, an alert will notify them that the competition has already begun
 
-make each competiton begin at a reasonable time, so have a timer on each card saying how much time reamins until the competition begins
+3. **Voting Phase**
 
-# Modals
+   - After competing phase ends, voting begins
+   - Clicking the competition box navigates both participants and viewers to the voting screen
+   - Submissions are shown in a 3x3 grid
+   - Users can select one submission to vote on (one vote per user)
+   - Must vote before time runs out
 
-before the competitons actually begins, if the user clicks on the card, a modal pops up giving like a short sentnece description of the competition, will just be basic like "Rise and shine, campus chefs—whip up your most creative morning masterpiece in our ultimate Breakfast Battle!" Then have a join button that will add them to the competiton.
+4. **Completed Phase**
+   - Shows the winner and vote count
+   - Clicking the box navigates users to the `morningResults.tsx` page
+   - Displays final standings with vote counts for all participants
+   - _Note: Styling for this page wasn't fully tested, so implement it similar to the 'morning' competition_
 
-# Joined - Waiting for competiton to start
+## Current Implementation (For Testing)
 
-If a user has signed up to join a competiton, the card option ex. Breakfest, some text with "Joined" will be displayed on the card to show that they are joined.
+### Supabase Tables
 
----
+- competitions
+- participants
+- submissions
+- votes
 
-# Actual Competiton - Regular person view
+### Competition Phases
 
-Once the competitons have begun, clicking on the card will no longer open the modal but a screen that shows the bracket, if the competiton is in progress have a timer saying how long until it ends. have like "In Progess" text,
+- registration
+- competing
+- voting
+- completed
 
-# Actual Competiton - Regular person view
+Currently, we can make testing competitions using the "Make Comp" button, which will create a competition in the competitions table. You can delete the competition using the "Delete Comp" button, which will delete the competition and all its related data (e.g., participants, submissions, votes that are connected to that specific competition). Only make one competition at a time and delete one competition at a time. If you click on "Delete Comp" when there are no competitions to delete, you'll get an error - don't worry about that, it's just saying that there's nothing to delete.
 
-# making test competitions
+## My Recommendation
 
--- Example SQL to create a test competition with 5-minute phases
-INSERT INTO breakfast_competitions (
-start_time, -- Add these for backward compatibility
-end_time, -- Add these for backward compatibility
-registration_start_time,
-competition_start_time,
-competition_end_time,
-voting_start_time,
-voting_end_time,
-status,
-theme,
-competition_number,
-week_number,
-year
-) VALUES (
-NOW(), -- start_time
-NOW() + interval '14 minutes', -- end_time (same as voting_end_time)
-NOW(), -- registration starts now
-NOW() + interval '5 minutes', -- competition starts in 5 minutes
-NOW() + interval '9 minutes', -- competition ends in 9 minutes (4 hours compressed to 4 minutes)
-NOW() + interval '9 minutes', -- voting starts when competition ends
-NOW() + interval '14 minutes', -- voting ends in 14 minutes (1 day compressed to 5 minutes)
-'active',
-'Test Breakfast Competition',
-1,
-EXTRACT(WEEK FROM NOW()),
-EXTRACT(YEAR FROM NOW())
-);
+Click on the "Make Competition" button and go through one complete competition as a participant (join the competition) just so you can see everything that's going on.
 
-$$
-$$
+As for the coding, go through the main `competition.tsx` file and see what I made for the 'morning' competition since everything there has been implemented. Any helper functions or anything that I used there, you can just Ctrl+Click on it and it will take you to wherever it was made. Many functions can be reused just by changing the parameters, or you can copy and paste and change whatever needs to be changed. A lot can be copy-pasted, but then you wouldn't really be learning React/React Native, so use it as a guide. Feel free to copy and paste stuff if you want, and feel free to use AI and all that. Make a separate branch for everything that you do, and once you're done, we can do a PR and merge everything. I set restrictions in GitHub to prevent automatic merge to main.
+
+Don't worry too much about styling - just make sure it's the same stuff as everything else I made. Styling improvements can be made later on since they are quick and easy. This is more focused on implementation.
+
+While you're going through everything, if you see some things that could be added/slightly changed to improve anything or any styling that you think would make something look better, there's a section at the very bottom for noting stuff down. Feel free to put down anything there if you want, but don't feel forced to use it if you think everything is fine.
+
+### To Change Which Competition to Make
+
+In `competitions.tsx`:
+
+```typescript
+<Button
+  title="Make Comp"
+  onPress={async () => {
+    const success = await createCompetition('morning', user);
+    if (success) {
+      fetchStatus();
+    }
+  }}
+/>
+<Button
+  title="Delete Comp"
+  onPress={async () => {
+    const success = await deleteCompetition('morning', user);
+    if (success) {
+      fetchStatus();
+    }
+  }}
+/>
+```
+
+This is an example of how to make a 'morning' competition. This is the competition that I already made. To make the other two, you would just change the parameter to 'noon' or 'night'. No need to make new buttons, just change the parameters.
+
+Example: `createCompetition('noon', user);`
+
+_Disclaimer: We would really be working with "afternoon" timing in the final/completed implementation, but I just used the 'noon' parameter throughout instead. Just thought I'd include this incase you're ever wondering lol._
+
+### To Change Time Intervals
+
+In `createCompetition` function (`competitions.ts`):
+
+```typescript
+const joinEndTime = new Date(now.getTime() + 1000 * 60 * 1); // 1 minute from now
+const submitEndTime = new Date(now.getTime() + 1000 * 60 * 2); // 2 minutes from now
+const voteEndTime = new Date(now.getTime() + 1000 * 60 * 3); // 3 minutes from now
+const compEndTime = new Date(now.getTime() + 1000 * 60 * 60); // 1 hour (60 minutes) from now
+```
+
+If you want more time during certain phases, just change the final number in the parentheses. Remember, if you made a competition but changed its time, you'll need to delete it then make a new one with the updated timing.
+
+## Future Implementation
+
+After you're done, I will go back and set the times so the competitions start on specific dates and times (e.g., every Monday at 8am for morning competition) and that it's automated so that once one competition entirely finishes, another will be created. Don't worry about this - I will do this after you're done with everything. It's fairly simple, and I think I already have it, just commented out.
+
+## Screens to Implement
+
+### Noon Competition Screens
+
+- [ ] `NoonCompModal.tsx`
+- [ ] `noonCompetition.tsx`
+- [ ] `noonVoting.tsx`
+- [ ] `noonResults.tsx`
+
+### Night Competition Screens
+
+- [ ] `NightCompModal.tsx`
+- [ ] `nightCompetition.tsx`
+- [ ] `nightVoting.tsx`
+- [ ] `nightResults.tsx`
+
+> _Note: If I forgot anything, my bad_
+
+## Caitlin's Notes and Observations

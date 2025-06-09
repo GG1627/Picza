@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import ViewerModal from '../../components/ViewerModal';
 import { useAuth } from '../../lib/useAuth';
 import { supabase } from '../../lib/supabase';
 import { generateRandomMorningLunchCompetitionName } from '~/lib/generateRandomName';
