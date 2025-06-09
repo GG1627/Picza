@@ -31,7 +31,6 @@ export default function MorningCompetitionScreen() {
     if (!user || !competitionId) return;
 
     try {
-      console.log('Checking submission for user:', user.id, 'competition:', competitionId);
       const { data, error } = await supabase
         .from('submissions')
         .select('id, status')
@@ -44,9 +43,7 @@ export default function MorningCompetitionScreen() {
         return;
       }
 
-      console.log('Submission check result:', data);
       const hasSubmitted = !!data && data.status === 'submitted';
-      console.log('Setting hasSubmitted to:', hasSubmitted);
       setHasSubmitted(hasSubmitted);
     } catch (error) {
       console.error('Error in checkSubmission:', error);
@@ -68,7 +65,6 @@ export default function MorningCompetitionScreen() {
         if (error) throw error;
 
         if (data) {
-          console.log('Setting competition ID:', data.id);
           setCompetitionId(data.id);
           const submitEnd = new Date(data.submit_end_time);
           const now = new Date();
@@ -81,11 +77,40 @@ export default function MorningCompetitionScreen() {
     };
 
     fetchCompetitionStatus();
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => Math.max(0, prev - 1));
+    const timer = setInterval(async () => {
+      const { data } = await supabase
+        .from('competitions')
+        .select('submit_end_time')
+        .eq('type', 'morning')
+        .single();
+
+      if (data) {
+        const submitEnd = new Date(data.submit_end_time);
+        const now = new Date();
+        const remaining = Math.floor((submitEnd.getTime() - now.getTime()) / 1000);
+        setTimeRemaining(remaining);
+
+        if (remaining <= 0) {
+          clearInterval(timer);
+          Alert.alert(
+            'Submission Time Ended',
+            'The time to submit your entry has ended. Time to vote!',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  router.replace('/morningVoting');
+                },
+              },
+            ]
+          );
+        }
+      }
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+    };
   }, []);
 
   // Add a new useEffect to check submission whenever competitionId or user changes

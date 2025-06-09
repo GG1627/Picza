@@ -50,10 +50,12 @@ export default function CompetitionsScreen() {
           `
           id,
           image_url,
-          user_id
+          user_id,
+          status
         `
         )
-        .eq('competition_id', competitionId);
+        .eq('competition_id', competitionId)
+        .eq('status', 'submitted');
 
       if (subError) throw subError;
 
@@ -192,10 +194,13 @@ export default function CompetitionsScreen() {
       if (isParticipant) {
         router.push('/morningCompetition');
       } else {
-        Alert.alert(
-          'Competition in Progress',
-          'The competition has begun. Come back in a bit for voting!'
-        );
+        // Allow joining the competition during competing phase
+        const success = await joinCompetition(competitionsStatus.morning.id, user);
+        if (success) {
+          router.push('/morningCompetition');
+        } else {
+          Alert.alert('Error', 'Failed to join competition');
+        }
       }
     } else if (competitionsStatus.morning.phase === 'voting') {
       router.push('/morningVoting');
@@ -282,7 +287,7 @@ export default function CompetitionsScreen() {
                 </>
               ) : (
                 <View className="flex-1 items-center justify-center">
-                  <Text className="text-xl font-semibold text-black">No Participants</Text>
+                  <Text className="text-xl font-semibold text-black">No Submissions</Text>
                   <Text className="mt-2 text-black">This competition had no submissions</Text>
                 </View>
               )}
@@ -311,6 +316,9 @@ export default function CompetitionsScreen() {
                 className={`text-lg font-semibold ${colorScheme === 'dark' ? 'text-black' : 'text-gray-900'}`}>
                 {competitionsStatus.morning.name || 'No active competition'}
               </Text>
+              {competitionsStatus.morning.phase === 'competing' && (
+                <Text className="mt-2 text-center text-black">Time to submit your entry!</Text>
+              )}
             </>
           )}
         </TouchableOpacity>

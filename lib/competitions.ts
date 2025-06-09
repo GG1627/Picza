@@ -158,8 +158,8 @@ export const createCompetition = async (type: string, user: User | null) => {
     }
 
     const joinEndTime = new Date(now.getTime() + 1000 * 60 * 1); // 1 minute from now
-    const submitEndTime = new Date(now.getTime() + 1000 * 60 * 3); // 2 hours from now
-    const voteEndTime = new Date(now.getTime() + 1000 * 60 * 6); // 3 hours from now
+    const submitEndTime = new Date(now.getTime() + 1000 * 60 * 2); // 2 hours from now
+    const voteEndTime = new Date(now.getTime() + 1000 * 60 * 3); // 3 hours from now
     const compEndTime = new Date(now.getTime() + 1000 * 60 * 60); // 4 hours from now
 
     // const joinEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60); // 1 hour from now

@@ -211,7 +211,7 @@ export default function MorningResultsScreen() {
                     {submission.rank}
                   </Text>
                 </View>
-                <View>
+                <View className="ml-2">
                   <Text
                     className={`text-lg font-semibold ${
                       colorScheme === 'dark' ? 'text-white' : 'text-gray-900'
