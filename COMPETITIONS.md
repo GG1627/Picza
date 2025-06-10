@@ -2,7 +2,7 @@
 
 > **Note:** Read the entire document before starting
 
-> **Note:** Get a markdown reader extension to view this properly
+> **Note:** Get a markdown reader extension to view this properly, or jusst view it in GitHub
 
 ## Summary of How a Competition Works
 
