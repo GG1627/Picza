@@ -157,10 +157,9 @@ export const createCompetition = async (type: string, user: User | null) => {
       throw new Error('Invalid competition type');
     }
 
-
     const joinEndTime = new Date(now.getTime() + 1000 * 60 * 1); // 2 minutes from now
     const submitEndTime = new Date(now.getTime() + 1000 * 60 * 2); // 4 minutes from now
-    const voteEndTime = new Date(now.getTime() + 1000 * 60 * 3); // 6 minutes from now
+    const voteEndTime = new Date(now.getTime() + 1000 * 60 * 5); // 6 minutes from now
     const compEndTime = new Date(now.getTime() + 1000 * 60 * 60); // 1 hour from now
 
     // const joinEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60); // 1 hour from now

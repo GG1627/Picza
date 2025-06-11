@@ -281,9 +281,15 @@ export default function CompetitionsScreen() {
         );
       }
     } else if (competitionsStatus.morning.phase === 'voting') {
-      router.push('/allVoting');
+      router.push({
+        pathname: '/allVoting',
+        params: { competitionId: competitionsStatus.morning.id },
+      });
     } else if (competitionsStatus.morning.phase === 'completed') {
-      router.push('/allResults');
+      router.push({
+        pathname: '/allResults',
+        params: { competitionId: competitionsStatus.morning.id },
+      });
     } else {
       Alert.alert('Error', 'Competition not found');
     }
@@ -317,9 +323,15 @@ export default function CompetitionsScreen() {
         );
       }
     } else if (competitionsStatus.noon.phase === 'voting') {
-      router.push('/allVoting');
+      router.push({
+        pathname: '/allVoting',
+        params: { competitionId: competitionsStatus.noon.id },
+      });
     } else if (competitionsStatus.noon.phase === 'completed') {
-      router.push('/allResults');
+      router.push({
+        pathname: '/allResults',
+        params: { competitionId: competitionsStatus.noon.id },
+      });
     } else {
       Alert.alert('Error', 'Competition not found');
     }
@@ -353,9 +365,15 @@ export default function CompetitionsScreen() {
         );
       }
     } else if (competitionsStatus.night.phase === 'voting') {
-      router.push('/allVoting');
+      router.push({
+        pathname: '/allVoting',
+        params: { competitionId: competitionsStatus.night.id },
+      });
     } else if (competitionsStatus.night.phase === 'completed') {
-      router.push('/allResults');
+      router.push({
+        pathname: '/allResults',
+        params: { competitionId: competitionsStatus.night.id },
+      });
     } else {
       Alert.alert('Error', 'Competition not found');
     }
@@ -379,7 +397,7 @@ export default function CompetitionsScreen() {
         <Button
           title="Make Comp"
           onPress={async () => {
-            const success = await createCompetition('noon', user);
+            const success = await createCompetition('night', user);
             if (success) {
               fetchStatus();
             }
@@ -388,7 +406,7 @@ export default function CompetitionsScreen() {
         <Button
           title="Delete Comp"
           onPress={async () => {
-            const success = await deleteCompetition('noon', user);
+            const success = await deleteCompetition('morning', user);
             if (success) {
               fetchStatus();
             }
@@ -784,16 +802,16 @@ export default function CompetitionsScreen() {
       </Modal>
 
       {/* Modals */}
-      
-<CompModal
+
+      <CompModal
         isVisible={isMorningModalVisible}
         onClose={() => setIsMorningModalVisible(false)}
         competitionName={competitionsStatus.morning.name}
         competitionId={competitionsStatus.morning.id}
         competitionType="morning"
-        competitionDescription='Ready to show off your breakfast skills? Join this exciting breakfast competition and
-            compete against other talented students!'
-        competitionTime='Morning Competition'
+        competitionDescription="Ready to show off your breakfast skills? Join this exciting breakfast competition and
+            compete against other talented students!"
+        competitionTime="Morning Competition"
         user={user}
         numberOfParticipants={numberOfParticipants}
       />
@@ -803,9 +821,9 @@ export default function CompetitionsScreen() {
         competitionName={competitionsStatus.noon.name}
         competitionId={competitionsStatus.noon.id}
         competitionType="noon"
-        competitionDescription='Ready to show off your lunch skills? Join this exciting afternoon competition and
-            compete against other talented students!'
-        competitionTime='Afternoon Competition'
+        competitionDescription="Ready to show off your lunch skills? Join this exciting afternoon competition and
+            compete against other talented students!"
+        competitionTime="Afternoon Competition"
         user={user}
         numberOfParticipants={numberOfParticipants}
       />
@@ -815,9 +833,9 @@ export default function CompetitionsScreen() {
         competitionName={competitionsStatus.night.name}
         competitionId={competitionsStatus.night.id}
         competitionType="night"
-        competitionDescription='Ready to show off your late night skills? Join this exciting late night competition and
-            compete against other talented students!'
-        competitionTime='Late-Night Competition'
+        competitionDescription="Ready to show off your late night skills? Join this exciting late night competition and
+            compete against other talented students!"
+        competitionTime="Late-Night Competition"
         user={user}
         numberOfParticipants={numberOfParticipants}
       />

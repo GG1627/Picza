@@ -14,8 +14,8 @@ import { useAuth } from '~/lib/auth';
 import { useEffect, useState } from 'react';
 import { supabase } from '~/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import {time} from '../sharedTime';
+import { router, useLocalSearchParams } from 'expo-router';
+import { time } from '../sharedTime';
 
 type Submission = {
   id: string;
@@ -36,6 +36,7 @@ export default function VotingScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [votedSubmissionId, setVotedSubmissionId] = useState<string | null>(null);
+  const { competitionId: routeCompetitionId } = useLocalSearchParams();
 
   // Check if user has already voted
   const checkVoteStatus = async () => {
@@ -67,7 +68,7 @@ export default function VotingScreen() {
         const { data: competition, error: compError } = await supabase
           .from('competitions')
           .select('id, vote_end_time')
-          .eq('type',time)
+          .eq('id', routeCompetitionId)
           .single();
 
         if (compError) throw compError;
