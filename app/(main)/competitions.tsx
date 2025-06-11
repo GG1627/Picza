@@ -40,6 +40,15 @@ export default function CompetitionsScreen() {
   const [winner, setWinner] = useState<Winner>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [numberOfParticipants, setNumberOfParticipants] = useState(0);
+
+  const [morningWinner, setMorningWinner] = useState<Winner>(null);
+  const [noonWinner, setNoonWinner] = useState<Winner>(null);
+  const [nightWinner, setNightWinner] = useState<Winner>(null);
+
+  const [morningParticipants, setMorningParticipants] = useState(0);
+  const [noonParticipants, setNoonParticipants] = useState(0);
+  const [nightParticipants, setNightParticipants] = useState(0);
+
   const [competitionsStatus, setCompetitionsStatus] = useState<AllCompetitionsStatus>({
     morning: { phase: 'completed', timeRemaining: 0, nextPhaseTime: null, name: null, id: null },
     noon: { phase: 'completed', timeRemaining: 0, nextPhaseTime: null, name: null, id: null },
@@ -47,7 +56,7 @@ export default function CompetitionsScreen() {
   });
 
   // Fetch winner when competition is completed
-  const fetchWinner = async (competitionId: string) => {
+  const fetchWinner = async (competitionId: string, type: 'morning' | 'noon' | 'night') => {
     try {
       // First get all submissions with their vote counts
       const { data: submissions, error: subError } = await supabase
@@ -99,15 +108,38 @@ export default function CompetitionsScreen() {
           .eq('id', winningSubmission.user_id)
           .single();
 
-        setWinner({
+        const winnerData = {
           username: profile?.username || 'Unknown',
           image_url: winningSubmission.image_url,
           vote_count: winningSubmission.vote_count,
-        });
+        };
+
+        switch (type) {
+          case 'morning':
+            setMorningWinner(winnerData);
+            break;
+          case 'noon':
+            setNoonWinner(winnerData);
+            break;
+          case 'night':
+            setNightWinner(winnerData);
+            break;
+        }
       }
     } catch (error) {
       console.error('Error fetching winner:', error);
-      setWinner(null);
+      // Set the appropriate winner state to null based on type
+      switch (type) {
+        case 'morning':
+          setMorningWinner(null);
+          break;
+        case 'noon':
+          setNoonWinner(null);
+          break;
+        case 'night':
+          setNightWinner(null);
+          break;
+      }
     }
   };
 
@@ -119,37 +151,37 @@ export default function CompetitionsScreen() {
 
       // If morning competition is in registration or competing phase, fetch participant count
       // If morning competition is completed, fetch the winner
-      if(status.morning.id) {
-        if(status.morning.phase === 'registration' || status.morning.phase === 'competing') {
+      if (status.morning.id) {
+        if (status.morning.phase === 'registration' || status.morning.phase === 'competing') {
           const count = await getParticipantCount(status.morning.id);
-          setNumberOfParticipants(count);
+          setMorningParticipants(count);
         }
-        if(status.morning.phase == 'completed'){
-          fetchWinner(status.morning.id);
+        if (status.morning.phase == 'completed') {
+          fetchWinner(status.morning.id, 'morning');
         }
       }
 
       //Same for noon competitions
-      else if(status.noon.id) {
-        if(status.noon.phase === 'registration' || status.noon.phase === 'competing') {
+      if (status.noon.id) {
+        if (status.noon.phase === 'registration' || status.noon.phase === 'competing') {
           const count = await getParticipantCount(status.noon.id);
-          setNumberOfParticipants(count);
+          setNoonParticipants(count);
         }
-        if(status.noon.phase == 'completed'){
-          fetchWinner(status.noon.id);
+        if (status.noon.phase == 'completed') {
+          fetchWinner(status.noon.id, 'noon');
         }
       }
 
-      else if(status.night.id) {
-        if(status.night.phase === 'registration' || status.night.phase === 'competing') {
+      // night competition
+      if (status.night.id) {
+        if (status.night.phase === 'registration' || status.night.phase === 'competing') {
           const count = await getParticipantCount(status.night.id);
-          setNumberOfParticipants(count);
+          setNightParticipants(count);
         }
-        if(status.noon.phase == 'completed'){
-          fetchWinner(status.night.id);
+        if (status.night.phase == 'completed') {
+          fetchWinner(status.night.id, 'night');
         }
       }
-
     } catch (error) {
       console.error('Error fetching competition status:', error);
     }
@@ -191,7 +223,7 @@ export default function CompetitionsScreen() {
       case 'voting':
         return 'Voting closes in:';
       case 'completed':
-        return 'Next competition::';
+        return 'Next competition:';
       default:
         return '';
     }
@@ -201,23 +233,25 @@ export default function CompetitionsScreen() {
   const formatTimeRemaining = (seconds: number) => {
     if (seconds <= 0) return "Time's up!";
 
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
+    const SECONDS_IN_DAY = 86400; // 24 * 60 * 60
+    const SECONDS_IN_HOUR = 3600; // 60 * 60
+    const SECONDS_IN_MINUTE = 60;
 
-    // if more than 1 day, return days
-    if (days > 1) {
-      return `${days}d`;
-    } else if (hours > 1) {
-      return `${hours}h`;
-    } else if (minutes > 1) {
-      return `${minutes}m`;
-    } else if (remainingSeconds > 1) {
-      return `${remainingSeconds}s`;
+    if (seconds >= SECONDS_IN_DAY) {
+      const days = Math.floor(seconds / SECONDS_IN_DAY);
+      const remainingHours = Math.floor((seconds % SECONDS_IN_DAY) / SECONDS_IN_HOUR);
+      return `${days}d ${remainingHours}h`;
+    } else if (seconds >= SECONDS_IN_HOUR) {
+      const hours = Math.floor(seconds / SECONDS_IN_HOUR);
+      const remainingMinutes = Math.floor((seconds % SECONDS_IN_HOUR) / SECONDS_IN_MINUTE);
+      return `${hours}h ${remainingMinutes}m`;
+    } else if (seconds >= SECONDS_IN_MINUTE) {
+      const minutes = Math.floor(seconds / SECONDS_IN_MINUTE);
+      const remainingSeconds = seconds % SECONDS_IN_MINUTE;
+      return `${minutes}m ${remainingSeconds}s`;
+    } else {
+      return `${seconds}s`;
     }
-
-    return "Time's up!";
   };
 
   const handleMorningCompetitionPress = async () => {
@@ -255,8 +289,7 @@ export default function CompetitionsScreen() {
     }
   };
 
-
-    const handleNoonCompetitionPress = async () => {
+  const handleNoonCompetitionPress = async () => {
     if (competitionsStatus.noon.phase === 'registration') {
       console.log('registration');
       setIsNoonModalVisible(true);
@@ -344,7 +377,7 @@ export default function CompetitionsScreen() {
         <Button
           title="Make Comp"
           onPress={async () => {
-            const success = await createCompetition('night', user);
+            const success = await createCompetition('noon', user);
             if (success) {
               fetchStatus();
             }
@@ -353,7 +386,7 @@ export default function CompetitionsScreen() {
         <Button
           title="Delete Comp"
           onPress={async () => {
-            const success = await deleteCompetition('night', user);
+            const success = await deleteCompetition('morning', user);
             if (success) {
               fetchStatus();
             }
@@ -388,7 +421,7 @@ export default function CompetitionsScreen() {
               </View>
               <View className="absolute bottom-0 right-0 p-4">
                 <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
-                  <Text className="text-base font-bold text-black">{numberOfParticipants}/9</Text>
+                  <Text className="text-base font-bold text-black">{morningParticipants}/9</Text>
                 </View>
               </View>
             </>
@@ -401,7 +434,7 @@ export default function CompetitionsScreen() {
               </View>
               <View className="absolute bottom-0 right-0 p-4">
                 <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
-                  <Text className="text-base font-bold text-black">{numberOfParticipants}/9</Text>
+                  <Text className="text-base font-bold text-black">{morningParticipants}/9</Text>
                 </View>
               </View>
             </>
@@ -414,7 +447,7 @@ export default function CompetitionsScreen() {
               </View>
               <View className="absolute bottom-0 right-0 p-4">
                 <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
-                  <Text className="text-base font-bold text-black">{numberOfParticipants}/9</Text>
+                  <Text className="text-base font-bold text-black">{morningParticipants}/9</Text>
                 </View>
               </View>
             </>
@@ -422,7 +455,7 @@ export default function CompetitionsScreen() {
 
           {competitionsStatus.morning.phase === 'completed' ? (
             <View className="w-full flex-1">
-              {(winner && competitionsStatus.morning.id) ? (
+              {winner && competitionsStatus.morning.id ? (
                 <>
                   {/* Winner Info and Image */}
                   <View className="flex-1 flex-row items-center justify-between px-6">
@@ -494,7 +527,7 @@ export default function CompetitionsScreen() {
           {/* Header Section */}
           <View className="absolute left-0 top-0 flex-row items-center gap-2 p-4">
             <View className="rounded-full bg-white/20 p-2">
-              <Ionicons name="sunny" size={24} color="black" />
+              <Ionicons name="partly-sunny" size={24} color="black" />
             </View>
             <Text className="text-lg font-bold text-black">Afternoon Competition</Text>
           </View>
@@ -509,7 +542,7 @@ export default function CompetitionsScreen() {
               </View>
               <View className="absolute bottom-0 right-0 p-4">
                 <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
-                  <Text className="text-base font-bold text-black">{numberOfParticipants}/9</Text>
+                  <Text className="text-base font-bold text-black">{noonParticipants}/9</Text>
                 </View>
               </View>
             </>
@@ -522,7 +555,7 @@ export default function CompetitionsScreen() {
               </View>
               <View className="absolute bottom-0 right-0 p-4">
                 <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
-                  <Text className="text-base font-bold text-black">{numberOfParticipants}/9</Text>
+                  <Text className="text-base font-bold text-black">{noonParticipants}/9</Text>
                 </View>
               </View>
             </>
@@ -535,7 +568,7 @@ export default function CompetitionsScreen() {
               </View>
               <View className="absolute bottom-0 right-0 p-4">
                 <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
-                  <Text className="text-base font-bold text-black">{numberOfParticipants}/9</Text>
+                  <Text className="text-base font-bold text-black">{noonParticipants}/9</Text>
                 </View>
               </View>
             </>
@@ -543,7 +576,7 @@ export default function CompetitionsScreen() {
 
           {competitionsStatus.noon.phase === 'completed' ? (
             <View className="w-full flex-1">
-              {(winner && competitionsStatus.noon.id) ? (
+              {winner && competitionsStatus.noon.id ? (
                 <>
                   {/* Winner Info and Image */}
                   <View className="flex-1 flex-row items-center justify-between px-6">
@@ -615,7 +648,7 @@ export default function CompetitionsScreen() {
           {/* Header Section */}
           <View className="absolute left-0 top-0 flex-row items-center gap-2 p-4">
             <View className="rounded-full bg-white/20 p-2">
-              <Ionicons name="sunny" size={24} color="black" />
+              <Ionicons name="moon" size={24} color="black" />
             </View>
             <Text className="text-lg font-bold text-black">Late Night Competition</Text>
           </View>
@@ -630,7 +663,7 @@ export default function CompetitionsScreen() {
               </View>
               <View className="absolute bottom-0 right-0 p-4">
                 <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
-                  <Text className="text-base font-bold text-black">{numberOfParticipants}/9</Text>
+                  <Text className="text-base font-bold text-black">{nightParticipants}/9</Text>
                 </View>
               </View>
             </>
@@ -643,7 +676,7 @@ export default function CompetitionsScreen() {
               </View>
               <View className="absolute bottom-0 right-0 p-4">
                 <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
-                  <Text className="text-base font-bold text-black">{numberOfParticipants}/9</Text>
+                  <Text className="text-base font-bold text-black">{nightParticipants}/9</Text>
                 </View>
               </View>
             </>
@@ -656,7 +689,7 @@ export default function CompetitionsScreen() {
               </View>
               <View className="absolute bottom-0 right-0 p-4">
                 <View className="rounded-full bg-white/90 px-4 py-2 shadow-sm">
-                  <Text className="text-base font-bold text-black">{numberOfParticipants}/9</Text>
+                  <Text className="text-base font-bold text-black">{nightParticipants}/9</Text>
                 </View>
               </View>
             </>
@@ -664,7 +697,7 @@ export default function CompetitionsScreen() {
 
           {competitionsStatus.night.phase === 'completed' ? (
             <View className="w-full flex-1">
-              {(winner && competitionsStatus.night.id) ? (
+              {winner && competitionsStatus.night.id ? (
                 <>
                   {/* Winner Info and Image */}
                   <View className="flex-1 flex-row items-center justify-between px-6">
