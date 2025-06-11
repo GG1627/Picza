@@ -6,28 +6,35 @@ import { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { supabase } from '~/lib/supabase';
 
-type NightCompModalProps = {
+type CompModalProps = {
   isVisible: boolean;
   onClose: () => void;
   competitionName: string | null;
   competitionId: string | null;
+  competitionType: string;
+  competitionDescription: string;
+  competitionTime: string;
   user: User | null;
   numberOfParticipants: number;
 };
 
-export default function NightCompModal({
+export default function CompModal({
   isVisible,
   onClose,
   competitionName,
   competitionId,
+  competitionType,
+  competitionDescription,
+  competitionTime,
   user,
   numberOfParticipants,
-}: NightCompModalProps) {
+}: CompModalProps) {
   const { colorScheme } = useColorScheme();
   const [isJoining, setIsJoining] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [currentParticipantCount, setCurrentParticipantCount] = useState(numberOfParticipants);
   const isCompetitionFull = currentParticipantCount >= 9;
+  
 
   const checkParticipationStatus = async () => {
     if (!user || !competitionId) return;
@@ -52,7 +59,7 @@ export default function NightCompModal({
     if (!isVisible) return;
 
     try {
-      const status = await getCompetitionStatus('night');
+      const status = await getCompetitionStatus(competitionType);
       if (status.phase !== 'registration') {
         onClose();
         Alert.alert(
@@ -123,14 +130,11 @@ export default function NightCompModal({
 
           {/* Title */}
           <Text className="mb-4 mt-4 text-2xl font-bold text-black">
-            {competitionName || 'Night Competition'}
+            {competitionName || competitionTime}
           </Text>
 
           {/* Description */}
-          <Text className="mb-8 text-lg text-black">
-            Ready to show off your late night skills? Join this exciting late night competition and
-            compete against other talented students!
-          </Text>
+          <Text className="mb-8 text-lg text-black">{competitionDescription}</Text>
 
           {/* Buttons */}
           <View className="gap-3">
@@ -175,3 +179,6 @@ export default function NightCompModal({
     </Modal>
   );
 }
+
+
+

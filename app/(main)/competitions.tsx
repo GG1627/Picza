@@ -17,9 +17,8 @@ import {
   isUserParticipant,
   getParticipantCount,
 } from '~/lib/competitions';
-import MorningCompModal from '~/components/MorningCompModal';
-import NoonCompModal from '~/components/NoonCompModal';
-import NightCompModal from '~/components/NightCompModal';
+import CompModal from '~/components/CompModal';
+import setTime from '../sharedTime';
 
 type Winner = {
   username: string;
@@ -273,7 +272,8 @@ export default function CompetitionsScreen() {
       const isParticipant = await isUserParticipant(competitionsStatus.morning.id, user.id);
 
       if (isParticipant) {
-        router.push('/morningCompetition');
+        setTime('morning');
+        router.push('/allCompetition');
       } else {
         Alert.alert(
           'Competition in Progress',
@@ -281,9 +281,9 @@ export default function CompetitionsScreen() {
         );
       }
     } else if (competitionsStatus.morning.phase === 'voting') {
-      router.push('/morningVoting');
+      router.push('/allVoting');
     } else if (competitionsStatus.morning.phase === 'completed') {
-      router.push('/morningResults');
+      router.push('/allResults');
     } else {
       Alert.alert('Error', 'Competition not found');
     }
@@ -308,7 +308,8 @@ export default function CompetitionsScreen() {
       const isParticipant = await isUserParticipant(competitionsStatus.noon.id, user.id);
 
       if (isParticipant) {
-        router.push('/noonCompetition');
+        setTime('noon');
+        router.push('/allCompetition');
       } else {
         Alert.alert(
           'Competition in Progress',
@@ -316,9 +317,9 @@ export default function CompetitionsScreen() {
         );
       }
     } else if (competitionsStatus.noon.phase === 'voting') {
-      router.push('/noonVoting');
+      router.push('/allVoting');
     } else if (competitionsStatus.noon.phase === 'completed') {
-      router.push('/noonResults');
+      router.push('/allResults');
     } else {
       Alert.alert('Error', 'Competition not found');
     }
@@ -343,7 +344,8 @@ export default function CompetitionsScreen() {
       const isParticipant = await isUserParticipant(competitionsStatus.night.id, user.id);
 
       if (isParticipant) {
-        router.push('/nightCompetition');
+        setTime('night');
+        router.push('/allCompetition');
       } else {
         Alert.alert(
           'Competition in Progress',
@@ -351,9 +353,9 @@ export default function CompetitionsScreen() {
         );
       }
     } else if (competitionsStatus.night.phase === 'voting') {
-      router.push('/nightVoting');
+      router.push('/allVoting');
     } else if (competitionsStatus.night.phase === 'completed') {
-      router.push('/nightResults');
+      router.push('/allResults');
     } else {
       Alert.alert('Error', 'Competition not found');
     }
@@ -386,7 +388,7 @@ export default function CompetitionsScreen() {
         <Button
           title="Delete Comp"
           onPress={async () => {
-            const success = await deleteCompetition('morning', user);
+            const success = await deleteCompetition('noon', user);
             if (success) {
               fetchStatus();
             }
@@ -782,27 +784,40 @@ export default function CompetitionsScreen() {
       </Modal>
 
       {/* Modals */}
-      <MorningCompModal
+      
+<CompModal
         isVisible={isMorningModalVisible}
         onClose={() => setIsMorningModalVisible(false)}
         competitionName={competitionsStatus.morning.name}
         competitionId={competitionsStatus.morning.id}
+        competitionType="morning"
+        competitionDescription='Ready to show off your breakfast skills? Join this exciting breakfast competition and
+            compete against other talented students!'
+        competitionTime='Morning Competition'
         user={user}
         numberOfParticipants={numberOfParticipants}
       />
-      <NoonCompModal
+      <CompModal
         isVisible={isNoonModalVisible}
         onClose={() => setIsNoonModalVisible(false)}
         competitionName={competitionsStatus.noon.name}
         competitionId={competitionsStatus.noon.id}
+        competitionType="noon"
+        competitionDescription='Ready to show off your lunch skills? Join this exciting afternoon competition and
+            compete against other talented students!'
+        competitionTime='Afternoon Competition'
         user={user}
         numberOfParticipants={numberOfParticipants}
       />
-      <NightCompModal
+      <CompModal
         isVisible={isNightModalVisible}
         onClose={() => setIsNightModalVisible(false)}
         competitionName={competitionsStatus.night.name}
         competitionId={competitionsStatus.night.id}
+        competitionType="night"
+        competitionDescription='Ready to show off your late night skills? Join this exciting late night competition and
+            compete against other talented students!'
+        competitionTime='Late-Night Competition'
         user={user}
         numberOfParticipants={numberOfParticipants}
       />

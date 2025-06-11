@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '~/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import {time} from '../sharedTime';
 
 type Submission = {
   id: string;
@@ -24,7 +25,7 @@ type Submission = {
 
 type GridItem = Submission | null;
 
-export default function NightVotingScreen() {
+export default function VotingScreen() {
   const { colorScheme } = useColorScheme();
   const { user } = useAuth();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -66,7 +67,7 @@ export default function NightVotingScreen() {
         const { data: competition, error: compError } = await supabase
           .from('competitions')
           .select('id, vote_end_time')
-          .eq('type','night')
+          .eq('type',time)
           .single();
 
         if (compError) throw compError;

@@ -15,8 +15,9 @@ import { uploadToCloudinary } from '~/lib/cloudinary';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import {time} from '../sharedTime';
 
-export default function MorningCompetitionScreen() {
+export default function CompetitionScreen() {
   const { colorScheme } = useColorScheme();
   const { user } = useAuth();
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -59,7 +60,7 @@ export default function MorningCompetitionScreen() {
         const { data, error } = await supabase
           .from('competitions')
           .select('id, submit_end_time')
-          .eq('type', 'morning')
+          .eq('type', time)
           .single();
 
         if (error) throw error;
@@ -81,7 +82,7 @@ export default function MorningCompetitionScreen() {
       const { data } = await supabase
         .from('competitions')
         .select('submit_end_time')
-        .eq('type', 'morning')
+        .eq('type', time)
         .single();
 
       if (data) {
@@ -99,7 +100,7 @@ export default function MorningCompetitionScreen() {
               {
                 text: 'OK',
                 onPress: () => {
-                  router.replace('/morningVoting');
+                  router.replace('/allVoting');
                 },
               },
             ]
@@ -207,7 +208,7 @@ export default function MorningCompetitionScreen() {
       <View className="mb-8 mt-20 px-4 pt-2">
         <Text
           className={`text-center text-3xl font-bold ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-          Morning Competition
+          Competition
         </Text>
         <Text
           className={`mt-1 text-center text-base ${colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
