@@ -455,23 +455,25 @@ export default function CompetitionsScreen() {
 
           {competitionsStatus.morning.phase === 'completed' ? (
             <View className="w-full flex-1">
-              {winner && competitionsStatus.morning.id ? (
+              {morningWinner && competitionsStatus.morning.id ? (
                 <>
                   {/* Winner Info and Image */}
                   <View className="flex-1 flex-row items-center justify-between px-6">
                     {/* Left side - Winner Info */}
                     <View className="flex-1 items-center space-y-3">
                       <Text className="text-2xl font-bold text-black">Winner!</Text>
-                      <Text className="text-2xl text-black">{winner.username}</Text>
-                      <Text className="text-lg text-black/80">with {winner.vote_count} votes</Text>
+                      <Text className="text-2xl text-black">{morningWinner?.username}</Text>
+                      <Text className="text-lg text-black/80">
+                        with {morningWinner?.vote_count} votes
+                      </Text>
                     </View>
 
                     {/* Right side - Image */}
                     <TouchableOpacity
-                      onPress={() => setSelectedImage(winner.image_url)}
+                      onPress={() => setSelectedImage(morningWinner?.image_url || null)}
                       className="h-32 w-32 overflow-hidden rounded-xl border-2 border-black shadow-lg">
                       <Image
-                        source={{ uri: winner.image_url }}
+                        source={{ uri: morningWinner?.image_url }}
                         className="h-full w-full"
                         resizeMode="cover"
                       />
@@ -576,23 +578,25 @@ export default function CompetitionsScreen() {
 
           {competitionsStatus.noon.phase === 'completed' ? (
             <View className="w-full flex-1">
-              {winner && competitionsStatus.noon.id ? (
+              {noonWinner && competitionsStatus.noon.id ? (
                 <>
                   {/* Winner Info and Image */}
                   <View className="flex-1 flex-row items-center justify-between px-6">
                     {/* Left side - Winner Info */}
                     <View className="flex-1 items-center space-y-3">
                       <Text className="text-2xl font-bold text-black">Winner!</Text>
-                      <Text className="text-2xl text-black">{winner.username}</Text>
-                      <Text className="text-lg text-black/80">with {winner.vote_count} votes</Text>
+                      <Text className="text-2xl text-black">{noonWinner?.username}</Text>
+                      <Text className="text-lg text-black/80">
+                        with {noonWinner?.vote_count} votes
+                      </Text>
                     </View>
 
                     {/* Right side - Image */}
                     <TouchableOpacity
-                      onPress={() => setSelectedImage(winner.image_url)}
+                      onPress={() => setSelectedImage(noonWinner?.image_url || null)}
                       className="h-32 w-32 overflow-hidden rounded-xl border-2 border-black shadow-lg">
                       <Image
-                        source={{ uri: winner.image_url }}
+                        source={{ uri: noonWinner?.image_url }}
                         className="h-full w-full"
                         resizeMode="cover"
                       />
@@ -650,7 +654,7 @@ export default function CompetitionsScreen() {
             <View className="rounded-full bg-white/20 p-2">
               <Ionicons name="moon" size={24} color="black" />
             </View>
-            <Text className="text-lg font-bold text-black">Late Night Competition</Text>
+            <Text className="text-lg font-bold text-black">Night Competition</Text>
           </View>
 
           {/* Status Badges */}
@@ -697,23 +701,25 @@ export default function CompetitionsScreen() {
 
           {competitionsStatus.night.phase === 'completed' ? (
             <View className="w-full flex-1">
-              {winner && competitionsStatus.night.id ? (
+              {nightWinner && competitionsStatus.night.id ? (
                 <>
                   {/* Winner Info and Image */}
                   <View className="flex-1 flex-row items-center justify-between px-6">
                     {/* Left side - Winner Info */}
                     <View className="flex-1 items-center space-y-3">
                       <Text className="text-2xl font-bold text-black">Winner!</Text>
-                      <Text className="text-2xl text-black">{winner.username}</Text>
-                      <Text className="text-lg text-black/80">with {winner.vote_count} votes</Text>
+                      <Text className="text-2xl text-black">{nightWinner?.username}</Text>
+                      <Text className="text-lg text-black/80">
+                        with {nightWinner?.vote_count} votes
+                      </Text>
                     </View>
 
                     {/* Right side - Image */}
                     <TouchableOpacity
-                      onPress={() => setSelectedImage(winner.image_url)}
+                      onPress={() => setSelectedImage(nightWinner?.image_url || null)}
                       className="h-32 w-32 overflow-hidden rounded-xl border-2 border-black shadow-lg">
                       <Image
-                        source={{ uri: winner.image_url }}
+                        source={{ uri: nightWinner?.image_url }}
                         className="h-full w-full"
                         resizeMode="cover"
                       />
