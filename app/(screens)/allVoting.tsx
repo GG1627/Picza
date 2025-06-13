@@ -38,6 +38,19 @@ export default function VotingScreen() {
   const [votedSubmissionId, setVotedSubmissionId] = useState<string | null>(null);
   const { competitionId: routeCompetitionId } = useLocalSearchParams();
 
+  // Add validation for competitionId
+  useEffect(() => {
+    if (!routeCompetitionId) {
+      Alert.alert('Error', 'Invalid competition ID', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/competitions'),
+        },
+      ]);
+      return;
+    }
+  }, [routeCompetitionId]);
+
   // Check if user has already voted
   const checkVoteStatus = async () => {
     if (!user || !competitionId) return;
@@ -63,6 +76,11 @@ export default function VotingScreen() {
   // Fetch competition status and submissions
   useEffect(() => {
     const fetchData = async () => {
+      if (!routeCompetitionId) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
         // Get competition ID and end time
         const { data: competition, error: compError } = await supabase
@@ -71,41 +89,66 @@ export default function VotingScreen() {
           .eq('id', routeCompetitionId)
           .single();
 
-        if (compError) throw compError;
-
-        if (competition) {
-          setCompetitionId(competition.id);
-          const voteEnd = new Date(competition.vote_end_time);
-          const now = new Date();
-          const remaining = Math.floor((voteEnd.getTime() - now.getTime()) / 1000);
-          setTimeRemaining(remaining);
-
-          // Get submissions with vote counts
-          const { data: submissionsData, error: subError } = await supabase
-            .from('submissions')
-            .select(
-              `
-              id,
-              image_url,
-              votes:votes(count)
-            `
-            )
-            .eq('competition_id', competition.id);
-
-          if (subError) throw subError;
-
-          // Transform the data to include vote counts
-          const submissionsWithVotes = submissionsData.map((submission) => ({
-            id: submission.id,
-            image_url: submission.image_url,
-            vote_count: submission.votes[0]?.count || 0,
-          }));
-
-          setSubmissions(submissionsWithVotes);
+        if (compError) {
+          console.error('Error fetching competition:', compError);
+          Alert.alert('Error', 'Failed to load competition data', [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/competitions'),
+            },
+          ]);
+          return;
         }
+
+        if (!competition) {
+          Alert.alert('Error', 'Competition not found', [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/competitions'),
+            },
+          ]);
+          return;
+        }
+
+        setCompetitionId(competition.id);
+        const voteEnd = new Date(competition.vote_end_time);
+        const now = new Date();
+        const remaining = Math.floor((voteEnd.getTime() - now.getTime()) / 1000);
+        setTimeRemaining(remaining);
+
+        // Get submissions with vote counts
+        const { data: submissionsData, error: subError } = await supabase
+          .from('submissions')
+          .select(
+            `
+            id,
+            image_url,
+            votes:votes(count)
+          `
+          )
+          .eq('competition_id', competition.id);
+
+        if (subError) {
+          console.error('Error fetching submissions:', subError);
+          throw subError;
+        }
+
+        // Transform the data to include vote counts
+        const submissionsWithVotes = submissionsData.map((submission) => ({
+          id: submission.id,
+          image_url: submission.image_url,
+          vote_count: submission.votes[0]?.count || 0,
+        }));
+
+        setSubmissions(submissionsWithVotes);
       } catch (error) {
         console.error('Error fetching data:', error);
-        Alert.alert('Error', 'Failed to load submissions');
+        Alert.alert('Error', 'Failed to load submissions', [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/competitions'),
+          },
+        ]);
       } finally {
         setIsLoading(false);
       }
@@ -135,7 +178,7 @@ export default function VotingScreen() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [routeCompetitionId]);
 
   // Check vote status when competition ID is set
   useEffect(() => {
@@ -229,7 +272,7 @@ export default function VotingScreen() {
         onPress={() => {
           if (isSelecting) {
             setVotedSubmissionId(item.id);
-          } else {
+          } else if (hasVoted || !isSelecting) {
             setSelectedImage(item.image_url);
           }
         }}
@@ -269,7 +312,7 @@ export default function VotingScreen() {
 
       {/* Back Button */}
       <TouchableOpacity
-        onPress={() => router.back()}
+        onPress={() => router.replace('/competitions')}
         className="absolute left-4 top-20 z-10 rounded-full p-2"
         style={{
           backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',

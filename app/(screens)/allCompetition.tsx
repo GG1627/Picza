@@ -15,7 +15,7 @@ import { uploadToCloudinary } from '~/lib/cloudinary';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import {time} from '../sharedTime';
+import { time } from '../sharedTime';
 
 export default function CompetitionScreen() {
   const { colorScheme } = useColorScheme();
@@ -81,7 +81,7 @@ export default function CompetitionScreen() {
     const timer = setInterval(async () => {
       const { data } = await supabase
         .from('competitions')
-        .select('submit_end_time')
+        .select('submit_end_time, id')
         .eq('type', time)
         .single();
 
@@ -100,7 +100,10 @@ export default function CompetitionScreen() {
               {
                 text: 'OK',
                 onPress: () => {
-                  router.replace('/allVoting');
+                  router.push({
+                    pathname: '/allVoting',
+                    params: { competitionId: data.id },
+                  });
                 },
               },
             ]
@@ -196,7 +199,7 @@ export default function CompetitionScreen() {
 
       {/* Back Button */}
       <TouchableOpacity
-        onPress={() => router.back()}
+        onPress={() => router.replace('/competitions')}
         className="absolute left-4 top-20 z-10 rounded-full p-2"
         style={{
           backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',

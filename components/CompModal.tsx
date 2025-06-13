@@ -34,7 +34,6 @@ export default function CompModal({
   const [hasJoined, setHasJoined] = useState(false);
   const [currentParticipantCount, setCurrentParticipantCount] = useState(numberOfParticipants);
   const isCompetitionFull = currentParticipantCount >= 9;
-  
 
   const checkParticipationStatus = async () => {
     if (!user || !competitionId) return;
@@ -118,40 +117,75 @@ export default function CompModal({
 
   return (
     <Modal animationType="fade" transparent={true} visible={isVisible} onRequestClose={onClose}>
-      <View className="flex-1 items-center justify-center bg-black/50">
+      <View className="flex-1 items-center justify-center bg-black/90">
         <View
           className={`w-[90%] rounded-xl p-6 ${
-            colorScheme === 'dark' ? 'bg-[#fa6f48]' : 'bg-white'
+            colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-white'
           }`}>
           {/* Close button */}
           <TouchableOpacity onPress={onClose} className="absolute right-4 top-4">
-            <Ionicons name="close" size={24} color="black" />
+            <Ionicons
+              name="close"
+              size={24}
+              color={colorScheme === 'dark' ? '#e0e0e0' : '#1a1a1a'}
+            />
           </TouchableOpacity>
 
           {/* Title */}
-          <Text className="mb-4 mt-4 text-2xl font-bold text-black">
+          <Text
+            className={`mb-4 mt-4 text-2xl font-bold ${
+              colorScheme === 'dark' ? 'text-[#e0e0e0]' : 'text-[#1a1a1a]'
+            }`}>
             {competitionName || competitionTime}
           </Text>
 
           {/* Description */}
-          <Text className="mb-8 text-lg text-black">{competitionDescription}</Text>
+          <Text
+            className={`mb-8 text-lg ${
+              colorScheme === 'dark' ? 'text-[#a0a0a0]' : 'text-[#4a4a4a]'
+            }`}>
+            {competitionDescription}
+          </Text>
 
           {/* Buttons */}
           <View className="gap-3">
             {hasJoined ? (
-              <View className="items-center rounded-lg bg-gray-200 p-4">
-                <Ionicons name="checkmark-circle" size={24} color="black" />
-                <Text className="mt-2 text-center font-semibold text-black">
+              <View
+                className={`items-center rounded-lg p-4 ${
+                  colorScheme === 'dark' ? 'bg-[#1a3a1a]' : 'bg-[#e6f3e6]'
+                }`}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={24}
+                  color={colorScheme === 'dark' ? '#4ade80' : '#15803d'}
+                />
+                <Text
+                  className={`mt-2 text-center text-[1rem] font-semibold ${
+                    colorScheme === 'dark' ? 'text-[#4ade80]' : 'text-[#15803d]'
+                  }`}>
                   You have joined this competition
                 </Text>
               </View>
             ) : isCompetitionFull ? (
-              <View className="items-center rounded-lg bg-gray-200 p-4">
-                <Ionicons name="people" size={24} color="black" />
-                <Text className="mt-2 text-center font-semibold text-black">
+              <View
+                className={`items-center rounded-lg p-4 ${
+                  colorScheme === 'dark' ? 'bg-[#2a2a2a]' : 'bg-[#f5f5f5]'
+                }`}>
+                <Ionicons
+                  name="people"
+                  size={24}
+                  color={colorScheme === 'dark' ? '#e0e0e0' : '#1a1a1a'}
+                />
+                <Text
+                  className={`mt-2 text-center font-semibold ${
+                    colorScheme === 'dark' ? 'text-[#e0e0e0]' : 'text-[#1a1a1a]'
+                  }`}>
                   Competition is Full
                 </Text>
-                <Text className="mt-1 text-center text-sm text-black/60">
+                <Text
+                  className={`mt-1 text-center text-sm ${
+                    colorScheme === 'dark' ? 'text-[#a0a0a0]' : 'text-[#4a4a4a]'
+                  }`}>
                   {currentParticipantCount}/9 participants
                 </Text>
               </View>
@@ -159,17 +193,31 @@ export default function CompModal({
               <TouchableOpacity
                 onPress={handleJoin}
                 disabled={isJoining}
-                className="rounded-lg bg-black p-4">
+                className={`rounded-lg p-4 ${
+                  colorScheme === 'dark' ? 'bg-[#e0e0e0]' : 'bg-[#1a1a1a]'
+                }`}>
                 {isJoining ? (
-                  <ActivityIndicator color="white" />
+                  <ActivityIndicator color={colorScheme === 'dark' ? '#1a1a1a' : '#e0e0e0'} />
                 ) : (
-                  <Text className="text-center font-semibold text-white">Join Now</Text>
+                  <Text
+                    className={`text-center font-semibold ${
+                      colorScheme === 'dark' ? 'text-[#1a1a1a]' : 'text-[#e0e0e0]'
+                    }`}>
+                    Join Now
+                  </Text>
                 )}
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity onPress={onClose} className="rounded-lg bg-gray-200 p-4">
-              <Text className="text-center font-semibold text-black">
+            <TouchableOpacity
+              onPress={onClose}
+              className={`rounded-lg p-4 ${
+                colorScheme === 'dark' ? 'bg-[#2a2a2a]' : 'bg-[#f5f5f5]'
+              }`}>
+              <Text
+                className={`text-center font-semibold ${
+                  colorScheme === 'dark' ? 'text-[#e0e0e0]' : 'text-[#1a1a1a]'
+                }`}>
                 {hasJoined ? 'Close' : 'Maybe Later'}
               </Text>
             </TouchableOpacity>
@@ -179,6 +227,3 @@ export default function CompModal({
     </Modal>
   );
 }
-
-
-
