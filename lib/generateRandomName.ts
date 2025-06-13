@@ -1,34 +1,24 @@
 const MorningLunchCompetitionNames = [
-  'AM Fuel Fest',
-  'Morning Munchies Mashup',
-  'Brunch Battle Royale',
-  'Midday Meal Mania',
   'Daylight Delights',
-  'The Sunrise Scramble',
+  'Sunrise Scramble',
   'Pancake Palooza',
   'Griddle Games',
 ];
 
 const DinnerCompetitionNames = [
-  'The Sunset Supper',
-  'Evening Eats Throwdown',
-  'After Class Cook-Off',
-  'The Sunset Sizzle',
-  'Twilight Takedown',
+  'Sunset Supper',
+  'Evening Eats',
+  'Sunset Sizzle',
   'Dinner Duel',
-  'The Kitchen Kollision',
-  'Post-Lecture Plates',
+  'Kitchen Kollision',
 ];
 
 const LateNightCompetitionNames = [
-  'Late Night Cravez',
-  'Late Night Loot',
-  'After Hour Eats',
-  'The "2 AM" Challenge',
-  "The Insomniac's Snack-Off",
-  'Midnight Munchies Madness',
-  'The Study Grub Games',
-  'Nocturnal Nom-Off',
+  'Night Bites',
+  'Late Noms',
+  'Moon Meals',
+  'Dark Eats',
+  'After Hours',
 ];
 
 export const generateRandomMorningLunchCompetitionName = () => {

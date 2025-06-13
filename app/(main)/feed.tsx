@@ -813,7 +813,7 @@ export default function FeedScreen() {
                     source={
                       post.profiles?.avatar_url
                         ? { uri: post.profiles.avatar_url }
-                        : require('../../assets/splash.png')
+                        : require('../../assets/default-avatar.png')
                     }
                     className="h-full w-full"
                   />
@@ -864,7 +864,7 @@ export default function FeedScreen() {
                   source={
                     post.profiles?.avatar_url
                       ? { uri: post.profiles.avatar_url }
-                      : require('../../assets/splash.png')
+                      : require('../../assets/default-avatar.png')
                   }
                   className="h-full w-full"
                 />

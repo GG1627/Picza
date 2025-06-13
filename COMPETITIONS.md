@@ -128,3 +128,13 @@ After you're done, I will go back and set the times so the competitions start on
 > _Note: If I forgot anything, my bad_
 
 ## Caitlin's Notes and Observations
+
+The styling for when the winner shows up looks messy, at least on my phone. It doesn't look like it all fits on the screen.
+
+There is something off about the timer. At the bottom, it counts down from 59 seconds twice, and when it gets to zero it says times up. But if you click on the place to upload a photo, it shows how long you have to upload, and it is counting down from 1:59. So it's two minutes in total, but whne just looking at the competition title page it looks like it repeats a one minute timer twice.
+
+There is a sun icon for all three I didn't know what icons should be for the afternoon and late night.
+
+The description for all three is almost the same except I changed the words morning, afternoon, and late night.
+
+Theses are just things to be changed that I noticed, if you want to fix them yourself go for it and if you want me to fix them just tell me and i can work on them.

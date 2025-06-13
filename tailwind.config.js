@@ -9,8 +9,10 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'luckiest-guy': ['LuckiestGuy'],
+        luckiestGuy: ['LuckiestGuy'],
         pattaya: ['Pattaya'],
+        nunito: ['Nunito'],
+        jua: ['Jua'],
       },
       colors: {
         border: withOpacity('border'),

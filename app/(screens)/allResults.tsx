@@ -13,7 +13,8 @@ import { useAuth } from '~/lib/auth';
 import { useEffect, useState } from 'react';
 import { supabase } from '~/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import { time } from '../sharedTime';
 
 type Submission = {
   id: string;
@@ -24,12 +25,13 @@ type Submission = {
   rank: number;
 };
 
-export default function MorningResultsScreen() {
+export default function ResultsScreen() {
   const { colorScheme } = useColorScheme();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [competitionId, setCompetitionId] = useState<string | null>(null);
+  const { competitionId: routeCompetitionId } = useLocalSearchParams();
 
   // Fetch competition results
   useEffect(() => {
@@ -39,7 +41,7 @@ export default function MorningResultsScreen() {
         const { data: competition, error: compError } = await supabase
           .from('competitions')
           .select('id')
-          .eq('type', 'morning')
+          .eq('id', routeCompetitionId)
           .single();
 
         if (compError) throw compError;

@@ -212,7 +212,7 @@ export default function PostDetailScreen() {
                   source={
                     post.profiles?.avatar_url
                       ? { uri: post.profiles.avatar_url }
-                      : require('../../assets/splash.png')
+                      : require('../../assets/default-avatar.png')
                   }
                   className="h-full w-full"
                 />
