@@ -6,9 +6,7 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "npm": {
-        "legacyPeerDeps": true
-      }
+      "yarn": true
     },
     "preview": {
       "distribution": "internal"
