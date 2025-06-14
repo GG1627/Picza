@@ -93,16 +93,42 @@ export default function SignUp() {
         return;
       }
 
-      // If no existing user, proceed to create profile
-      router.replace({
-        pathname: '/(auth)/create-profile',
-        params: {
-          schoolId: school.id,
-          schoolName: school.name,
-          email: email,
-          password: password,
+      // Create the account with email verification
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+          data: {
+            school_id: school.id,
+            school_name: school.name,
+            email: email,
+            password: password,
+          },
         },
       });
+
+      if (signUpError) {
+        throw signUpError;
+      }
+
+      if (signUpData?.user) {
+        Alert.alert(
+          'Verification Email Sent',
+          'Please check your email to verify your account. After verification, you can log in to continue.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Clear the form and go to login
+                setEmail('');
+                setPassword('');
+                setConfirmPassword('');
+                router.replace('/(auth)/login');
+              },
+            },
+          ]
+        );
+      }
     } catch (error) {
       console.error('Unexpected error during signup:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');

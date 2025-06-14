@@ -42,7 +42,6 @@
     "expo-constants": "~17.1.4",
     "expo-crypto": "~14.1.4",
     "expo-dev-client": "~5.1.7",
-    "expo-dev-launcher": "^5.0.17",
     "expo-font": "~13.3.1",
     "expo-image": "~2.1.7",
     "expo-image-manipulator": "~13.1.7",
@@ -73,7 +72,8 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.20.0",
     "tailwind-merge": "^2.2.1",
-    "zustand": "^4.5.1"
+    "zustand": "^4.5.1",
+    "@expo/config-plugins": "~10.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

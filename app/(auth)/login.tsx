@@ -30,20 +30,56 @@ export default function LogIn() {
     if (loading) return;
 
     setLoading(true);
-    const {
-      error,
-      data: { session },
-    } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
 
-    if (session) {
-      router.replace('/(main)/feed');
+      if (error) {
+        if (error.message.includes('Email not confirmed')) {
+          Alert.alert(
+            'Email Not Verified',
+            'Please check your email and click the verification link before logging in.'
+          );
+        } else {
+          Alert.alert('Error', error.message);
+        }
+        return;
+      }
+
+      if (data?.user) {
+        // Check if user has a profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError) {
+          if (profileError.code === 'PGRST116') {
+            // No profile found, redirect to profile creation
+            router.replace('/(auth)/create-profile');
+            return;
+          }
+          throw profileError;
+        }
+
+        if (!profile) {
+          // No profile found, redirect to profile creation
+          router.replace('/(auth)/create-profile');
+          return;
+        }
+
+        // User has a profile, allow access to the app
+        router.replace('/(main)/feed');
+      }
+    } catch (error) {
+      console.error('Error signing in:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    if (error) Alert.alert(error.message);
-    setLoading(false);
   }
 
   return (

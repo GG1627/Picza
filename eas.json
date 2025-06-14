@@ -5,8 +5,7 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal",
-      "yarn": true
+      "distribution": "internal"
     },
     "preview": {
       "distribution": "internal"

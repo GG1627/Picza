@@ -32,13 +32,34 @@ export default function SplashScreen() {
           return;
         }
 
-        if (session) {
-          console.log('Logged in as:', session.user.email);
-          router.replace('/(main)/feed');
-        } else {
+        if (!session) {
           console.log('No active session, redirecting to login');
           router.replace('/(auth)/login');
+          return;
         }
+
+        // Check if user has verified their email
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) {
+          console.error('Error getting user:', userError);
+          router.replace('/(auth)/login');
+          return;
+        }
+
+        // If email is not verified, go to login
+        if (!user?.email_confirmed_at) {
+          console.log('Email not verified, redirecting to login');
+          router.replace('/(auth)/login');
+          return;
+        }
+
+        // User is verified and has a session, allow access to the app
+        console.log('Logged in as:', session.user.email);
+        router.replace('/(main)/feed');
       } catch (error) {
         console.error('Unexpected error:', error);
         router.replace('/(auth)/login');
