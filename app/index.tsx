@@ -26,13 +26,7 @@ export default function SplashScreen() {
           error,
         } = await supabase.auth.getSession();
 
-        if (error) {
-          console.error('Error checking session:', error.message);
-          router.replace('/(auth)/login');
-          return;
-        }
-
-        if (!session) {
+        if (error || !session) {
           console.log('No active session, redirecting to login');
           router.replace('/(auth)/login');
           return;
@@ -44,8 +38,8 @@ export default function SplashScreen() {
           error: userError,
         } = await supabase.auth.getUser();
 
-        if (userError) {
-          console.error('Error getting user:', userError);
+        if (userError || !user) {
+          console.log('Session expired or invalid, redirecting to login');
           router.replace('/(auth)/login');
           return;
         }
@@ -57,7 +51,20 @@ export default function SplashScreen() {
           return;
         }
 
-        // User is verified and has a session, allow access to the app
+        // Check if user has a profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError || !profile) {
+          console.log('No profile found, redirecting to login');
+          router.replace('/(auth)/login');
+          return;
+        }
+
+        // User is verified, has a session, and has a profile, allow access to the app
         console.log('Logged in as:', session.user.email);
         router.replace('/(main)/feed');
       } catch (error) {
@@ -67,7 +74,7 @@ export default function SplashScreen() {
     };
 
     // Add a small delay for better UX
-    const timer = setTimeout(prepare, 700);
+    const timer = setTimeout(prepare, 850);
     return () => clearTimeout(timer);
   }, []);
 

@@ -123,7 +123,15 @@ export default function SignUp() {
                 setEmail('');
                 setPassword('');
                 setConfirmPassword('');
-                router.replace('/(auth)/login');
+                router.replace({
+                  pathname: '/(auth)/login',
+                  params: {
+                    schoolId: school.id,
+                    schoolName: school.name,
+                    email: email,
+                    password: password,
+                  },
+                });
               },
             },
           ]

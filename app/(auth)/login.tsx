@@ -59,7 +59,15 @@ export default function LogIn() {
         if (profileError) {
           if (profileError.code === 'PGRST116') {
             // No profile found, redirect to profile creation
-            router.replace('/(auth)/create-profile');
+            router.replace({
+              pathname: '/(auth)/create-profile',
+              params: {
+                schoolId: data.user.user_metadata.school_id,
+                schoolName: data.user.user_metadata.school_name,
+                email: email,
+                password: password,
+              },
+            });
             return;
           }
           throw profileError;
@@ -67,7 +75,15 @@ export default function LogIn() {
 
         if (!profile) {
           // No profile found, redirect to profile creation
-          router.replace('/(auth)/create-profile');
+          router.replace({
+            pathname: '/(auth)/create-profile',
+            params: {
+              schoolId: data.user.user_metadata.school_id,
+              schoolName: data.user.user_metadata.school_name,
+              email: email,
+              password: password,
+            },
+          });
           return;
         }
 
