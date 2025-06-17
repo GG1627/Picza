@@ -21,6 +21,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useColorScheme } from '../../lib/useColorScheme';
 import { uploadToCloudinary } from '../../lib/cloudinary';
+import MeshGradient from '../../components/MeshGradient';
+import GradientText from '../../components/GradientText';
 
 export default function CreateProfileScreen() {
   const [username, setUsername] = useState('');
@@ -29,16 +31,17 @@ export default function CreateProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const [schoolColors, setSchoolColors] = useState({ primary: '#0029A5', secondary: '#FF7824' });
+  const [shortSchoolName, setShortSchoolName] = useState('');
   const router = useRouter();
   const { schoolId, schoolName, email, password } = useLocalSearchParams();
   const { colorScheme, colors } = useColorScheme();
 
   useEffect(() => {
-    const fetchSchoolColors = async () => {
+    const fetchSchoolInfo = async () => {
       try {
         const { data, error } = await supabase
           .from('schools')
-          .select('primary_color, secondary_color')
+          .select('primary_color, secondary_color, short_name')
           .eq('id', schoolId)
           .single();
 
@@ -48,16 +51,17 @@ export default function CreateProfileScreen() {
             primary: data.primary_color,
             secondary: data.secondary_color,
           });
+          setShortSchoolName(data.short_name || schoolName);
         }
       } catch (error) {
-        console.error('Error fetching school colors:', error);
+        console.error('Error fetching school info:', error);
       }
     };
 
     if (schoolId) {
-      fetchSchoolColors();
+      fetchSchoolInfo();
     }
-  }, [schoolId]);
+  }, [schoolId, schoolName]);
 
   const pickImage = async () => {
     try {
@@ -95,7 +99,7 @@ export default function CreateProfileScreen() {
   };
 
   const handleCreateProfile = async () => {
-    if (!username || !fullName) {
+    if (!username || !fullName || !image) {
       Alert.alert('Required Fields', 'Please fill in all required fields');
       return;
     }
@@ -107,44 +111,14 @@ export default function CreateProfileScreen() {
 
     setLoading(true);
     try {
-      // Create the auth account first
+      // Get the current authenticated user
       const {
-        data: { session },
-        error: signUpError,
-      } = await supabase.auth.signUp({
-        email: email as string,
-        password: password as string,
-      });
-
-      if (signUpError) {
-        if (signUpError.message.includes('already registered')) {
-          Alert.alert(
-            'Account Exists',
-            'An account with this email already exists. Would you like to sign in instead?',
-            [
-              {
-                text: 'Cancel',
-                style: 'cancel',
-              },
-              {
-                text: 'Sign In',
-                onPress: () => {
-                  router.replace('/(auth)/login');
-                },
-              },
-            ]
-          );
-        } else {
-          Alert.alert('Error', signUpError.message);
-        }
-        return;
-      }
-
-      if (!session?.user) {
-        Alert.alert(
-          'Verification Required',
-          'Please check your email for a verification link to complete your registration.'
-        );
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) {
+        Alert.alert('Error', 'Could not get current user. Please log in again.');
+        setLoading(false);
         return;
       }
 
@@ -175,7 +149,7 @@ export default function CreateProfileScreen() {
               {
                 text: 'Continue',
                 onPress: async () => {
-                  await createProfileWithoutImage(session.user.id);
+                  await createProfileWithoutImage(user.id);
                 },
               },
             ]
@@ -184,7 +158,7 @@ export default function CreateProfileScreen() {
         }
       }
 
-      await createProfileWithImage(session.user.id, avatarUrl);
+      await createProfileWithImage(user.id, avatarUrl);
     } catch (error) {
       console.error('Error creating profile:', error);
       Alert.alert(
@@ -265,217 +239,210 @@ export default function CreateProfileScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1">
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
-          <View className="flex-1 items-center justify-center px-8">
-            <View className="w-full max-w-sm space-y-8">
-              <View className="mt-0">
-                <Text
-                  className={`text-3xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-                  Create Profile
-                </Text>
-                <Text
-                  className={`mt-3 text-base ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-                  Let's get to know you better
-                </Text>
-              </View>
+      <View className="flex-1">
+        <MeshGradient intensity={40} />
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View className="flex-1">
+            <View className="flex-1 items-center justify-center px-8">
+              <View className="w-full max-w-sm space-y-8">
+                <View className="mt-0">
+                  <Text
+                    className={`text-3xl font-bold ${colorScheme === 'dark' ? 'text-white' : 'text-[#07020D]'}`}>
+                    Create Profile
+                  </Text>
+                  <Text
+                    className={`mt-0 text-base ${colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Let's get to know you better
+                  </Text>
+                </View>
 
-              <View className="mt-8 space-y-8">
-                {/* Profile Image Upload */}
-                <View className="items-center">
-                  <View className="relative">
-                    <Pressable
-                      onPress={pickImage}
-                      className={`h-40 w-40 items-center justify-center rounded-full border-4 ${
-                        colorScheme === 'dark' ? 'border-[#E0E0E0]' : 'border-[#07020D]'
-                      } p-1 ${image ? (colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]') : colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-white'}`}>
-                      {image ? (
-                        <Image source={{ uri: image }} className="h-full w-full rounded-full" />
-                      ) : (
-                        <View className="items-center">
-                          <Ionicons
-                            name="camera-outline"
-                            size={40}
-                            color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                          />
-                          <Text
-                            className={`mt-2 text-sm ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-gray-500'}`}>
-                            Add Photo
-                          </Text>
-                        </View>
-                      )}
-                    </Pressable>
-                    {/* <View
-                      className={`absolute -bottom-0 -right-[-6] h-12 w-12 items-center justify-center rounded-full ${
-                        colorScheme === 'dark' ? 'bg-[#E0E0E0]' : 'bg-[#07020D]'
-                      }`}>
-                      <Ionicons
-                        name="pencil"
-                        size={26}
-                        color={colorScheme === 'dark' ? '#07020D' : 'white'}
+                <View className="mt-4 space-y-8">
+                  {/* Profile Image Upload */}
+                  <View className="items-center">
+                    <View className="relative">
+                      <Pressable
+                        onPress={pickImage}
+                        className={`h-40 w-40 items-center justify-center rounded-full border-4 ${
+                          colorScheme === 'dark' ? 'border-[#ff9f6b]/20' : 'border-[#07020D]'
+                        } p-1 ${image ? (colorScheme === 'dark' ? 'bg-none' : 'bg-none') : colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
+                        {image ? (
+                          <Image source={{ uri: image }} className="h-full w-full rounded-full" />
+                        ) : (
+                          <View className="items-center">
+                            <Ionicons
+                              name="camera-outline"
+                              size={40}
+                              color={colorScheme === 'dark' ? '#ff9f6b' : '#07020D'}
+                            />
+                            <Text
+                              className={`mt-2 text-sm ${colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                              Add Photo
+                              <Text className="text-red-500">*</Text>
+                            </Text>
+                          </View>
+                        )}
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  {/* School Display */}
+                  <View>
+                    <Text
+                      className={`mb-0 text-sm font-medium ${colorScheme === 'dark' ? 'text-gray-300' : 'text-[#07020D]'}`}>
+                      School
+                    </Text>
+                    <View className="relative">
+                      <View
+                        className={`w-full flex-row items-center rounded-2xl border py-2 shadow-sm ${
+                          colorScheme === 'dark'
+                            ? 'border-[#ff9f6b]/20 bg-[#242424] text-gray-400'
+                            : 'border-[#07020D] bg-[#e0e0e0] text-gray-600'
+                        }`}>
+                        <GradientText
+                          className="ml-4 text-2xl font-extrabold"
+                          colors={[schoolColors.primary, schoolColors.secondary]}>
+                          {shortSchoolName}
+                        </GradientText>
+                        <Text
+                          className={`ml-3 text-[1rem] font-semibold ${
+                            colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-700'
+                          }`}>
+                          {schoolName}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Full Name Input */}
+                  <View>
+                    <Text
+                      className={`mb-0 mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-gray-300' : 'text-[#07020D]'}`}>
+                      Full Name
+                      <Text className="text-red-500">*</Text>
+                    </Text>
+                    <View className="relative">
+                      <TextInput
+                        className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${
+                          colorScheme === 'dark'
+                            ? 'border-[#ff9f6b]/20 bg-[#1a1a1a] text-white'
+                            : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
+                        }`}
+                        placeholder="Enter your full name"
+                        placeholderTextColor="#9ca3af"
+                        value={fullName}
+                        onChangeText={setFullName}
+                        autoCapitalize="words"
+                        spellCheck={false}
                       />
-                    </View> */}
+                      <Ionicons
+                        name="person-outline"
+                        size={20}
+                        color={colorScheme === 'dark' ? '#ff9f6b' : '#07020D'}
+                        className="absolute left-4 top-4"
+                      />
+                    </View>
                   </View>
-                </View>
 
-                {/* School Display */}
-                <View>
-                  <Text
-                    className={`mb-0 text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-                    School
-                  </Text>
-                  <View
-                    style={{
-                      shadowColor: colorScheme === 'dark' ? '#fff' : '#000',
-                      shadowOffset: { width: 0, height: 0 },
-                      shadowOpacity: 0.9,
-                      shadowRadius: 4.65,
-                      elevation: 10,
-                      borderRadius: 2,
-                    }}>
-                    <LinearGradient
-                      colors={[schoolColors.primary, schoolColors.secondary]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={{
-                        borderRadius: 16,
-                        padding: 12,
-                        borderWidth: 1,
-                        borderColor: colorScheme === 'dark' ? '#E0E0E0' : '#07020D',
-                      }}>
-                      <Text className="text-base font-bold text-white">{schoolName}</Text>
-                    </LinearGradient>
+                  {/* Username Input */}
+                  <View>
+                    <View className="flex-row items-center justify-between">
+                      <Text
+                        className={`mb-0 mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-gray-300' : 'text-[#07020D]'}`}>
+                        Username
+                        <Text className="text-red-500">*</Text>
+                      </Text>
+                      <Text
+                        className={`mb-0 mt-3 text-xs ${colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {username.length}/20
+                      </Text>
+                    </View>
+                    <View className="relative">
+                      <TextInput
+                        className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${
+                          colorScheme === 'dark'
+                            ? 'border-[#ff9f6b]/20 bg-[#1a1a1a] text-white'
+                            : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
+                        }`}
+                        placeholder="Choose a username"
+                        placeholderTextColor="#9ca3af"
+                        value={username}
+                        onChangeText={setUsername}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        maxLength={20}
+                        spellCheck={false}
+                      />
+                      <Ionicons
+                        name="person-outline"
+                        size={20}
+                        color={colorScheme === 'dark' ? '#ff9f6b' : '#07020D'}
+                        className="absolute left-4 top-4"
+                      />
+                    </View>
                   </View>
-                </View>
 
-                {/* Full Name Input */}
-                <View>
-                  <Text
-                    className={`mb-0 mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-                    Full Name
-                  </Text>
-                  <View className="relative">
-                    <TextInput
-                      className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${
-                        colorScheme === 'dark'
-                          ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]'
-                          : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
-                      }`}
-                      placeholder="Enter your full name"
-                      placeholderTextColor="#9ca3af"
-                      value={fullName}
-                      onChangeText={setFullName}
-                      autoCapitalize="words"
-                      spellCheck={false}
-                    />
-                    <Ionicons
-                      name="person-outline"
-                      size={20}
-                      color={colorScheme === 'dark' ? '#9ca3af' : '#07020D'}
-                      className="absolute left-4 top-4"
-                    />
+                  {/* Bio Input */}
+                  <View>
+                    <View className="flex-row items-center justify-between">
+                      <Text
+                        className={`mb-0 mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-gray-300' : 'text-[#07020D]'}`}>
+                        Bio
+                      </Text>
+                      <Text
+                        className={`mb-0 mt-3 text-xs ${colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {bio.length}/60
+                      </Text>
+                    </View>
+                    <View className="relative">
+                      <TextInput
+                        className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${
+                          colorScheme === 'dark'
+                            ? 'border-[#ff9f6b]/20 bg-[#1a1a1a] text-white'
+                            : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
+                        }`}
+                        placeholder="Tell us about yourself"
+                        placeholderTextColor="#9ca3af"
+                        value={bio}
+                        onChangeText={handleBioChange}
+                        maxLength={60}
+                        multiline
+                        numberOfLines={3}
+                        returnKeyType="done"
+                        blurOnSubmit={true}
+                        onSubmitEditing={Keyboard.dismiss}
+                        textAlignVertical="top"
+                        style={{ height: 65 }}
+                      />
+                      <Ionicons
+                        name="chatbubble-outline"
+                        size={20}
+                        color={colorScheme === 'dark' ? '#ff9f6b' : '#07020D'}
+                        className="absolute left-4 top-4"
+                      />
+                    </View>
                   </View>
-                </View>
 
-                {/* Username Input */}
-                <View>
-                  <View className="flex-row items-center justify-between">
-                    <Text
-                      className={`mb-0 mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-                      Username
-                    </Text>
-                    <Text
-                      className={`text-xs ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-gray-500'}`}>
-                      {username.length}/20
-                    </Text>
-                  </View>
-                  <View className="relative">
-                    <TextInput
-                      className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${
-                        colorScheme === 'dark'
-                          ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]'
-                          : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
-                      }`}
-                      placeholder="Choose a username"
-                      placeholderTextColor="#9ca3af"
-                      value={username}
-                      onChangeText={setUsername}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      maxLength={20}
-                      spellCheck={false}
-                    />
-                    <Ionicons
-                      name="person-outline"
-                      size={20}
-                      color={colorScheme === 'dark' ? '#9ca3af' : '#07020D'}
-                      className="absolute left-4 top-4"
-                    />
-                  </View>
+                  {/* Create Profile Button */}
+                  <Pressable
+                    onPress={handleCreateProfile}
+                    disabled={loading}
+                    className={`mt-8 rounded-2xl ${colorScheme === 'dark' ? 'bg-[#ff9f6b]' : 'bg-[#f77f5e]'} py-4 shadow-sm ${
+                      loading ? 'opacity-50' : ''
+                    }`}>
+                    {loading ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text className="text-center text-base font-semibold text-white">
+                        Create Profile
+                      </Text>
+                    )}
+                  </Pressable>
                 </View>
-
-                {/* Bio Input */}
-                <View>
-                  <View className="flex-row items-center justify-between">
-                    <Text
-                      className={`mb-0 mt-3 text-sm font-medium ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-                      Bio (Optional)
-                    </Text>
-                    <Text
-                      className={`text-xs ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-gray-500'}`}>
-                      {bio.length}/60
-                    </Text>
-                  </View>
-                  <View className="relative">
-                    <TextInput
-                      className={`w-full rounded-2xl border px-4 py-4 pl-12 shadow-sm ${
-                        colorScheme === 'dark'
-                          ? 'border-[#9ca3af] bg-[#282828] text-[#9ca3af]'
-                          : 'border-[#07020D] bg-[#f9f9f9] text-[#07020D]'
-                      }`}
-                      placeholder="Tell us about yourself"
-                      placeholderTextColor="#9ca3af"
-                      value={bio}
-                      onChangeText={handleBioChange}
-                      maxLength={60}
-                      multiline
-                      numberOfLines={3}
-                      returnKeyType="done"
-                      blurOnSubmit={true}
-                      onSubmitEditing={Keyboard.dismiss}
-                      textAlignVertical="top"
-                      style={{ height: 65 }}
-                    />
-                    <Ionicons
-                      name="chatbubble-outline"
-                      size={20}
-                      color={colorScheme === 'dark' ? '#9ca3af' : '#07020D'}
-                      className="absolute left-4 top-4"
-                    />
-                  </View>
-                </View>
-
-                {/* Create Profile Button */}
-                <Pressable
-                  onPress={handleCreateProfile}
-                  disabled={loading}
-                  className={`mt-8 rounded-2xl ${colorScheme === 'dark' ? 'bg-[#f77f5e]' : 'bg-[#f77f5e]'} py-4 shadow-sm ${
-                    loading ? 'opacity-50' : ''
-                  }`}>
-                  {loading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text
-                      className={`text-center text-base font-semibold ${colorScheme === 'dark' ? 'text-white' : 'text-white'}`}>
-                      Create Profile
-                    </Text>
-                  )}
-                </Pressable>
               </View>
             </View>
           </View>
-        </View>
-      </TouchableWithoutFeedback>
+        </TouchableWithoutFeedback>
+      </View>
     </KeyboardAvoidingView>
   );
 }

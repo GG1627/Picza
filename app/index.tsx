@@ -7,6 +7,7 @@ import { useColorScheme } from '../lib/useColorScheme';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { loadFonts } from '../lib/fonts';
+import MeshGradient from '../components/MeshGradient';
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -78,41 +79,30 @@ export default function SplashScreen() {
     return () => clearTimeout(timer);
   }, []);
 
-  // if (!fontsLoaded) {
-  //   return (
-  //     <View
-  //       className={`flex-1 items-center justify-center ${colorScheme === 'dark' ? 'bg-[#121113]' : ''}`}>
-  //       <ActivityIndicator size="large" color="#5070fd" />
-  //     </View>
-  //   );
-  // }
-
   return (
     <View
-      className={`flex-1 items-center justify-center ${colorScheme === 'dark' ? 'bg-[#121113]' : ''}`}>
+      style={[
+        {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        colorScheme === 'dark' ? { backgroundColor: '#0a0a0a' } : {},
+      ]}>
       <StatusBar hidden={true} />
-      {colorScheme !== 'dark' && (
-        <View className="absolute inset-0">
-          <LinearGradient
-            colors={['#fa6f48', '#ffcf99']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ flex: 1 }}
-          />
-        </View>
-      )}
+      {colorScheme !== 'dark' && <MeshGradient intensity={40} />}
       <MaskedView
         style={{ width: 160, height: 160, marginTop: -100 }}
         maskElement={<Logo width={160} height={160} fill="white" />}>
         <LinearGradient
           colors={
             colorScheme === 'dark'
-              ? ['#fa6f48', '#ff6e6a', '#f77f5e', '#ffb76a', '#ffb76a'] // #f77f5e
+              ? ['#fa6f48', '#fa6f48', '#ffcf99', '#ffcf99', '#ffcf99']
               : ['black', 'black', '#1c1c1c', '#1c1c1c', '#1c1c1c']
           }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          locations={[0, 0.2, 0.6, 0.8, 1]}
+          locations={[0, 0.2, 0.7, 0.8, 1]}
           style={{ flex: 1 }}
         />
       </MaskedView>
