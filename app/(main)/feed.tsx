@@ -81,6 +81,10 @@ type Post = {
     username: string;
     avatar_url: string | null;
     competitions_won: number | null;
+    custom_tag: string | null;
+    custom_tag_color: string | null;
+    custom_tag_bg_color: string | null;
+    custom_tag_border_color: string | null;
     schools: {
       name: string;
     } | null;
@@ -405,125 +409,121 @@ export default function FeedScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView
-        className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#f77f5e" />
-        </View>
-      </SafeAreaView>
+      <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#ffcf99]'}`}>
+        <SafeAreaView edges={['top']} className="flex-1">
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color="#f77f5e" />
+          </View>
+        </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1">
-      <MeshGradient
-        intensity={50}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          opacity: colorScheme === 'dark' ? 0.3 : 0.2,
-        }}
-      />
-      <View className="flex-1">
-        {/* Header */}
-        <View className="mt-[-0.5rem] px-4">
-          <Text
-            className={`font-pattaya text-[2.5rem] ${
-              colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-            }`}>
-            Picza
-          </Text>
-        </View>
-
-        <FilterButtons
-          activeFilter={activeFilter}
-          sortBy={sortBy}
-          isGridView={isGridView}
-          schoolData={schoolData}
-          onFilterChange={handleFilterChange}
-          onSortChange={handleSortChange}
-          onViewSwitch={handleViewSwitch}
-        />
-
-        {/* Main Content */}
+    <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#ffcf99]'}`}>
+      <SafeAreaView edges={['top']} className="flex-1">
         <View className="flex-1">
-          <FlatList
-            key={isGridView ? 'grid' : 'list'}
-            ref={flatListRef}
-            data={allPosts}
-            renderItem={renderItem}
-            keyExtractor={(item, index) => `${item.id}-${index}`}
-            onEndReached={loadMore}
-            onEndReachedThreshold={0.5}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-            ListEmptyComponent={
-              <ListEmptyComponent
-                isLoading={isLoading}
-                activeFilter={activeFilter}
-                isLoadingMore={isLoadingMore}
-                schoolData={schoolData}
-              />
-            }
-            ListFooterComponent={
-              <ListFooterComponent
-                isLoading={isLoading}
-                activeFilter={activeFilter}
-                isLoadingMore={isLoadingMore}
-                schoolData={schoolData}
-              />
-            }
-            maintainVisibleContentPosition={{
-              minIndexForVisible: 0,
-              autoscrollToTopThreshold: 10,
-            }}
-            contentContainerStyle={{
-              paddingHorizontal: isGridView ? 0 : 16,
-              paddingBottom: 16,
-            }}
-            columnWrapperStyle={
-              isGridView
-                ? {
-                    paddingHorizontal: 0,
-                    justifyContent: 'flex-start',
-                  }
-                : undefined
-            }
-            numColumns={isGridView ? 2 : 1}
-            showsVerticalScrollIndicator={false}
-            getItemLayout={getItemLayout}
-            maxToRenderPerBatch={10}
-            windowSize={5}
-            removeClippedSubviews={true}
-            initialNumToRender={10}
+          {/* Header */}
+          <View className="mb-[-0.5rem] mt-[-0.5rem] px-4">
+            <Text
+              className={`ml-0.5 font-pattaya text-[2.5rem] ${
+                colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+              }`}>
+              Picza
+            </Text>
+          </View>
+
+          {/* Main Content */}
+          <View className="flex-1">
+            <FlatList
+              key={isGridView ? 'grid' : 'list'}
+              ref={flatListRef}
+              data={allPosts}
+              renderItem={renderItem}
+              keyExtractor={(item, index) => `${item.id}-${index}`}
+              onEndReached={loadMore}
+              onEndReachedThreshold={0.5}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+              ListEmptyComponent={
+                <ListEmptyComponent
+                  isLoading={isLoading}
+                  activeFilter={activeFilter}
+                  isLoadingMore={isLoadingMore}
+                  schoolData={schoolData}
+                />
+              }
+              ListFooterComponent={
+                <ListFooterComponent
+                  isLoading={isLoading}
+                  activeFilter={activeFilter}
+                  isLoadingMore={isLoadingMore}
+                  schoolData={schoolData}
+                />
+              }
+              maintainVisibleContentPosition={{
+                minIndexForVisible: 0,
+                autoscrollToTopThreshold: 10,
+              }}
+              contentContainerStyle={{
+                paddingHorizontal: isGridView ? 0 : 16,
+                paddingBottom: 80,
+                paddingTop: 60,
+              }}
+              columnWrapperStyle={
+                isGridView
+                  ? {
+                      paddingHorizontal: 0,
+                      justifyContent: 'flex-start',
+                    }
+                  : undefined
+              }
+              numColumns={isGridView ? 2 : 1}
+              showsVerticalScrollIndicator={false}
+              getItemLayout={getItemLayout}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              removeClippedSubviews={true}
+              initialNumToRender={10}
+            />
+          </View>
+
+          {/* Filter Buttons - Positioned absolutely */}
+          <View style={{ position: 'absolute', top: 45, left: 0, right: 0, zIndex: 10 }}>
+            <FilterButtons
+              activeFilter={activeFilter}
+              sortBy={sortBy}
+              isGridView={isGridView}
+              schoolData={schoolData}
+              onFilterChange={handleFilterChange}
+              onSortChange={handleSortChange}
+              onViewSwitch={handleViewSwitch}
+            />
+          </View>
+
+          {/* <CreatePostButton /> */}
+
+          {/* Modals */}
+          <IngredientsModal
+            visible={showIngredients}
+            onClose={() => setShowIngredients(false)}
+            ingredients={selectedIngredients}
+          />
+          <OptionsModal
+            visible={showOptionsModal}
+            onClose={() => setShowOptionsModal(false)}
+            post={selectedPost}
+            onDeletePost={handleDeletePost}
+            isOwnPost={selectedPost?.user_id === user?.id}
+          />
+          <CommentsModal
+            visible={showCommentsModal}
+            onClose={handleCloseComments}
+            post={selectedPostForComments}
+            onAddComment={handleAddComment}
+            colorScheme={colorScheme}
           />
         </View>
-
-        <CreatePostButton />
-
-        {/* Modals */}
-        <IngredientsModal
-          visible={showIngredients}
-          onClose={() => setShowIngredients(false)}
-          ingredients={selectedIngredients}
-        />
-        <OptionsModal
-          visible={showOptionsModal}
-          onClose={() => setShowOptionsModal(false)}
-          post={selectedPost}
-          onDeletePost={handleDeletePost}
-          isOwnPost={selectedPost?.user_id === user?.id}
-        />
-        <CommentsModal
-          visible={showCommentsModal}
-          onClose={handleCloseComments}
-          post={selectedPostForComments}
-          onAddComment={handleAddComment}
-          colorScheme={colorScheme}
-        />
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }

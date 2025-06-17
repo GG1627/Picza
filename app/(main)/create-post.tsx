@@ -164,7 +164,7 @@ export default function CreatePostScreen() {
   };
 
   return (
-    <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
+    <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#ffcf99]'}`}>
       {/* Header */}
       <View
         className={`flex-row items-center justify-between border-b p-4 ${
@@ -175,10 +175,10 @@ export default function CreatePostScreen() {
             <Ionicons
               name="close-circle-outline"
               size={24}
-              color={colorScheme === 'dark' ? '#F00511' : '#F00511'}
+              color={colorScheme === 'dark' ? '#ff9f6b' : '#f77f5e'}
             />
             <Text
-              className={`ml-1 font-medium ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
+              className={`ml-1 font-medium ${colorScheme === 'dark' ? 'text-[#ff9f6b]' : 'text-[#f77f5e]'}`}>
               Clear
             </Text>
           </TouchableOpacity>
@@ -198,17 +198,13 @@ export default function CreatePostScreen() {
                 ? 'bg-[#282828]'
                 : 'bg-[#f9f9f9]'
               : colorScheme === 'dark'
-                ? 'border-2 border-[#259365] bg-[#26342e]'
-                : 'border-2 border-[#259365] bg-[#c7e5d9]'
+                ? 'bg-[#ff9f6b]'
+                : 'bg-[#f77f5e]'
           }`}>
           {createPost.isPending ? (
-            <ActivityIndicator color={colorScheme === 'dark' ? 'white' : '#259365'} />
+            <ActivityIndicator color="white" />
           ) : isSuccess ? (
-            <Ionicons
-              name="checkmark"
-              size={20}
-              color={colorScheme === 'dark' ? 'white' : '#259365'}
-            />
+            <Ionicons name="checkmark" size={20} color="white" />
           ) : (
             <Text
               className={`font-medium ${
@@ -216,9 +212,7 @@ export default function CreatePostScreen() {
                   ? colorScheme === 'dark'
                     ? 'text-[#9ca3af]'
                     : 'text-[#877B66]'
-                  : colorScheme === 'dark'
-                    ? 'text-[#259365]'
-                    : 'text-[#259365]'
+                  : 'text-white'
               }`}>
               Post
             </Text>
@@ -251,9 +245,13 @@ export default function CreatePostScreen() {
                 }`}>
                 <View
                   className={`rounded-full p-4 ${
-                    colorScheme === 'dark' ? 'bg-[#f77f5e]/10' : 'bg-[#f77f5e]/10'
+                    colorScheme === 'dark' ? 'bg-[#ff9f6b]/10' : 'bg-[#f77f5e]/10'
                   }`}>
-                  <Ionicons name="camera" size={40} color="#f77f5e" />
+                  <Ionicons
+                    name="camera"
+                    size={40}
+                    color={colorScheme === 'dark' ? '#ff9f6b' : '#f77f5e'}
+                  />
                 </View>
                 <Text
                   className={`mt-2 text-base font-medium ${

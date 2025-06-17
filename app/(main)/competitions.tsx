@@ -392,13 +392,13 @@ export default function CompetitionsScreen() {
   };
 
   return (
-    <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
+    <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#ffcf99]'}`}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
       {/* Title Section */}
       <View className="mb-4 mt-16 px-4 pt-2">
         <View className="flex-row items-center">
           <Text
-            className={`font-jua text-center text-[3.2rem] ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            className={`text-center font-jua text-[3.2rem] ${colorScheme === 'dark' ? 'text-white' : 'text-[#07020D]'}`}>
             JOIN A COOKING COMPETITION!
           </Text>
           <TouchableOpacity
@@ -407,7 +407,7 @@ export default function CompetitionsScreen() {
             <Octicons
               name="info"
               size={24}
-              color={colorScheme === 'dark' ? '#5c5c5c' : '#5c5c5c'}
+              color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
             />
           </TouchableOpacity>
         </View>

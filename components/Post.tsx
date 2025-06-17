@@ -7,6 +7,8 @@ import { useRouter } from 'expo-router';
 import { getCompetitionTag } from '../lib/competitionTags';
 import GradientText from './GradientText';
 import { Animated } from 'react-native';
+// @ts-ignore
+import tinycolor from 'tinycolor2';
 
 interface PostProps {
   post: {
@@ -24,6 +26,10 @@ interface PostProps {
       username: string;
       avatar_url: string | null;
       competitions_won: number | null;
+      custom_tag: string | null;
+      custom_tag_color: string | null;
+      custom_tag_bg_color: string | null;
+      custom_tag_border_color: string | null;
       schools: {
         name: string;
       } | null;
@@ -81,6 +87,28 @@ export default function Post({
     return `${diffInYears}y ago`;
   };
 
+  const tag = post.profiles
+    ? getCompetitionTag(post.profiles.competitions_won, post.profiles.username, {
+        tag: post.profiles.custom_tag,
+        color: post.profiles.custom_tag_color,
+        bgColor: post.profiles.custom_tag_bg_color,
+        borderColor: post.profiles.custom_tag_border_color,
+      })
+    : null;
+
+  // Adjust custom tag colors for dark/light mode
+  let tagBgColor = tag?.bgColor;
+  let tagBorderColor = tag?.borderColor;
+  if (post.profiles?.custom_tag && tagBgColor && tagBorderColor) {
+    if (colorScheme === 'dark') {
+      tagBgColor = tinycolor(tagBgColor).darken(20).toString();
+      tagBorderColor = tinycolor(tagBorderColor).darken(10).toString();
+    } else {
+      tagBgColor = tinycolor(tagBgColor).lighten(50).toString();
+      tagBorderColor = tinycolor(tagBorderColor).lighten(10).toString();
+    }
+  }
+
   if (isGridView) {
     return (
       <View className="mb-4">
@@ -137,97 +165,9 @@ export default function Post({
     <View className="mb-6">
       <View
         className={`overflow-hidden rounded-3xl ${
-          colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-white'
+          colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-[#f77f5e]/50'
         } shadow-lg`}>
-        {/* Post Header */}
-        <View className="mb-[-0.25rem] mt-[-0.25rem] flex-row items-center justify-between p-3">
-          <Pressable
-            onPress={() => {
-              onReturningFromProfile();
-              router.push(`/user-profile?userId=${post.user_id}`);
-            }}
-            className="flex-row items-center">
-            <View
-              className={`h-12 w-12 overflow-hidden rounded-full border-2 ${
-                colorScheme === 'dark'
-                  ? 'border-[#282828] bg-[#282828]'
-                  : 'border-gray-100 bg-gray-50'
-              }`}>
-              <Image
-                source={
-                  post.profiles?.avatar_url
-                    ? { uri: post.profiles.avatar_url }
-                    : require('../assets/default-avatar.png')
-                }
-                className="h-full w-full"
-              />
-            </View>
-            <View className="ml-3">
-              <View className="flex-row items-center space-x-2">
-                <Text
-                  className={`text-base font-bold ${
-                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                  }`}>
-                  {post.profiles?.username || 'Unknown User'}
-                </Text>
-                {post.profiles && (
-                  <View
-                    style={{
-                      backgroundColor: getCompetitionTag(
-                        post.profiles.competitions_won,
-                        post.profiles.username
-                      ).bgColor,
-                      borderColor: getCompetitionTag(
-                        post.profiles.competitions_won,
-                        post.profiles.username
-                      ).borderColor,
-                    }}
-                    className="ml-1 rounded-xl border px-2 py-0.5">
-                    <Text
-                      style={{
-                        color: getCompetitionTag(
-                          post.profiles.competitions_won,
-                          post.profiles.username
-                        ).color,
-                      }}
-                      className="text-center text-xs font-semibold">
-                      {
-                        getCompetitionTag(post.profiles.competitions_won, post.profiles.username)
-                          .tag
-                      }
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <View className="flex-row items-center">
-                <Text className="text-xs text-gray-500">{getTimeElapsed(post.created_at)}</Text>
-                <Text className="mx-1 text-xs text-gray-500">•</Text>
-                <View className="flex-row items-center">
-                  <Ionicons name="school" size={12} color="#f77f5e" />
-                  <GradientText
-                    colors={
-                      colorScheme === 'dark'
-                        ? ['#f77f5e', '#f77f5e', '#f77f5e', '#f77f5e', '#f77f5e']
-                        : ['#d66c4f', '#d66c4f', '#d66c4f', '#d66c4f', '#d66c4f']
-                    }
-                    locations={[0, 0.3, 0.6, 0.8, 1]}
-                    className="ml-1 text-xs font-medium">
-                    {post.profiles?.schools?.name || 'Unknown School'}
-                  </GradientText>
-                </View>
-              </View>
-            </View>
-          </Pressable>
-          <TouchableOpacity onPress={() => onShowOptions(post)} className="p-2">
-            <Ionicons
-              name="ellipsis-horizontal"
-              size={24}
-              color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Post Image */}
+        {/* Post Image with Header Overlay */}
         <View className="relative">
           <Image
             source={{ uri: post.image_url }}
@@ -242,11 +182,75 @@ export default function Post({
           )}
           <View className="absolute inset-0">
             <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
-              locations={[0, 0.5, 1]}
+              colors={['rgba(0,0,0,0.6)', 'transparent', 'rgba(0,0,0,0.8)']}
+              locations={[0, 0.3, 1]}
               style={{ flex: 1 }}
             />
           </View>
+
+          {/* Header Overlay */}
+          <View className="absolute left-0 right-0 top-0 flex-row items-center justify-between p-4">
+            <Pressable
+              onPress={() => {
+                onReturningFromProfile();
+                router.push(`/user-profile?userId=${post.user_id}`);
+              }}
+              className="flex-row items-center">
+              <View
+                className={`h-12 w-12 overflow-hidden rounded-full border-2 ${
+                  colorScheme === 'dark'
+                    ? 'border-[#282828] bg-[#282828]'
+                    : 'border-gray-100 bg-gray-50'
+                }`}>
+                <Image
+                  source={
+                    post.profiles?.avatar_url
+                      ? { uri: post.profiles.avatar_url }
+                      : require('../assets/default-avatar.png')
+                  }
+                  className="h-full w-full"
+                />
+              </View>
+              <View className="ml-3">
+                <View className="flex-row items-center space-x-2">
+                  <Text className="text-base font-bold text-white">
+                    {post.profiles?.username || 'Unknown User'}
+                  </Text>
+                  {post.profiles && tag && (
+                    <View
+                      style={{
+                        backgroundColor: tagBgColor,
+                        borderColor: tagBorderColor,
+                      }}
+                      className="ml-2 rounded-xl border px-2 py-0.5">
+                      <Text
+                        style={{
+                          color: tag.color,
+                        }}
+                        className="text-center text-xs font-semibold">
+                        {tag.tag}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <View className="flex-row items-center">
+                  <Text className="text-xs text-gray-200">{getTimeElapsed(post.created_at)}</Text>
+                  <Text className="mx-1 text-xs text-gray-200">•</Text>
+                  <View className="flex-row items-center">
+                    <Ionicons name="school" size={12} color="#f77f5e" />
+                    <Text className="ml-1 text-xs font-medium text-white">
+                      {post.profiles?.schools?.name || 'Unknown School'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </Pressable>
+            <TouchableOpacity onPress={() => onShowOptions(post)} className="p-2">
+              <Ionicons name="ellipsis-horizontal" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Dish Name Overlay */}
           {post.dish_name && (
             <View className="absolute bottom-0 left-0 right-0 p-4">
               <Text className="text-2xl font-bold text-white" numberOfLines={2}>
@@ -257,7 +261,7 @@ export default function Post({
         </View>
 
         {/* Post Actions */}
-        <View className="mt-[-0.25rem] p-3">
+        <View className="bg-[#0a0a0a] px-4 py-3">
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center space-x-4">
               <View className="flex-row items-center">
@@ -269,87 +273,53 @@ export default function Post({
                     <Ionicons
                       name={likedPosts.has(post.id) ? 'heart' : 'heart-outline'}
                       size={28}
-                      color={
-                        likedPosts.has(post.id)
-                          ? '#F00511'
-                          : colorScheme === 'dark'
-                            ? '#E0E0E0'
-                            : '#07020D'
-                      }
+                      color={likedPosts.has(post.id) ? '#F00511' : 'white'}
                     />
                   </Animated.View>
                 </TouchableOpacity>
                 <View className="w-8">
-                  <Text
-                    className={`text-base font-semibold ${
-                      colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                    }`}>
+                  <Text className="text-base font-semibold text-white">
                     {postLikes[post.id] || 0}
                   </Text>
                 </View>
               </View>
               <View className="flex-row items-center">
                 <TouchableOpacity onPress={() => onShowComments(post)}>
-                  <Ionicons
-                    name="chatbubble-outline"
-                    size={28}
-                    color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                  />
+                  <Ionicons name="chatbubble-outline" size={28} color="white" />
                 </TouchableOpacity>
                 <View className="w-8">
-                  <Text
-                    className={`text-base font-semibold ${
-                      colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                    }`}>
+                  <Text className="text-base font-semibold text-white">
                     {post.comments_count || 0}
                   </Text>
                 </View>
               </View>
               <TouchableOpacity>
-                <Ionicons
-                  name="paper-plane-outline"
-                  size={28}
-                  color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                />
+                <Ionicons name="paper-plane-outline" size={28} color="white" />
               </TouchableOpacity>
             </View>
             <View className="flex-row items-center space-x-2">
               {post.ingredients && (
                 <TouchableOpacity
                   onPress={() => onShowIngredients(post.ingredients || 'No ingredients listed')}
-                  className={`rounded-full border-2 border-[#2DFE54] px-3 py-1.5 ${
-                    colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-[#dffff2]'
-                  }`}>
-                  <Text
-                    className={`text-sm font-semibold ${
-                      colorScheme === 'dark' ? 'text-[#2DFE54]' : 'text-[#2DFE54]'
-                    }`}>
-                    Ingredients
-                  </Text>
+                  className="rounded-full border-2 border-[#2DFE54] bg-black px-3 py-1.5">
+                  <Text className="text-sm font-semibold text-[#2DFE54]">Ingredients</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity>
-                <Ionicons
-                  name="bookmark-outline"
-                  size={28}
-                  color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                />
+                <Ionicons name="bookmark-outline" size={28} color="white" />
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Post Caption */}
-          <View className="mt-1">
-            {post.caption && (
-              <Text
-                className={`text-base leading-5 ${
-                  colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                }`}>
+          {post.caption && (
+            <View className="mt-2">
+              <Text className="text-base leading-5 text-white">
                 <Text className="font-bold">{post.profiles?.username || 'Unknown User'} </Text>
                 {post.caption}
               </Text>
-            )}
-          </View>
+            </View>
+          )}
         </View>
       </View>
     </View>

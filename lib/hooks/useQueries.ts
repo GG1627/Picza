@@ -71,6 +71,11 @@ export function usePosts(
             id,
             username,
             avatar_url,
+            competitions_won,
+            custom_tag,
+            custom_tag_color,
+            custom_tag_bg_color,
+            custom_tag_border_color,
             schools (
               name
             )

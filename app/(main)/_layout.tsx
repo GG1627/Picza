@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { useColorScheme } from '../../lib/useColorScheme';
 
 export default function MainLayout() {
@@ -12,13 +13,27 @@ export default function MainLayout() {
         headerShown: false,
         tabBarActiveTintColor: colorScheme === 'dark' ? '#E0E0E0' : '#121113',
         tabBarInactiveTintColor: colorScheme === 'dark' ? '#666666' : '#9ca3af',
+        tabBarBackground: () => (
+          <BlurView
+            intensity={20}
+            tint={colorScheme}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              borderRadius: 40,
+              overflow: 'hidden',
+            }}
+          />
+        ),
         tabBarStyle: {
           borderTopWidth: 1,
           borderBottomWidth: 1,
           borderLeftWidth: 1,
           borderRightWidth: 1,
-          backgroundColor:
-            colorScheme === 'dark' ? 'rgba(18, 17, 19, 0.5)' : 'rgba(224, 224, 224, 0.3)',
+          backgroundColor: 'transparent',
           height: Platform.OS === 'ios' ? 75 : 55,
           paddingBottom: Platform.OS === 'ios' ? 20 : 5,
           paddingTop: 10,
@@ -29,7 +44,6 @@ export default function MainLayout() {
           elevation: 0,
           borderRadius: 40,
           marginHorizontal: 20,
-          backdropFilter: 'blur(10px)',
           borderColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
           shadowColor: colorScheme === 'dark' ? '#000' : '#000',
           shadowOffset: {
