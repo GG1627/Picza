@@ -23,6 +23,8 @@ import { useColorScheme } from '../../lib/useColorScheme';
 import React from 'react';
 import { uploadToCloudinary } from '../../lib/cloudinary';
 import { getCompetitionTag } from '../../lib/competitionTags';
+// @ts-ignore
+import tinycolor from 'tinycolor2';
 
 type Post = {
   id: string;
@@ -49,6 +51,10 @@ type Profile = {
   last_username_change: string | null;
   album_name: string | null;
   competitions_won: number | null;
+  custom_tag: string | null;
+  custom_tag_color: string | null;
+  custom_tag_bg_color: string | null;
+  custom_tag_border_color: string | null;
 };
 
 export default function ProfileScreen() {
@@ -126,7 +132,7 @@ export default function ProfileScreen() {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          'id, username, full_name, created_at, avatar_url, bio, school_id, last_username_change, album_name, competitions_won'
+          'id, username, full_name, created_at, avatar_url, bio, school_id, last_username_change, album_name, competitions_won, custom_tag, custom_tag_color, custom_tag_bg_color, custom_tag_border_color'
         )
         .eq('id', user.id)
         .single();
@@ -450,6 +456,28 @@ export default function ProfileScreen() {
     }
   };
 
+  const tag = profile
+    ? getCompetitionTag(profile.competitions_won, profile.username, {
+        tag: profile.custom_tag,
+        color: profile.custom_tag_color,
+        bgColor: profile.custom_tag_bg_color,
+        borderColor: profile.custom_tag_border_color,
+      })
+    : null;
+
+  // Adjust custom tag colors for dark/light mode
+  let tagBgColor = tag?.bgColor;
+  let tagBorderColor = tag?.borderColor;
+  if (profile?.custom_tag && tagBgColor && tagBorderColor) {
+    if (colorScheme === 'dark') {
+      tagBgColor = tinycolor(tagBgColor).darken(20).toString();
+      tagBorderColor = tinycolor(tagBorderColor).darken(10).toString();
+    } else {
+      tagBgColor = tinycolor(tagBgColor).lighten(50).toString();
+      tagBorderColor = tinycolor(tagBorderColor).lighten(10).toString();
+    }
+  }
+
   if (loading) {
     return (
       <View
@@ -568,27 +596,20 @@ export default function ProfileScreen() {
                       className={`text-2xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
                       @{profile?.username}
                     </Text>
-                    {profile && (
+                    {profile && tag && (
                       <View className="mb-1 mt-1">
                         <View
                           style={{
-                            backgroundColor: getCompetitionTag(
-                              profile.competitions_won,
-                              profile.username
-                            ).bgColor,
-                            borderColor: getCompetitionTag(
-                              profile.competitions_won,
-                              profile.username
-                            ).borderColor,
+                            backgroundColor: tagBgColor,
+                            borderColor: tagBorderColor,
                           }}
                           className="rounded-xl border-2 px-4 py-1">
                           <Text
                             style={{
-                              color: getCompetitionTag(profile.competitions_won, profile.username)
-                                .color,
+                              color: tag.color,
                             }}
                             className="text-center text-sm font-semibold">
-                            {getCompetitionTag(profile.competitions_won, profile.username).tag}
+                            {tag.tag}
                           </Text>
                         </View>
                       </View>

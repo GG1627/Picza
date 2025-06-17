@@ -260,6 +260,7 @@ export default function CreatePostScreen() {
                     colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                   }`}>
                   Select an image
+                  <Text className="text-red-500">*</Text>
                 </Text>
                 <Text
                   className={`mt-1 text-sm ${

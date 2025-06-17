@@ -74,6 +74,7 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.20.0",
     "tailwind-merge": "^2.2.1",
+    "tinycolor2": "^1.6.0",
     "zustand": "^4.5.1"
   },
   "devDependencies": {

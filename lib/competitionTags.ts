@@ -5,15 +5,24 @@ export type CompetitionTag = {
   borderColor: string;
 };
 
-export const getCompetitionTag = (wins: number | null, username?: string): CompetitionTag => {
-  // Special tag for GG1627
-  if (username === 'GG1627')
+export const getCompetitionTag = (
+  wins: number | null,
+  username?: string,
+  customTag?: {
+    tag: string | null;
+    color: string | null;
+    bgColor: string | null;
+    borderColor: string | null;
+  }
+): CompetitionTag => {
+  if (customTag && customTag.tag && customTag.color && customTag.bgColor && customTag.borderColor) {
     return {
-      tag: 'CEO 😊',
-      color: '#FFD700',
-      bgColor: '#2e2a1f',
-      borderColor: '#FFD700',
+      tag: customTag.tag,
+      color: customTag.color,
+      bgColor: customTag.bgColor,
+      borderColor: customTag.borderColor,
     };
+  }
 
   if (!wins)
     return {
