@@ -482,7 +482,7 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#ffcf99]'}`}>
+      <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#E8E9EB]'}`}>
         <View className="flex-1 items-center justify-center">
           <Animated.View
             style={{
@@ -497,7 +497,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#ffcf99]'}`}>
+    <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#E8E9EB]'}`}>
       <View className="flex-1 pt-12">
         {/* Black background that shows when screen shrinks */}
         <Animated.View
@@ -536,7 +536,7 @@ export default function ProfileScreen() {
               outputRange: [0.85, 1],
             }),
           }}
-          className={`${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#ffcf99]'}`}>
+          className={`${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#E8E9EB]'}`}>
           <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
             {/* Header */}
             <View className="mt-5 flex-row items-center justify-between px-6">
@@ -832,7 +832,7 @@ export default function ProfileScreen() {
                                 <View
                                   className={`aspect-square border-b border-r ${
                                     index % 3 !== 2 ? 'border-r' : ''
-                                  } ${colorScheme === 'dark' ? 'border-[#121113]' : 'border-[#ffcf99]'}`}>
+                                  } ${colorScheme === 'dark' ? 'border-[#121113]' : 'border-[#E8E9EB]'}`}>
                                   <Image
                                     source={{
                                       uri: post.image_url,
@@ -914,7 +914,7 @@ export default function ProfileScreen() {
             }}
             className="mt-20 flex-1">
             <View
-              className={`flex-1 rounded-t-[30px] ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#ffcf99]'} p-6`}>
+              className={`flex-1 rounded-t-[30px] ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#E8E9EB]'} p-6`}>
               <View className="mb-6 flex-row items-center justify-between">
                 <Text
                   className={`text-xl font-semibold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
@@ -922,7 +922,7 @@ export default function ProfileScreen() {
                 </Text>
                 <Pressable
                   onPress={closeSettings}
-                  className={`rounded-full ${colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-[#ffcf99]'} p-2`}>
+                  className={`rounded-full ${colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-[#E8E9EB]'} p-2`}>
                   <Ionicons
                     name="close"
                     size={24}
@@ -936,7 +936,7 @@ export default function ProfileScreen() {
                 <Pressable
                   onPress={toggleColorScheme}
                   className={`flex-row items-center space-x-3 rounded-t-3xl border ${
-                    colorScheme === 'dark' ? 'bg-[#282828]' : 'border-[#b1b9c8] bg-[#ffcf99]'
+                    colorScheme === 'dark' ? 'bg-[#282828]' : 'border-[#b1b9c8] bg-[#E8E9EB]'
                   } p-4`}>
                   <Ionicons
                     name={isDarkColorScheme ? 'sunny-outline' : 'moon-outline'}
@@ -958,7 +958,7 @@ export default function ProfileScreen() {
                     closeSettings();
                   }}
                   className={`flex-row items-center space-x-3 border border-t-0 ${
-                    colorScheme === 'dark' ? 'bg-[#282828]' : 'border-[#b1b9c8] bg-[#ffcf99]'
+                    colorScheme === 'dark' ? 'bg-[#282828]' : 'border-[#b1b9c8] bg-[#E8E9EB]'
                   } p-4`}>
                   <Ionicons
                     name="create-outline"
@@ -976,7 +976,7 @@ export default function ProfileScreen() {
                 <Pressable
                   onPress={handleLogout}
                   className={`flex-row items-center space-x-3 border border-t-0 ${
-                    colorScheme === 'dark' ? 'bg-[#282828]' : 'border-[#b1b9c8] bg-[#ffcf99]'
+                    colorScheme === 'dark' ? 'bg-[#282828]' : 'border-[#b1b9c8] bg-[#E8E9EB]'
                   } p-4`}>
                   <Ionicons name="log-out-outline" size={24} color="#BA3B46" />
                   <Text className="text-base font-medium text-[#BA3B46]">Log Out</Text>
@@ -986,7 +986,7 @@ export default function ProfileScreen() {
                   onPress={handleDeleteAccount}
                   disabled={deleting}
                   className={`flex-row items-center space-x-3 border border-t-0 ${
-                    colorScheme === 'dark' ? 'bg-[#282828]' : 'border-[#b1b9c8] bg-[#ffcf99]'
+                    colorScheme === 'dark' ? 'bg-[#282828]' : 'border-[#b1b9c8] bg-[#E8E9EB]'
                   } p-4 ${deleting ? 'opacity-50' : ''}`}>
                   <Ionicons name="trash-outline" size={24} color="#BA3B46" />
                   <Text className="text-base font-medium text-[#BA3B46]">

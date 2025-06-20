@@ -164,7 +164,7 @@ export default function CreatePostScreen() {
   };
 
   return (
-    <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#ffcf99]'}`}>
+    <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#E8E9EB]'}`}>
       {/* Header */}
       <View
         className={`flex-row items-center justify-between border-b p-4 ${

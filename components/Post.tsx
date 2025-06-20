@@ -219,7 +219,7 @@ export default function Post({
                   {post.profiles && tag && (
                     <View
                       style={{
-                        backgroundColor: tagBgColor,
+                        backgroundColor: '#000000',
                         borderColor: tagBorderColor,
                       }}
                       className="ml-2 rounded-xl border px-2 py-0.5">
@@ -237,7 +237,7 @@ export default function Post({
                   <Text className="text-xs text-gray-200">{getTimeElapsed(post.created_at)}</Text>
                   <Text className="mx-1 text-xs text-gray-200">•</Text>
                   <View className="flex-row items-center">
-                    <Ionicons name="school" size={12} color="#f77f5e" />
+                    <Ionicons name="school" size={12} color="#ff9f6b" />
                     <Text className="ml-1 text-xs font-medium text-white">
                       {post.profiles?.schools?.name || 'Unknown School'}
                     </Text>

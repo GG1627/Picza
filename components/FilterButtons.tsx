@@ -40,7 +40,7 @@ export default function FilterButtons({
             <GradientText
               colors={
                 colorScheme === 'dark'
-                  ? ['#f77f5e', '#f77f5e', '#f77f5e', '#f7bdad', '#f7bdad']
+                  ? ['#ff9f6b', '#ff9f6b', '#ff9f6b', '#ffc3a3', '#ffdbc7']
                   : ['#f77f5e', '#cc694e', '#e0775a', '#f77f5e', '#f77f5e']
               }
               locations={[0, 0.3, 0.6, 0.8, 1]}

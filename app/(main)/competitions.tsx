@@ -17,6 +17,7 @@ import {
   isUserParticipant,
   getParticipantCount,
   initializeCompetitions,
+  ensureNextCompetition,
 } from '~/lib/competitions';
 import CompModal from '~/components/CompModal';
 import setTime from '../sharedTime';
@@ -160,6 +161,17 @@ export default function CompetitionsScreen() {
     try {
       const status = await getAllCompetitionsStatus();
       setCompetitionsStatus(status);
+
+      // Automate next competition creation for all types
+      if (status.morning.phase === 'completed' && status.morning.timeRemaining === 0) {
+        await ensureNextCompetition('morning');
+      }
+      if (status.noon.phase === 'completed' && status.noon.timeRemaining === 0) {
+        await ensureNextCompetition('noon');
+      }
+      if (status.night.phase === 'completed' && status.night.timeRemaining === 0) {
+        await ensureNextCompetition('night');
+      }
 
       // If morning competition is in registration or competing phase, fetch participant count
       // If morning competition is completed, fetch the winner
@@ -396,7 +408,7 @@ export default function CompetitionsScreen() {
   };
 
   return (
-    <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#ffcf99]'}`}>
+    <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#E8E9EB]'}`}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
       {/* Title Section */}
       <View className="mb-4 mt-16 px-4 pt-2">

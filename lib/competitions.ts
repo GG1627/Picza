@@ -78,7 +78,112 @@ export const initializeCompetitions = async (): Promise<void> => {
   }
 };
 
-// Add this function to automatically create the next competition
+// Remove auto-creation from getCompetitionStatus and add ensureNextCompetition
+
+export const getCompetitionStatus = async (type: string): Promise<CompetitionStatus> => {
+  try {
+    const { data, error } = await supabase
+      .from('competitions')
+      .select(
+        'id, comp_start_time, join_end_time, submit_end_time, vote_end_time, comp_end_time, name'
+      )
+      .eq('type', type)
+      .order('comp_end_time', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      // No competition exists, return completed status
+      return {
+        phase: 'completed',
+        timeRemaining: 0,
+        nextPhaseTime: null,
+        name: null,
+        id: null,
+      };
+    }
+
+    const now = new Date();
+    const joinEnd = new Date(data.join_end_time);
+    const submitEnd = new Date(data.submit_end_time);
+    const voteEnd = new Date(data.vote_end_time);
+    const compEnd = new Date(data.comp_end_time);
+
+    if (now < joinEnd) {
+      return {
+        phase: 'registration',
+        timeRemaining: Math.floor((joinEnd.getTime() - now.getTime()) / 1000),
+        nextPhaseTime: joinEnd,
+        name: data.name,
+        id: data.id,
+      };
+    } else if (now < submitEnd) {
+      return {
+        phase: 'competing',
+        timeRemaining: Math.floor((submitEnd.getTime() - now.getTime()) / 1000),
+        nextPhaseTime: submitEnd,
+        name: data.name,
+        id: data.id,
+      };
+    } else if (now < voteEnd) {
+      return {
+        phase: 'voting',
+        timeRemaining: Math.floor((voteEnd.getTime() - now.getTime()) / 1000),
+        nextPhaseTime: voteEnd,
+        name: data.name,
+        id: data.id,
+      };
+    } else if (now < compEnd) {
+      return {
+        phase: 'completed',
+        timeRemaining: Math.floor((compEnd.getTime() - now.getTime()) / 1000),
+        nextPhaseTime: compEnd,
+        name: data.name,
+        id: data.id,
+      };
+    } else {
+      // Competition has fully ended
+      return {
+        phase: 'completed',
+        timeRemaining: 0,
+        nextPhaseTime: null,
+        name: data.name,
+        id: data.id,
+      };
+    }
+  } catch (error) {
+    console.error('Error getting competition status:', error);
+    // Return completed status on error
+    return {
+      phase: 'completed',
+      timeRemaining: 0,
+      nextPhaseTime: null,
+      name: null,
+      id: null,
+    };
+  }
+};
+
+// Only create a new competition if none exists for the type that is not ended
+export const ensureNextCompetition = async (type: string): Promise<void> => {
+  const { data, error } = await supabase
+    .from('competitions')
+    .select('id, comp_end_time')
+    .eq('type', type)
+    .order('comp_end_time', { ascending: false })
+    .limit(1);
+
+  if (error) return;
+
+  const now = new Date();
+  if (!data || data.length === 0 || new Date(data[0].comp_end_time) < now) {
+    // No active or future competition, safe to create
+    await createNextCompetition(type);
+  }
+};
+
+// Usage: After a competition ends (phase === 'completed' && timeRemaining === 0), call ensureNextCompetition(type)
+
 export const createNextCompetition = async (type: string): Promise<boolean> => {
   try {
     const now = new Date();
@@ -143,106 +248,11 @@ export const createNextCompetition = async (type: string): Promise<boolean> => {
 
     if (error) throw error;
 
-    console.log(`Automatically created next ${type} competition: ${competitionName}`);
+    // Removed console.log to avoid spam
     return true;
   } catch (error) {
     console.error('Error automatically creating next competition:', error);
     return false;
-  }
-};
-
-export const getCompetitionStatus = async (type: string): Promise<CompetitionStatus> => {
-  try {
-    const { data, error } = await supabase
-      .from('competitions')
-      .select(
-        'id, comp_start_time, join_end_time, submit_end_time, vote_end_time, comp_end_time, name'
-      )
-      .eq('type', type)
-      .single();
-
-    if (error || !data) {
-      // No competition exists, try to create the next one automatically
-      const created = await createNextCompetition(type);
-      if (created) {
-        // Recursively call this function to get the status of the newly created competition
-        return await getCompetitionStatus(type);
-      }
-
-      // Return completed status if competition doesn't exist and couldn't be created
-      return {
-        phase: 'completed',
-        timeRemaining: 0,
-        nextPhaseTime: null,
-        name: null,
-        id: null,
-      };
-    }
-
-    const now = new Date();
-    const joinEnd = new Date(data.join_end_time);
-    const submitEnd = new Date(data.submit_end_time);
-    const voteEnd = new Date(data.vote_end_time);
-    const compEnd = new Date(data.comp_end_time);
-
-    if (now < joinEnd) {
-      return {
-        phase: 'registration',
-        timeRemaining: Math.floor((joinEnd.getTime() - now.getTime()) / 1000),
-        nextPhaseTime: joinEnd,
-        name: data.name,
-        id: data.id,
-      };
-    } else if (now < submitEnd) {
-      return {
-        phase: 'competing',
-        timeRemaining: Math.floor((submitEnd.getTime() - now.getTime()) / 1000),
-        nextPhaseTime: submitEnd,
-        name: data.name,
-        id: data.id,
-      };
-    } else if (now < voteEnd) {
-      return {
-        phase: 'voting',
-        timeRemaining: Math.floor((voteEnd.getTime() - now.getTime()) / 1000),
-        nextPhaseTime: voteEnd,
-        name: data.name,
-        id: data.id,
-      };
-    } else if (now < compEnd) {
-      return {
-        phase: 'completed',
-        timeRemaining: Math.floor((compEnd.getTime() - now.getTime()) / 1000),
-        nextPhaseTime: compEnd,
-        name: data.name,
-        id: data.id,
-      };
-    } else {
-      // Competition has fully ended, create the next one automatically
-      const created = await createNextCompetition(type);
-      if (created) {
-        // Recursively call this function to get the status of the newly created competition
-        return await getCompetitionStatus(type);
-      }
-
-      return {
-        phase: 'completed',
-        timeRemaining: 0,
-        nextPhaseTime: null,
-        name: data.name,
-        id: data.id,
-      };
-    }
-  } catch (error) {
-    console.error('Error getting competition status:', error);
-    // Return completed status on error
-    return {
-      phase: 'completed',
-      timeRemaining: 0,
-      nextPhaseTime: null,
-      name: null,
-      id: null,
-    };
   }
 };
 
