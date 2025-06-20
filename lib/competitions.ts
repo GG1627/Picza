@@ -43,6 +43,114 @@ export const getAllCompetitionsStatus = async (): Promise<AllCompetitionsStatus>
   }
 };
 
+// Add this function to initialize all competitions if none exist
+export const initializeCompetitions = async (): Promise<void> => {
+  try {
+    console.log('Checking if competitions need to be initialized...');
+
+    // Check if any competitions exist
+    const { data: existingCompetitions, error } = await supabase
+      .from('competitions')
+      .select('type')
+      .limit(1);
+
+    if (error) {
+      console.error('Error checking existing competitions:', error);
+      return;
+    }
+
+    // If no competitions exist, create them
+    if (!existingCompetitions || existingCompetitions.length === 0) {
+      console.log('No competitions found, initializing all competition types...');
+
+      await Promise.all([
+        createNextCompetition('morning'),
+        createNextCompetition('noon'),
+        createNextCompetition('night'),
+      ]);
+
+      console.log('All competitions initialized successfully');
+    } else {
+      console.log('Competitions already exist, skipping initialization');
+    }
+  } catch (error) {
+    console.error('Error initializing competitions:', error);
+  }
+};
+
+// Add this function to automatically create the next competition
+export const createNextCompetition = async (type: string): Promise<boolean> => {
+  try {
+    const now = new Date();
+    let compStartTime: Date;
+    let competitionName: string;
+
+    if (type === 'morning') {
+      compStartTime = new Date(now);
+      // Calculate next Monday at 8am
+      const daysUntilMonday = (8 - now.getDay()) % 7;
+      compStartTime.setDate(now.getDate() + daysUntilMonday);
+      compStartTime.setHours(8, 0, 0, 0);
+      // If we're already past 8am on Monday, schedule for next Monday
+      if (now.getDay() === 1 && now.getHours() >= 8) {
+        compStartTime.setDate(compStartTime.getDate() + 7);
+      }
+      competitionName = generateRandomMorningLunchCompetitionName();
+    } else if (type === 'noon') {
+      compStartTime = new Date(now);
+      // Calculate next Monday at 4pm
+      const daysUntilMonday = (8 - now.getDay()) % 7;
+      compStartTime.setDate(now.getDate() + daysUntilMonday);
+      compStartTime.setHours(16, 0, 0, 0);
+      // If we're already past 4pm on Monday, schedule for next Monday
+      if (now.getDay() === 1 && now.getHours() >= 16) {
+        compStartTime.setDate(compStartTime.getDate() + 7);
+      }
+      competitionName = generateRandomDinnerCompetitionName();
+    } else if (type === 'night') {
+      compStartTime = new Date(now);
+      // Calculate next Monday at 10pm
+      const daysUntilMonday = (8 - now.getDay()) % 7;
+      compStartTime.setDate(now.getDate() + daysUntilMonday);
+      compStartTime.setHours(22, 0, 0, 0);
+      // If we're already past 10pm on Monday, schedule for next Monday
+      if (now.getDay() === 1 && now.getHours() >= 22) {
+        compStartTime.setDate(compStartTime.getDate() + 7);
+      }
+      competitionName = generateRandomLateNightCompetitionName();
+    } else {
+      throw new Error('Invalid competition type');
+    }
+
+    const joinEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60); // 1 hour from start
+    const submitEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 2); // 2 hours from start
+    const voteEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 3); // 3 hours from start
+    const compEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 4); // 4 hours from start
+
+    const { data, error } = await supabase
+      .from('competitions')
+      .insert({
+        type: type,
+        name: competitionName,
+        comp_start_time: compStartTime.toISOString(),
+        join_end_time: joinEndTime.toISOString(),
+        submit_end_time: submitEndTime.toISOString(),
+        vote_end_time: voteEndTime.toISOString(),
+        comp_end_time: compEndTime.toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log(`Automatically created next ${type} competition: ${competitionName}`);
+    return true;
+  } catch (error) {
+    console.error('Error automatically creating next competition:', error);
+    return false;
+  }
+};
+
 export const getCompetitionStatus = async (type: string): Promise<CompetitionStatus> => {
   try {
     const { data, error } = await supabase
@@ -54,7 +162,14 @@ export const getCompetitionStatus = async (type: string): Promise<CompetitionSta
       .single();
 
     if (error || !data) {
-      // Return completed status if competition doesn't exist
+      // No competition exists, try to create the next one automatically
+      const created = await createNextCompetition(type);
+      if (created) {
+        // Recursively call this function to get the status of the newly created competition
+        return await getCompetitionStatus(type);
+      }
+
+      // Return completed status if competition doesn't exist and couldn't be created
       return {
         phase: 'completed',
         timeRemaining: 0,
@@ -103,6 +218,13 @@ export const getCompetitionStatus = async (type: string): Promise<CompetitionSta
         id: data.id,
       };
     } else {
+      // Competition has fully ended, create the next one automatically
+      const created = await createNextCompetition(type);
+      if (created) {
+        // Recursively call this function to get the status of the newly created competition
+        return await getCompetitionStatus(type);
+      }
+
       return {
         phase: 'completed',
         timeRemaining: 0,
@@ -124,10 +246,10 @@ export const getCompetitionStatus = async (type: string): Promise<CompetitionSta
   }
 };
 
-export const createCompetition = async (type: string, user: User | null) => {
+export const createCompetition = async (type: string, user: User | null = null) => {
   if (!user) {
-    Alert.alert('Please login to create a competition');
-    return;
+    // If no user is provided, this is an automatic creation, so we don't need to show an alert
+    console.log(`Creating ${type} competition automatically`);
   }
 
   try {
@@ -137,43 +259,58 @@ export const createCompetition = async (type: string, user: User | null) => {
 
     if (type === 'morning') {
       compStartTime = new Date(now);
-      // set stat time to Mondays at 8am
-      compStartTime.setDate(now.getDate() + ((1 + 7 - now.getDay()) % 7));
+      // Calculate next Monday at 8am
+      const daysUntilMonday = (8 - now.getDay()) % 7;
+      compStartTime.setDate(now.getDate() + daysUntilMonday);
       compStartTime.setHours(8, 0, 0, 0);
+      // If we're already past 8am on Monday, schedule for next Monday
+      if (now.getDay() === 1 && now.getHours() >= 8) {
+        compStartTime.setDate(compStartTime.getDate() + 7);
+      }
       competitionName = generateRandomMorningLunchCompetitionName();
     } else if (type === 'noon') {
       compStartTime = new Date(now);
-      // set stat time to Mondays at 4pm
-      compStartTime.setDate(now.getDate() + ((1 + 7 - now.getDay()) % 7));
+      // Calculate next Monday at 4pm
+      const daysUntilMonday = (8 - now.getDay()) % 7;
+      compStartTime.setDate(now.getDate() + daysUntilMonday);
       compStartTime.setHours(16, 0, 0, 0);
+      // If we're already past 4pm on Monday, schedule for next Monday
+      if (now.getDay() === 1 && now.getHours() >= 16) {
+        compStartTime.setDate(compStartTime.getDate() + 7);
+      }
       competitionName = generateRandomDinnerCompetitionName();
     } else if (type === 'night') {
       compStartTime = new Date(now);
-      // set stat time to Mondays at 10pm
-      compStartTime.setDate(now.getDate() + ((1 + 7 - now.getDay()) % 7));
+      // Calculate next Monday at 10pm
+      const daysUntilMonday = (8 - now.getDay()) % 7;
+      compStartTime.setDate(now.getDate() + daysUntilMonday);
       compStartTime.setHours(22, 0, 0, 0);
+      // If we're already past 10pm on Monday, schedule for next Monday
+      if (now.getDay() === 1 && now.getHours() >= 22) {
+        compStartTime.setDate(compStartTime.getDate() + 7);
+      }
       competitionName = generateRandomLateNightCompetitionName();
     } else {
       throw new Error('Invalid competition type');
     }
 
-    const joinEndTime = new Date(now.getTime() + 1000 * 60 * 0.3); // 2 minutes from now
-    const submitEndTime = new Date(now.getTime() + 1000 * 60 * 0.7); // 4 minutes from now
-    const voteEndTime = new Date(now.getTime() + 1000 * 60 * 1.2); // 6 minutes from now
-    const compEndTime = new Date(now.getTime() + 1000 * 60 * 300); // 1 hour from now
+    // const joinEndTime = new Date(now.getTime() + 1000 * 60 * 0.3); // 2 minutes from now
+    // const submitEndTime = new Date(now.getTime() + 1000 * 60 * 0.7); // 4 minutes from now
+    // const voteEndTime = new Date(now.getTime() + 1000 * 60 * 1.2); // 6 minutes from now
+    // const compEndTime = new Date(now.getTime() + 1000 * 60 * 300); // 1 hour from now
 
-    // const joinEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60); // 1 hour from now
-    // const submitEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 2); // 2 hours from now
-    // const voteEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 3); // 3 hours from now
-    // const compEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 4); // 4 hours from now
+    const joinEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60); // 1 hour from start
+    const submitEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 2); // 2 hours from start
+    const voteEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 3); // 3 hours from start
+    const compEndTime = new Date(compStartTime.getTime() + 1000 * 60 * 60 * 4); // 4 hours from start
 
     const { data, error } = await supabase
       .from('competitions')
       .insert({
         type: type,
         name: competitionName,
-        comp_start_time: now.toISOString(),
-        // comp_start_time: compStartTime.toISOString(),
+        // comp_start_time: now.toISOString(),
+        comp_start_time: compStartTime.toISOString(),
         join_end_time: joinEndTime.toISOString(),
         submit_end_time: submitEndTime.toISOString(),
         vote_end_time: voteEndTime.toISOString(),
@@ -184,11 +321,15 @@ export const createCompetition = async (type: string, user: User | null) => {
 
     if (error) throw error;
 
-    Alert.alert('Success', `${type} competition created successfully!`);
+    if (user) {
+      Alert.alert('Success', `${type} competition created successfully!`);
+    }
     return true;
   } catch (error) {
     console.error('Error creating competition:', error);
-    Alert.alert('Error', 'Failed to create competition');
+    if (user) {
+      Alert.alert('Error', 'Failed to create competition');
+    }
     return false;
   }
 };

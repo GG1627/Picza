@@ -16,6 +16,7 @@ import {
   joinCompetition,
   isUserParticipant,
   getParticipantCount,
+  initializeCompetitions,
 } from '~/lib/competitions';
 import CompModal from '~/components/CompModal';
 import setTime from '../sharedTime';
@@ -199,6 +200,9 @@ export default function CompetitionsScreen() {
   };
 
   useEffect(() => {
+    // Initialize competitions if none exist
+    initializeCompetitions();
+
     // Initial fetch
     fetchStatus();
 

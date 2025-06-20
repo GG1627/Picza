@@ -425,12 +425,11 @@ export default function FeedScreen() {
         <View className="flex-1">
           {/* Header */}
           <View className="mb-[-0.5rem] mt-[-0.5rem] px-4">
-            <Text
-              className={`ml-0.5 font-pattaya text-[2.5rem] ${
-                colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-              }`}>
+            <GradientText
+              colors={['#ff9f6b', '#ff9f6b']}
+              className="ml-0.5 font-pattaya text-[2.5rem]">
               Picza
-            </Text>
+            </GradientText>
           </View>
 
           {/* Main Content */}
