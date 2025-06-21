@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "picza",
+    "name": "Picza",
     "slug": "picza",
     "version": "1.0.0",
     "scheme": "exp",
@@ -17,11 +17,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,

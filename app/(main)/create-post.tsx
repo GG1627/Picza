@@ -11,6 +11,7 @@ import {
   ScrollView,
   Keyboard,
   Animated,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,6 +20,7 @@ import { useColorScheme } from '../../lib/useColorScheme';
 import { useCreatePost } from '../../lib/hooks/useQueries';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
+import { validateFoodImage } from '../../lib/azureVision';
 
 export default function CreatePostScreen() {
   const router = useRouter();
@@ -27,6 +29,11 @@ export default function CreatePostScreen() {
   const [caption, setCaption] = useState('');
   const [ingredients, setIngredients] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isValidatingFood, setIsValidatingFood] = useState(false);
+  const [foodValidationResult, setFoodValidationResult] = useState<{
+    isValid: boolean;
+    message: string;
+  } | null>(null);
   const createPost = useCreatePost();
   const { colorScheme } = useColorScheme();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -74,6 +81,7 @@ export default function CreatePostScreen() {
     setCaption('');
     setIngredients('');
     setIsSuccess(false);
+    setFoodValidationResult(null);
   };
 
   const pickImage = async () => {
@@ -85,11 +93,69 @@ export default function CreatePostScreen() {
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      const selectedImage = result.assets[0].uri;
+      setImage(selectedImage);
+
+      // Reset previous validation result
+      setFoodValidationResult(null);
+
+      // Validate if the image contains food
+      setIsValidatingFood(true);
+      try {
+        const validation = await validateFoodImage(selectedImage);
+        setFoodValidationResult(validation);
+
+        if (!validation.isValid) {
+          Alert.alert(
+            'No Food Detected',
+            'Please select an image that contains food. Only food images are allowed.',
+            [
+              {
+                text: 'OK',
+                style: 'default',
+                onPress: () => setImage(null),
+              },
+            ]
+          );
+        }
+      } catch (error) {
+        console.error('Error validating food image:', error);
+        setFoodValidationResult({
+          isValid: false,
+          message: 'Unable to validate image. Please try again with a different image.',
+        });
+        Alert.alert(
+          'Validation Error',
+          'Unable to validate your image. Please try again with a different food image.',
+          [
+            {
+              text: 'OK',
+              style: 'default',
+              onPress: () => setImage(null),
+            },
+          ]
+        );
+      } finally {
+        setIsValidatingFood(false);
+      }
     }
   };
 
   const handleCreatePost = async () => {
+    if (!image) return;
+
+    // Only allow posting if food is detected
+    if (!foodValidationResult || !foodValidationResult.isValid) {
+      Alert.alert('No Food Detected', 'Please select an image that contains food before posting.', [
+        { text: 'OK', style: 'default' },
+      ]);
+      return;
+    }
+
+    await createPostAction();
+  };
+
+  const createPostAction = async () => {
     if (!image) return;
 
     try {
@@ -191,15 +257,13 @@ export default function CreatePostScreen() {
         </Text>
         <TouchableOpacity
           onPress={handleCreatePost}
-          disabled={!image || createPost.isPending}
+          disabled={!image || createPost.isPending || !foodValidationResult?.isValid}
           className={`rounded-2xl px-6 py-2 ${
-            !image || createPost.isPending
+            !image || createPost.isPending || !foodValidationResult?.isValid
               ? colorScheme === 'dark'
                 ? 'bg-[#282828]'
                 : 'bg-[#f9f9f9]'
-              : colorScheme === 'dark'
-                ? 'bg-[#0f9900]'
-                : 'bg-[#0f9900]'
+              : 'bg-green-500'
           }`}>
           {createPost.isPending ? (
             <ActivityIndicator color="white" />
@@ -208,7 +272,7 @@ export default function CreatePostScreen() {
           ) : (
             <Text
               className={`font-medium ${
-                !image || createPost.isPending
+                !image || createPost.isPending || !foodValidationResult?.isValid
                   ? colorScheme === 'dark'
                     ? 'text-[#9ca3af]'
                     : 'text-[#877B66]'
@@ -236,6 +300,31 @@ export default function CreatePostScreen() {
             {image ? (
               <View className="mb-4 aspect-square w-full overflow-hidden rounded-2xl">
                 <Image source={{ uri: image }} className="h-full w-full" resizeMode="cover" />
+
+                {/* Food validation status */}
+                {isValidatingFood && (
+                  <View className="absolute inset-0 items-center justify-center bg-black/50">
+                    <View className="rounded-lg bg-white/90 p-4">
+                      <ActivityIndicator size="large" color="#0f9900" />
+                      <Text className="mt-2 text-center font-medium text-gray-800">
+                        Checking if image contains food...
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {foodValidationResult && !isValidatingFood && (
+                  <View className="absolute bottom-2 left-2 right-2">
+                    <View
+                      className={`rounded-lg p-2 ${
+                        foodValidationResult.isValid ? 'bg-green-500/90' : 'bg-red-500/90'
+                      }`}>
+                      <Text className="text-center text-sm font-medium text-white">
+                        {foodValidationResult.isValid ? '✅ Food detected!' : '❌ No food detected'}
+                      </Text>
+                    </View>
+                  </View>
+                )}
               </View>
             ) : (
               <TouchableOpacity
@@ -257,7 +346,7 @@ export default function CreatePostScreen() {
                   className={`mt-2 text-base font-medium ${
                     colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                   }`}>
-                  Select an image
+                  Select a food image
                   <Text className="text-red-500">*</Text>
                 </Text>
                 <Text

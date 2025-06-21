@@ -11,6 +11,8 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@azure/cognitiveservices-computervision": "^8.2.0",
+    "@azure/ms-rest-azure-js": "^2.1.0",
     "@expo/config-plugins": "~10.0.0",
     "@expo/react-native-action-sheet": "^4.1.1",
     "@expo/vector-icons": "^14.0.0",
