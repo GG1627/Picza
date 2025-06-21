@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,12 @@ import { useRouter } from 'expo-router';
 import { getCompetitionTag } from '../lib/competitionTags';
 import GradientText from './GradientText';
 import { Animated } from 'react-native';
+import { useSavedPosts } from '../lib/hooks/useSavedPosts';
+import { useAuth } from '../lib/auth';
+import { supabase } from '../lib/supabase';
+
+// Cache for saved posts to avoid repeated database calls
+const savedPostsCache = new Map<string, boolean>();
 
 interface PostProps {
   post: {
@@ -70,6 +76,54 @@ export default function Post({
 }: PostProps) {
   const { colorScheme } = useColorScheme();
   const router = useRouter();
+  const { user } = useAuth();
+  const { savePost, unsavePost, isSaving, isUnsaving } = useSavedPosts(user?.id || '');
+  const [isSaved, setIsSaved] = useState(false);
+
+  // Check if post is saved on mount
+  useEffect(() => {
+    const checkSavedStatus = async () => {
+      if (user?.id) {
+        const cacheKey = `${user.id}-${post.id}`;
+
+        // Check cache first
+        if (savedPostsCache.has(cacheKey)) {
+          setIsSaved(savedPostsCache.get(cacheKey)!);
+          return;
+        }
+
+        // If not in cache, check database
+        const { data } = await supabase
+          .from('saved_posts')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('post_id', post.id)
+          .single();
+
+        const saved = !!data;
+        setIsSaved(saved);
+        savedPostsCache.set(cacheKey, saved);
+      }
+    };
+    checkSavedStatus();
+  }, [post.id, user?.id]);
+
+  const handleSaveToggle = () => {
+    if (!user?.id) return;
+
+    const cacheKey = `${user.id}-${post.id}`;
+
+    // Optimistic update - immediately update UI and cache
+    if (isSaved) {
+      setIsSaved(false);
+      savedPostsCache.set(cacheKey, false);
+      unsavePost(post.id);
+    } else {
+      setIsSaved(true);
+      savedPostsCache.set(cacheKey, true);
+      savePost(post.id);
+    }
+  };
 
   const getTimeElapsed = (createdAt: string) => {
     const now = new Date();
@@ -311,9 +365,18 @@ export default function Post({
                   <Text className="text-sm font-semibold text-[#2DFE54]">Ingredients</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity>
-                <Ionicons name="bookmark-outline" size={28} color="white" />
-              </TouchableOpacity>
+              <View className="mr-[-0.2rem] flex-row items-center">
+                <TouchableOpacity
+                  onPress={handleSaveToggle}
+                  disabled={isSaving || isUnsaving}
+                  className="ml-2">
+                  <Ionicons
+                    name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                    size={28}
+                    color={isSaved ? '#3B82F6' : 'white'}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 

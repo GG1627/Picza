@@ -117,9 +117,26 @@ export default function CompetitionsScreen() {
         // Get the username for the winning submission
         const { data: profile } = await supabase
           .from('profiles')
-          .select('username')
+          .select('username, competitions_won')
           .eq('id', winningSubmission.user_id)
           .single();
+
+        // Increment the competitions_won count by 1 for the winner
+        if (profile) {
+          const currentWins = profile.competitions_won || 0;
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ competitions_won: currentWins + 1 })
+            .eq('id', winningSubmission.user_id);
+
+          if (updateError) {
+            console.error('Error updating winner competitions_won:', updateError);
+          } else {
+            console.log(
+              `Updated competitions_won for winner ${profile.username}: ${currentWins} -> ${currentWins + 1}`
+            );
+          }
+        }
 
         const winnerData = {
           username: profile?.username || 'Unknown',

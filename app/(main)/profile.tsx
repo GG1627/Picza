@@ -26,6 +26,8 @@ import { uploadToCloudinary } from '../../lib/cloudinary';
 import { getCompetitionTag } from '../../lib/competitionTags';
 import MeshGradient from '../../components/MeshGradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../../lib/auth';
+import { useSavedPosts } from '../../lib/hooks/useSavedPosts';
 
 type Post = {
   id: string;
@@ -71,6 +73,8 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<'posts' | 'saved'>('posts');
   const router = useRouter();
   const { colorScheme, toggleColorScheme, isDarkColorScheme } = useColorScheme();
+  const { user } = useAuth();
+  const { savedPosts, savedPostsLoading } = useSavedPosts(user?.id || '');
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
   const translateY = React.useRef(new Animated.Value(0)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
@@ -833,14 +837,53 @@ export default function ProfileScreen() {
 
                       {/* Saved Tab Content */}
                       {activeTab === 'saved' && (
-                        <View className="items-center justify-center py-8">
-                          <Text
-                            className={`text-center text-base ${
-                              colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                            }`}>
-                            Saved posts feature coming soon!
-                          </Text>
-                        </View>
+                        <>
+                          {savedPostsLoading ? (
+                            <View className="w-full items-center py-4">
+                              <ActivityIndicator size="small" color="#f77f5e" />
+                            </View>
+                          ) : savedPosts.length > 0 ? (
+                            <View className="-mx-6 flex-row flex-wrap">
+                              {savedPosts.map((savedPost, index) => (
+                                <View key={savedPost.id} className="aspect-square w-1/3">
+                                  <View
+                                    className={`aspect-square border-b border-r ${
+                                      index % 3 !== 2 ? 'border-r' : ''
+                                    } ${colorScheme === 'dark' ? 'border-[#121113]' : 'border-[#E8E9EB]'}`}>
+                                    <Image
+                                      source={{
+                                        uri: savedPost.posts.image_url,
+                                      }}
+                                      className="h-full w-full"
+                                      resizeMode="cover"
+                                    />
+                                    <View className="absolute inset-0 bg-black/0 hover:bg-black/20" />
+                                    <View className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2" />
+                                    <Pressable
+                                      onPress={() => {
+                                        console.log('Saved post clicked:', savedPost.posts.id);
+                                        console.log('Attempting to navigate to post detail...');
+                                        router.push(
+                                          `/post-detail?postId=${savedPost.posts.id}&userId=${savedPost.posts.profiles?.id}`
+                                        );
+                                      }}
+                                      className="absolute inset-0"
+                                    />
+                                  </View>
+                                </View>
+                              ))}
+                            </View>
+                          ) : (
+                            <View className="items-center justify-center py-8">
+                              <Text
+                                className={`text-center text-base ${
+                                  colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                                }`}>
+                                No saved posts yet. Save posts you love to see them here!
+                              </Text>
+                            </View>
+                          )}
+                        </>
                       )}
                     </View>
                   )}

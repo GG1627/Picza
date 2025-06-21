@@ -82,8 +82,15 @@ export const useFriends = (userId: string) => {
       );
 
       const validFriends = friendsWithProfiles.filter(Boolean);
-      console.log('Friends with profiles:', validFriends);
-      return validFriends as Friend[];
+
+      // Deduplicate friends based on profile ID to prevent duplicates
+      const uniqueFriends = validFriends.filter(
+        (friend, index, self) =>
+          index === self.findIndex((f) => f.profiles.id === friend.profiles.id)
+      );
+
+      console.log('Friends with profiles (deduplicated):', uniqueFriends);
+      return uniqueFriends as Friend[];
     },
     enabled: !!userId,
   });
@@ -247,20 +254,6 @@ export const useFriends = (userId: string) => {
       if (updateError) {
         console.error('Error updating request status:', updateError);
         throw updateError;
-      }
-
-      // Create the reciprocal friendship (the other direction)
-      const { error: insertError } = await supabase.from('friends').insert([
-        {
-          user_id: userId,
-          friend_id: request.user_id,
-          status: 'accepted',
-        },
-      ]);
-
-      if (insertError) {
-        console.error('Error creating reciprocal friendship:', insertError);
-        // Don't throw here as the main request was already accepted
       }
 
       console.log('Friend request accepted successfully');

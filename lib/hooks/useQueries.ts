@@ -13,9 +13,14 @@ type Post = {
   likes_count: number;
   dish_name: string | null;
   ingredients: string | null;
+  comments_count?: number;
   profiles: {
+    id: string;
     username: string;
     avatar_url: string | null;
+    competitions_won: number | null;
+    custom_tag: string | null;
+    custom_tag_color: string | null;
     schools: {
       name: string;
     } | null;
@@ -38,9 +43,14 @@ type DatabasePost = {
   likes_count: number;
   dish_name: string | null;
   ingredients: string | null;
+  comments_count?: number;
   profiles: {
+    id: string;
     username: string;
     avatar_url: string | null;
+    competitions_won: number | null;
+    custom_tag: string | null;
+    custom_tag_color: string | null;
     schools: {
       name: string;
     } | null;
@@ -65,7 +75,101 @@ export function usePosts(
   return useQuery({
     queryKey: ['posts', schoolId, filter, page, pageSize, sortBy],
     queryFn: async () => {
-      let query = supabase.from('posts').select(`
+      let query;
+
+      // Apply filters
+      if (filter === 'mySchool' && schoolId) {
+        // For my school filter, use a more explicit query
+        query = supabase
+          .from('posts')
+          .select(
+            `
+            *,
+            profiles!inner (
+              id,
+              username,
+              avatar_url,
+              competitions_won,
+              custom_tag,
+              custom_tag_color,
+              schools (
+                name
+              )
+            ),
+            comments:comments(count)
+          `
+          )
+          .eq('profiles.school_id', schoolId);
+      } else if (filter === 'otherSchools' && schoolId) {
+        // Show posts from all schools except mine
+        query = supabase
+          .from('posts')
+          .select(
+            `
+            *,
+            profiles!inner (
+              id,
+              username,
+              avatar_url,
+              competitions_won,
+              custom_tag,
+              custom_tag_color,
+              schools (
+                name
+              )
+            ),
+            comments:comments(count)
+          `
+          )
+          .neq('profiles.school_id', schoolId);
+      } else if (filter === 'friends') {
+        // Get the current user's friends first
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        // Get accepted friend relationships
+        const { data: friendRelationships } = await supabase
+          .from('friends')
+          .select('user_id, friend_id')
+          .or(
+            `and(user_id.eq.${user.id},status.eq.accepted),and(friend_id.eq.${user.id},status.eq.accepted)`
+          );
+
+        if (!friendRelationships || friendRelationships.length === 0) {
+          return []; // No friends, return empty array
+        }
+
+        // Extract friend IDs
+        const friendIds = friendRelationships.map((relationship) =>
+          relationship.user_id === user.id ? relationship.friend_id : relationship.user_id
+        );
+
+        // Show posts only from friends
+        query = supabase
+          .from('posts')
+          .select(
+            `
+            *,
+            profiles!inner (
+              id,
+              username,
+              avatar_url,
+              competitions_won,
+              custom_tag,
+              custom_tag_color,
+              schools (
+                name
+              )
+            ),
+            comments:comments(count)
+          `
+          )
+          .in('user_id', friendIds);
+      } else {
+        // 'all' filter - default query
+        query = supabase.from('posts').select(`
           *,
           profiles (
             id,
@@ -80,18 +184,7 @@ export function usePosts(
           ),
           comments:comments(count)
         `);
-
-      // Apply filters
-      if (filter === 'mySchool' && schoolId) {
-        query = query.eq('profiles.schools.id', schoolId);
-      } else if (filter === 'otherSchools' && schoolId) {
-        // Show posts from all schools except mine
-        query = query.neq('profiles.schools.id', schoolId);
-      } else if (filter === 'friends') {
-        // For now, return empty array as friends feature is not implemented
-        return [];
       }
-      // 'all' filter doesn't need any additional conditions
 
       // For trending, we need to fetch ALL posts first, then sort, then paginate
       if (sortBy === 'trending') {
