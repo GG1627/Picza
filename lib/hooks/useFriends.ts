@@ -346,15 +346,56 @@ export const useFriends = (userId: string) => {
   // Cancel sent request
   const cancelRequestMutation = useMutation({
     mutationFn: async (requestId: string) => {
-      const { error } = await supabase.from('friends').delete().eq('id', requestId);
+      console.log('Cancelling friend request:', requestId);
 
-      if (error) throw error;
+      // First get the request details
+      const { data: request, error: requestError } = await supabase
+        .from('friends')
+        .select('*')
+        .eq('id', requestId)
+        .single();
+
+      if (requestError) {
+        console.error('Error fetching request details:', requestError);
+        throw requestError;
+      }
+
+      console.log('Request to cancel:', request);
+
+      // Try using a database function to cancel the request
+      const { data, error } = await supabase.rpc('cancel_friend_request', {
+        request_id: requestId,
+        current_user_id: userId,
+      });
+
+      if (error) {
+        console.error('Function call failed, trying direct deletion:', error);
+
+        // Fallback to direct deletion
+        const { data: deleteData, error: deleteError } = await supabase
+          .from('friends')
+          .delete()
+          .eq('id', requestId)
+          .select();
+
+        if (deleteError) {
+          console.error('Error cancelling friend request:', deleteError);
+          throw deleteError;
+        }
+
+        console.log('Cancel request result (direct):', deleteData);
+      } else {
+        console.log('Cancel request result (function):', data);
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['friends-sent', userId] });
+      console.log('Invalidating queries after cancelling request');
+      queryClient.removeQueries({ queryKey: ['friends-sent', userId] });
+      queryClient.refetchQueries({ queryKey: ['friends-sent', userId] });
       Alert.alert('Success', 'Friend request cancelled.');
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Cancel request mutation error:', error);
       Alert.alert('Error', 'Failed to cancel friend request. Please try again.');
     },
   });

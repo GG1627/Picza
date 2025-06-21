@@ -90,8 +90,6 @@ type Post = {
     competitions_won: number | null;
     custom_tag: string | null;
     custom_tag_color: string | null;
-    custom_tag_bg_color: string | null;
-    custom_tag_border_color: string | null;
     schools: {
       name: string;
     } | null;

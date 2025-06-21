@@ -8,6 +8,7 @@ import {
   Animated,
   RefreshControl,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
@@ -41,8 +42,9 @@ type Profile = {
   avatar_url: string | null;
   bio: string | null;
   school_id: string | null;
-  album_name: string | null;
   competitions_won: number | null;
+  custom_tag: string | null;
+  custom_tag_color: string | null;
 };
 
 export default function UserProfileScreen() {
@@ -104,7 +106,7 @@ export default function UserProfileScreen() {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          'id, username, full_name, created_at, avatar_url, bio, school_id, album_name, competitions_won'
+          'id, username, full_name, created_at, avatar_url, bio, school_id, competitions_won, custom_tag, custom_tag_color'
         )
         .eq('id', userId)
         .single();
@@ -358,19 +360,48 @@ export default function UserProfileScreen() {
                       style={{
                         backgroundColor: getCompetitionTag(
                           profile.competitions_won,
-                          profile.username
+                          profile.username,
+                          {
+                            tag: profile.custom_tag,
+                            color: profile.custom_tag_color,
+                          },
+                          colorScheme
                         ).bgColor,
-                        borderColor: getCompetitionTag(profile.competitions_won, profile.username)
-                          .borderColor,
+                        borderColor: getCompetitionTag(
+                          profile.competitions_won,
+                          profile.username,
+                          {
+                            tag: profile.custom_tag,
+                            color: profile.custom_tag_color,
+                          },
+                          colorScheme
+                        ).borderColor,
                       }}
                       className="rounded-xl border-2 px-4 py-1">
                       <Text
                         style={{
-                          color: getCompetitionTag(profile.competitions_won, profile.username)
-                            .color,
+                          color: getCompetitionTag(
+                            profile.competitions_won,
+                            profile.username,
+                            {
+                              tag: profile.custom_tag,
+                              color: profile.custom_tag_color,
+                            },
+                            colorScheme
+                          ).color,
                         }}
                         className="text-center text-sm font-semibold">
-                        {getCompetitionTag(profile.competitions_won, profile.username).tag}
+                        {
+                          getCompetitionTag(
+                            profile.competitions_won,
+                            profile.username,
+                            {
+                              tag: profile.custom_tag,
+                              color: profile.custom_tag_color,
+                            },
+                            colorScheme
+                          ).tag
+                        }
                       </Text>
                     </View>
                   </View>
@@ -452,50 +483,35 @@ export default function UserProfileScreen() {
             </View>
 
             <View className="mt-8">
-              {/* Posts Grid */}
+              {/* Posts Content */}
               {allPosts.length > 0 ? (
-                <View className="space-y-4">
-                  <View className="flex-row items-center justify-between">
-                    <Text
-                      className={`text-lg font-semibold ${
-                        colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                      }`}>
-                      {profile?.album_name || `${profile?.full_name.split(' ')[0]}'s Food Album`}
-                    </Text>
-                  </View>
-                  <View className="-mx-6 flex-row flex-wrap">
-                    {allPosts.map((post, index) => (
-                      <View key={post.id} className="aspect-square w-1/3">
-                        <View
-                          className={`aspect-square border-b border-r ${
-                            index % 3 !== 2 ? 'border-r' : ''
-                          } ${colorScheme === 'dark' ? 'border-[#121113]' : 'border-[#e0e0e0]'}`}>
-                          <Image
-                            source={{
-                              uri: post.image_url,
-                            }}
-                            className="h-full w-full"
-                            resizeMode="cover"
-                          />
-                          <View className="absolute inset-0 bg-black/0 hover:bg-black/20" />
-                          <View className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2" />
-                          <Pressable
-                            onPress={() => {
-                              console.log('Post clicked:', post.id);
-                              console.log('Attempting to navigate to post detail...');
-                              router.push(`/post-detail?postId=${post.id}&userId=${profile?.id}`);
-                            }}
-                            className="absolute inset-0"
-                          />
-                        </View>
+                <View className="-mx-6 flex-row flex-wrap">
+                  {allPosts.map((post, index) => (
+                    <View key={post.id} className="aspect-square w-1/3">
+                      <View
+                        className={`aspect-square border-b border-r ${
+                          index % 3 !== 2 ? 'border-r' : ''
+                        } ${colorScheme === 'dark' ? 'border-[#121113]' : 'border-[#e0e0e0]'}`}>
+                        <Image
+                          source={{
+                            uri: post.image_url,
+                          }}
+                          className="h-full w-full"
+                          resizeMode="cover"
+                        />
+                        <View className="absolute inset-0 bg-black/0 hover:bg-black/20" />
+                        <View className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2" />
+                        <Pressable
+                          onPress={() => {
+                            console.log('Post clicked:', post.id);
+                            console.log('Attempting to navigate to post detail...');
+                            router.push(`/post-detail?postId=${post.id}&userId=${profile?.id}`);
+                          }}
+                          className="absolute inset-0"
+                        />
                       </View>
-                    ))}
-                  </View>
-                  {loading && page > 1 && (
-                    <View className="w-full items-center py-4">
-                      <ActivityIndicator size="small" color="#5070fd" />
                     </View>
-                  )}
+                  ))}
                 </View>
               ) : (
                 <View className="items-center justify-center py-8">
@@ -505,6 +521,11 @@ export default function UserProfileScreen() {
                     }`}>
                     No posts yet. Start sharing your food adventures!
                   </Text>
+                </View>
+              )}
+              {loading && page > 1 && (
+                <View className="w-full items-center py-4">
+                  <ActivityIndicator size="small" color="#5070fd" />
                 </View>
               )}
             </View>

@@ -325,8 +325,8 @@ export default function FriendsScreen() {
               colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.5)',
             backgroundColor: isActive
               ? colorScheme === 'dark'
-                ? 'rgba(247, 127, 94, 0.8)' // Same orange as light mode for consistency
-                : 'rgba(247, 127, 94, 0.8)' // Better orange for light mode
+                ? 'rgba(59, 130, 246, 0.8)' // Nice blue for dark mode
+                : 'rgba(59, 130, 246, 0.8)' // Same nice blue for light mode
               : 'transparent',
           }}>
           <Text

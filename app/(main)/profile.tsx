@@ -10,6 +10,7 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
@@ -23,8 +24,6 @@ import { useColorScheme } from '../../lib/useColorScheme';
 import React from 'react';
 import { uploadToCloudinary } from '../../lib/cloudinary';
 import { getCompetitionTag } from '../../lib/competitionTags';
-// @ts-ignore
-import tinycolor from 'tinycolor2';
 import MeshGradient from '../../components/MeshGradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -51,12 +50,9 @@ type Profile = {
   bio: string | null;
   school_id: string | null;
   last_username_change: string | null;
-  album_name: string | null;
   competitions_won: number | null;
   custom_tag: string | null;
   custom_tag_color: string | null;
-  custom_tag_bg_color: string | null;
-  custom_tag_border_color: string | null;
 };
 
 export default function ProfileScreen() {
@@ -67,13 +63,12 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedUsername, setEditedUsername] = useState('');
   const [editedBio, setEditedBio] = useState('');
-  const [editedAlbumName, setEditedAlbumName] = useState('');
-  const [isEditingAlbumName, setIsEditingAlbumName] = useState(false);
   const [newImage, setNewImage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [usernameChangeError, setUsernameChangeError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'posts' | 'saved'>('posts');
   const router = useRouter();
   const { colorScheme, toggleColorScheme, isDarkColorScheme } = useColorScheme();
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
@@ -96,7 +91,6 @@ export default function ProfileScreen() {
     if (profile) {
       setEditedUsername(profile.username);
       setEditedBio(profile.bio || '');
-      setEditedAlbumName(profile.album_name || `${profile.full_name.split(' ')[0]}'s Food Album`);
     }
   }, [profile]);
 
@@ -134,14 +128,13 @@ export default function ProfileScreen() {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          'id, username, full_name, created_at, avatar_url, bio, school_id, last_username_change, album_name, competitions_won, custom_tag, custom_tag_color, custom_tag_bg_color, custom_tag_border_color'
+          'id, username, full_name, created_at, avatar_url, bio, school_id, last_username_change, competitions_won, custom_tag, custom_tag_color'
         )
         .eq('id', user.id)
         .single();
 
       if (error) throw error;
       setProfile(data);
-      setEditedAlbumName(data.album_name || `${data.full_name.split(' ')[0]}'s Food Album`);
 
       if (data.school_id) {
         const { data: schoolData, error: schoolError } = await supabase
@@ -437,48 +430,54 @@ export default function ProfileScreen() {
     }
   }, []);
 
-  const handleSaveAlbumName = async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error('No user found');
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({ album_name: editedAlbumName })
-        .eq('id', user.id);
-
-      if (error) throw error;
-      setIsEditingAlbumName(false);
-      await fetchProfile();
-    } catch (error) {
-      console.error('Error updating album name:', error);
-      alert('Error updating album name. Please try again.');
-    }
-  };
-
   const tag = profile
-    ? getCompetitionTag(profile.competitions_won, profile.username, {
-        tag: profile.custom_tag,
-        color: profile.custom_tag_color,
-        bgColor: profile.custom_tag_bg_color,
-        borderColor: profile.custom_tag_border_color,
-      })
+    ? getCompetitionTag(
+        profile.competitions_won,
+        profile.username,
+        {
+          tag: profile.custom_tag,
+          color: profile.custom_tag_color,
+        },
+        colorScheme
+      )
     : null;
 
-  // Adjust custom tag colors for dark/light mode
-  let tagBgColor = tag?.bgColor;
-  let tagBorderColor = tag?.borderColor;
-  if (profile?.custom_tag && tagBgColor && tagBorderColor) {
-    if (colorScheme === 'dark') {
-      tagBgColor = tinycolor(tagBgColor).darken(20).toString();
-      tagBorderColor = tinycolor(tagBorderColor).darken(10).toString();
-    } else {
-      tagBgColor = tinycolor(tagBgColor).lighten(50).toString();
-      tagBorderColor = tinycolor(tagBorderColor).lighten(10).toString();
-    }
-  }
+  // Tab button component
+  const TabButton = ({ tab, label }: { tab: 'posts' | 'saved'; label: string }) => {
+    const isActive = activeTab === tab;
+
+    return (
+      <TouchableOpacity onPress={() => setActiveTab(tab)} activeOpacity={0.7} style={{ flex: 1 }}>
+        <View
+          style={{
+            alignItems: 'center',
+            paddingVertical: 8,
+            width: '100%',
+          }}>
+          <Text
+            className={`text-base font-semibold ${
+              isActive
+                ? 'text-[#3B82F6]'
+                : colorScheme === 'dark'
+                  ? 'text-[#9ca3af]'
+                  : 'text-[#877B66]'
+            }`}>
+            {label}
+          </Text>
+          {isActive && (
+            <View
+              style={{
+                width: 70,
+                height: 1,
+                backgroundColor: '#3B82F6',
+                marginTop: 4,
+              }}
+            />
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
@@ -628,8 +627,8 @@ export default function ProfileScreen() {
                         <View className="mb-1 mt-1">
                           <View
                             style={{
-                              backgroundColor: tagBgColor,
-                              borderColor: tagBorderColor,
+                              backgroundColor: tag.bgColor,
+                              borderColor: tag.borderColor,
                             }}
                             className="rounded-xl border-2 px-4 py-1">
                             <Text
@@ -773,103 +772,73 @@ export default function ProfileScreen() {
                       </Pressable>
                     </View>
                   ) : (
-                    <View className="mt-8">
-                      {/* Posts Grid */}
-                      {allPosts.length > 0 ? (
-                        <View className="space-y-4">
-                          <View className="flex-row items-center justify-between">
-                            {isEditingAlbumName ? (
-                              <View className="ml-[-20px] flex-row items-center space-x-2">
-                                <TextInput
-                                  value={editedAlbumName}
-                                  onChangeText={setEditedAlbumName}
-                                  className={`px-2 py-1 ${
-                                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                                  }`}
-                                  placeholder="Enter album name"
-                                  placeholderTextColor="#877B66"
-                                />
-                                <Pressable
-                                  onPress={handleSaveAlbumName}
-                                  className="rounded-full bg-[#5070fd] p-1">
-                                  <Ionicons name="checkmark" size={16} color="white" />
-                                </Pressable>
-                                <Pressable
-                                  onPress={() => {
-                                    setIsEditingAlbumName(false);
-                                    setEditedAlbumName(
-                                      profile?.album_name ||
-                                        `${profile?.full_name.split(' ')[0]}'s Food Album`
-                                    );
-                                  }}
-                                  className="rounded-full bg-[#BA3B46] p-1">
-                                  <Ionicons name="close" size={16} color="white" />
-                                </Pressable>
-                              </View>
-                            ) : (
-                              <View className="ml-[-20px] flex-row items-center space-x-2">
-                                <Text
-                                  className={`text-lg font-semibold ${
-                                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                                  }`}>
-                                  {profile?.album_name ||
-                                    `${profile?.full_name.split(' ')[0]}'s Food Album`}
-                                </Text>
-                                <Pressable
-                                  onPress={() => setIsEditingAlbumName(true)}
-                                  className="rounded-full p-1">
-                                  <Ionicons
-                                    name="pencil"
-                                    size={16}
-                                    color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-                                  />
-                                </Pressable>
-                              </View>
-                            )}
-                          </View>
-                          <View className="-mx-6 flex-row flex-wrap">
-                            {allPosts.map((post, index) => (
-                              <View key={post.id} className="aspect-square w-1/3">
-                                <View
-                                  className={`aspect-square border-b border-r ${
-                                    index % 3 !== 2 ? 'border-r' : ''
-                                  } ${colorScheme === 'dark' ? 'border-[#121113]' : 'border-[#E8E9EB]'}`}>
-                                  <Image
-                                    source={{
-                                      uri: post.image_url,
-                                    }}
-                                    className="h-full w-full"
-                                    resizeMode="cover"
-                                  />
-                                  <View className="absolute inset-0 bg-black/0 hover:bg-black/20" />
-                                  <View className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2" />
-                                  <Pressable
-                                    onPress={() => {
-                                      console.log('Post clicked:', post.id);
-                                      console.log('Attempting to navigate to post detail...');
-                                      router.push(
-                                        `/post-detail?postId=${post.id}&userId=${profile?.id}`
-                                      );
-                                    }}
-                                    className="absolute inset-0"
-                                  />
+                    <View className="mt-2">
+                      {/* Tab Navigation */}
+                      <View className="mb-[-0.3rem] w-full flex-row">
+                        <TabButton tab="posts" label="Posts" />
+                        <TabButton tab="saved" label="Saved" />
+                      </View>
+
+                      {/* Posts Tab Content */}
+                      {activeTab === 'posts' && (
+                        <>
+                          {allPosts.length > 0 ? (
+                            <View className="-mx-6 flex-row flex-wrap">
+                              {allPosts.map((post, index) => (
+                                <View key={post.id} className="aspect-square w-1/3">
+                                  <View
+                                    className={`aspect-square border-b border-r ${
+                                      index % 3 !== 2 ? 'border-r' : ''
+                                    } ${colorScheme === 'dark' ? 'border-[#121113]' : 'border-[#E8E9EB]'}`}>
+                                    <Image
+                                      source={{
+                                        uri: post.image_url,
+                                      }}
+                                      className="h-full w-full"
+                                      resizeMode="cover"
+                                    />
+                                    <View className="absolute inset-0 bg-black/0 hover:bg-black/20" />
+                                    <View className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2" />
+                                    <Pressable
+                                      onPress={() => {
+                                        console.log('Post clicked:', post.id);
+                                        console.log('Attempting to navigate to post detail...');
+                                        router.push(
+                                          `/post-detail?postId=${post.id}&userId=${profile?.id}`
+                                        );
+                                      }}
+                                      className="absolute inset-0"
+                                    />
+                                  </View>
                                 </View>
-                              </View>
-                            ))}
-                          </View>
+                              ))}
+                            </View>
+                          ) : (
+                            <View className="items-center justify-center py-8">
+                              <Text
+                                className={`text-center text-base ${
+                                  colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                                }`}>
+                                No posts yet. Start sharing your food adventures!
+                              </Text>
+                            </View>
+                          )}
                           {loading && page > 1 && (
                             <View className="w-full items-center py-4">
                               <ActivityIndicator size="small" color="#f77f5e" />
                             </View>
                           )}
-                        </View>
-                      ) : (
+                        </>
+                      )}
+
+                      {/* Saved Tab Content */}
+                      {activeTab === 'saved' && (
                         <View className="items-center justify-center py-8">
                           <Text
                             className={`text-center text-base ${
                               colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                             }`}>
-                            No posts yet. Start sharing your food adventures!
+                            Saved posts feature coming soon!
                           </Text>
                         </View>
                       )}

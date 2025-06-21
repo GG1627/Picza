@@ -15,8 +15,6 @@ import { useRouter } from 'expo-router';
 import { getCompetitionTag } from '../lib/competitionTags';
 import GradientText from './GradientText';
 import { Animated } from 'react-native';
-// @ts-ignore
-import tinycolor from 'tinycolor2';
 
 interface PostProps {
   post: {
@@ -36,8 +34,6 @@ interface PostProps {
       competitions_won: number | null;
       custom_tag: string | null;
       custom_tag_color: string | null;
-      custom_tag_bg_color: string | null;
-      custom_tag_border_color: string | null;
       schools: {
         name: string;
       } | null;
@@ -104,26 +100,20 @@ export default function Post({
   };
 
   const tag = post.profiles
-    ? getCompetitionTag(post.profiles.competitions_won, post.profiles.username, {
-        tag: post.profiles.custom_tag,
-        color: post.profiles.custom_tag_color,
-        bgColor: post.profiles.custom_tag_bg_color,
-        borderColor: post.profiles.custom_tag_border_color,
-      })
+    ? getCompetitionTag(
+        post.profiles.competitions_won,
+        post.profiles.username,
+        {
+          tag: post.profiles.custom_tag,
+          color: post.profiles.custom_tag_color,
+        },
+        colorScheme
+      )
     : null;
 
-  // Adjust custom tag colors for dark/light mode
-  let tagBgColor = tag?.bgColor;
-  let tagBorderColor = tag?.borderColor;
-  if (post.profiles?.custom_tag && tagBgColor && tagBorderColor) {
-    if (colorScheme === 'dark') {
-      tagBgColor = tinycolor(tagBgColor).darken(20).toString();
-      tagBorderColor = tinycolor(tagBorderColor).darken(10).toString();
-    } else {
-      tagBgColor = tinycolor(tagBgColor).lighten(50).toString();
-      tagBorderColor = tinycolor(tagBorderColor).lighten(10).toString();
-    }
-  }
+  // For posts, we always use black background regardless of theme
+  const tagBgColor = '#000000';
+  const tagBorderColor = tag?.borderColor;
 
   if (isGridView) {
     return (
