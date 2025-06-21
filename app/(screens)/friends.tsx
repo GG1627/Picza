@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Pressable,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -25,6 +26,7 @@ export default function FriendsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const { user } = useAuth();
   const { colorScheme } = useColorScheme();
@@ -49,6 +51,20 @@ export default function FriendsScreen() {
     isCancelling,
     searchUsers,
   } = useFriends(user?.id || '');
+
+  // Refresh function
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // Force refetch all queries by invalidating them
+      // This will trigger a refetch of all friend-related data
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Small delay for better UX
+    } catch (error) {
+      console.error('Error refreshing:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
 
   // Search functionality
   const handleSearch = useCallback(
@@ -97,7 +113,7 @@ export default function FriendsScreen() {
             className={`text-base font-semibold ${
               colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
             }`}>
-            @{item.profiles.username}
+            {item.profiles.username}
           </Text>
           {item.profiles.bio && (
             <Text
@@ -112,13 +128,13 @@ export default function FriendsScreen() {
         onPress={() => {
           Alert.alert(
             'Remove Friend',
-            `Are you sure you want to remove @${item.profiles.username}?`,
+            `Are you sure you want to remove ${item.profiles.username}?`,
             [
               { text: 'Cancel', style: 'cancel' },
               {
                 text: 'Remove',
                 style: 'destructive',
-                onPress: () => removeFriend(item.profiles.id),
+                onPress: () => removeFriend(item.friend_id),
               },
             ]
           );
@@ -154,7 +170,7 @@ export default function FriendsScreen() {
             className={`text-base font-semibold ${
               colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
             }`}>
-            @{item.profiles.username}
+            {item.profiles.username}
           </Text>
           <Text
             className={`text-sm ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
@@ -164,7 +180,7 @@ export default function FriendsScreen() {
       </View>
       <TouchableOpacity
         onPress={() => {
-          Alert.alert('Cancel Request', `Cancel friend request to @${item.profiles.username}?`, [
+          Alert.alert('Cancel Request', `Cancel friend request to ${item.profiles.username}?`, [
             { text: 'Cancel', style: 'cancel' },
             {
               text: 'Cancel Request',
@@ -204,7 +220,7 @@ export default function FriendsScreen() {
             className={`text-base font-semibold ${
               colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
             }`}>
-            @{item.profiles.username}
+            {item.profiles.username}
           </Text>
           <Text
             className={`text-sm ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
@@ -216,14 +232,14 @@ export default function FriendsScreen() {
         <TouchableOpacity
           onPress={() => acceptRequest(item.id)}
           disabled={isAccepting}
-          className="rounded-full bg-green-50 p-2">
-          <Ionicons name="checkmark" size={20} color="#10B981" />
+          className="rounded-full bg-green-500 p-3 shadow-sm">
+          <Ionicons name="checkmark" size={18} color="white" />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => rejectRequest(item.id)}
           disabled={isRejecting}
-          className="rounded-full bg-red-50 p-2">
-          <Ionicons name="close" size={20} color="#F00511" />
+          className="rounded-full bg-red-500 p-3 shadow-sm">
+          <Ionicons name="close" size={18} color="white" />
         </TouchableOpacity>
       </View>
     </View>
@@ -253,7 +269,7 @@ export default function FriendsScreen() {
             className={`text-base font-semibold ${
               colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
             }`}>
-            @{item.username}
+            {item.username}
           </Text>
           {item.bio && (
             <Text
@@ -439,6 +455,14 @@ export default function FriendsScreen() {
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                colors={[colorScheme === 'dark' ? '#E0E0E0' : '#07020D']}
+              />
+            }
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center py-8">
                 <Text

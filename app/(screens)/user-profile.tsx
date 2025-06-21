@@ -7,15 +7,17 @@ import {
   ScrollView,
   Animated,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { Alert } from 'react-native';
 import { useColorScheme } from '../../lib/useColorScheme';
 import React from 'react';
 import { getCompetitionTag } from '../../lib/competitionTags';
+import { useAuth } from '../../lib/auth';
+import { useFriends } from '../../lib/hooks/useFriends';
 
 type Post = {
   id: string;
@@ -49,8 +51,13 @@ export default function UserProfileScreen() {
   const [school, setSchool] = useState<School | null>(null);
   const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [friendStatus, setFriendStatus] = useState<
+    'none' | 'pending_sent' | 'pending_received' | 'friends'
+  >('none');
   const router = useRouter();
   const { colorScheme } = useColorScheme();
+  const { user } = useAuth();
+  const { sendRequest, isSending } = useFriends(user?.id || '');
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const loadingScale = React.useRef(new Animated.Value(1)).current;
   const loadingOpacity = React.useRef(new Animated.Value(1)).current;
@@ -62,7 +69,10 @@ export default function UserProfileScreen() {
 
   useEffect(() => {
     fetchProfile();
-  }, [userId]);
+    if (user?.id && userId) {
+      checkFriendStatus();
+    }
+  }, [userId, user?.id]);
 
   useEffect(() => {
     if (!loading) {
@@ -169,6 +179,78 @@ export default function UserProfileScreen() {
     }
   }, []);
 
+  const checkFriendStatus = async () => {
+    if (!user?.id || !userId || user.id === userId) return;
+
+    try {
+      const { data: friendData } = await supabase
+        .from('friends')
+        .select('*')
+        .or(
+          `and(user_id.eq.${user.id},friend_id.eq.${userId}),and(user_id.eq.${userId},friend_id.eq.${user.id})`
+        )
+        .single();
+
+      if (friendData) {
+        if (friendData.status === 'accepted') {
+          setFriendStatus('friends');
+        } else if (friendData.status === 'pending') {
+          setFriendStatus(friendData.user_id === user.id ? 'pending_sent' : 'pending_received');
+        }
+      } else {
+        setFriendStatus('none');
+      }
+    } catch (error) {
+      console.error('Error checking friend status:', error);
+      setFriendStatus('none');
+    }
+  };
+
+  const handleFriendRequest = () => {
+    if (!user?.id || !userId) return;
+
+    if (friendStatus === 'none') {
+      sendRequest(userId as string);
+      setFriendStatus('pending_sent');
+    }
+  };
+
+  const renderFriendButton = () => {
+    if (!user?.id || user.id === userId) return null;
+
+    switch (friendStatus) {
+      case 'friends':
+        return (
+          <View className="rounded-full bg-green-500 p-2">
+            <Ionicons name="checkmark-circle" size={24} color="white" />
+          </View>
+        );
+      case 'pending_sent':
+        return (
+          <View className="rounded-full bg-gray-300 p-2">
+            <Ionicons name="time" size={24} color="white" />
+          </View>
+        );
+      case 'pending_received':
+        return (
+          <Pressable
+            onPress={() => router.push('/friends')}
+            className="rounded-full bg-blue-500 p-2">
+            <Ionicons name="person-add" size={24} color="white" />
+          </Pressable>
+        );
+      default:
+        return (
+          <Pressable
+            onPress={handleFriendRequest}
+            disabled={isSending}
+            className={`rounded-full bg-blue-500 p-2 ${isSending ? 'opacity-50' : ''}`}>
+            <Ionicons name="person-add-outline" size={24} color="white" />
+          </Pressable>
+        );
+    }
+  };
+
   if (loading) {
     return (
       <View
@@ -207,16 +289,7 @@ export default function UserProfileScreen() {
               color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
             />
           </Pressable>
-          <Pressable
-            className={`rounded-full ${
-              colorScheme === 'dark' ? 'bg-none' : 'bg-none'
-            } p-2 shadow-sm`}>
-            <Ionicons
-              name="person-add-outline"
-              size={24}
-              color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-            />
-          </Pressable>
+          {renderFriendButton()}
         </View>
 
         <ScrollView

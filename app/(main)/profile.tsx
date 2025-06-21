@@ -679,7 +679,7 @@ export default function ProfileScreen() {
                           Posts
                         </Text>
                       </View>
-                      <View className="items-center">
+                      <Pressable onPress={() => router.push('/friends')} className="items-center">
                         <Text
                           className={`ml-5 mr-5 text-xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
                           0
@@ -688,7 +688,7 @@ export default function ProfileScreen() {
                           className={`ml-5 mr-5 text-sm ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
                           Friends
                         </Text>
-                      </View>
+                      </Pressable>
                       <View className="items-center">
                         <Text
                           className={`text-xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
