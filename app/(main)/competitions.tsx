@@ -721,13 +721,13 @@ export default function CompetitionsScreen() {
               </View>
               <View className="absolute left-3 mt-5 flex-col">
                 <Text
-                  className={`font-nunito text-[3.8rem] font-extrabold ${colorScheme === 'dark' ? 'text-[#e98700]' : 'text-[#efe1c3]'}`}>
+                  className={`font-nunito text-[3.8rem] font-extrabold ${colorScheme === 'dark' ? 'text-[#e98700]' : 'text-[#e98700]'}`}>
                   {competitionsStatus.noon.name
                     ? competitionsStatus.noon.name.split(' ')[0]
                     : 'No active'}
                 </Text>
                 <Text
-                  className={`mt-[-2rem] font-nunito text-[3.8rem] font-extrabold ${colorScheme === 'dark' ? 'text-[#e98700]' : 'text-[#efe1c3]'}`}>
+                  className={`mt-[-2rem] font-nunito text-[3.8rem] font-extrabold ${colorScheme === 'dark' ? 'text-[#e98700]' : 'text-[#e98700]'}`}>
                   {competitionsStatus.noon.name
                     ? competitionsStatus.noon.name.split(' ')[1]
                     : 'competition'}

@@ -1,5 +1,13 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+  Pressable,
+  Alert,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useColorScheme } from '../lib/useColorScheme';
@@ -87,6 +95,14 @@ export default function Post({
     return `${diffInYears}y ago`;
   };
 
+  const handleSendMessage = () => {
+    Alert.alert(
+      'Coming Soon!',
+      'The send feature is currently being implemented. Stay tuned for updates!',
+      [{ text: 'OK', style: 'default' }]
+    );
+  };
+
   const tag = post.profiles
     ? getCompetitionTag(post.profiles.competitions_won, post.profiles.username, {
         tag: post.profiles.custom_tag,
@@ -165,7 +181,7 @@ export default function Post({
     <View className="mb-6">
       <View
         className={`overflow-hidden rounded-3xl ${
-          colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-[#f77f5e]/50'
+          colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-gray-100'
         } shadow-lg`}>
         {/* Post Image with Header Overlay */}
         <View className="relative">
@@ -293,7 +309,7 @@ export default function Post({
                   </Text>
                 </View>
               </View>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={handleSendMessage}>
                 <Ionicons name="paper-plane-outline" size={28} color="white" />
               </TouchableOpacity>
             </View>

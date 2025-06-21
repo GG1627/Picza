@@ -541,9 +541,10 @@ export default function ProfileScreen() {
             {/* Header */}
             <View className="mt-5 flex-row items-center justify-between px-6">
               <Pressable
+                onPress={() => router.push('/friends')}
                 className={`rounded-full ${colorScheme === 'dark' ? 'bg-none' : 'bg-none'} p-2 shadow-sm`}>
                 <Ionicons
-                  name="person-add-outline"
+                  name="people-outline"
                   size={24}
                   color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
                 />

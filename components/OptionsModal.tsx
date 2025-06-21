@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, Modal, TouchableOpacity, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from '../lib/useColorScheme';
+import { usePostReports } from '../lib/hooks/usePostReports';
+import { useAuth } from '../lib/auth';
 
 interface OptionsModalProps {
   visible: boolean;
@@ -22,8 +24,33 @@ export default function OptionsModal({
   isOwnPost,
 }: OptionsModalProps) {
   const { colorScheme } = useColorScheme();
+  const { user } = useAuth();
+  const { reportPost, isReported, isReporting } = usePostReports();
 
   if (!post) return null;
+
+  const handleReportPost = () => {
+    if (!user?.id) {
+      Alert.alert('Error', 'You must be logged in to report a post.');
+      return;
+    }
+
+    Alert.alert(
+      'Report Post',
+      'Are you sure you want to report this post? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Report',
+          style: 'destructive',
+          onPress: () => {
+            reportPost(post.id, user.id);
+            onClose();
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -74,7 +101,9 @@ export default function OptionsModal({
                     onClose();
                     onDeletePost(post.id);
                   }}
-                  className="mt-2 flex-row items-center space-x-3 rounded-xl bg-red-50 p-3">
+                  className={`mt-2 flex-row items-center space-x-3 rounded-xl p-3 ${
+                    colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50'
+                  }`}>
                   <Ionicons name="trash" size={24} color="#F00511" />
                   <Text className="text-base text-[#F00511]">Delete Post</Text>
                 </TouchableOpacity>
@@ -99,13 +128,22 @@ export default function OptionsModal({
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => {
-                    onClose();
-                    Alert.alert('Coming Soon', 'Report functionality will be available soon!');
-                  }}
-                  className="mt-2 flex-row items-center space-x-3 rounded-xl bg-red-50 p-3">
-                  <Ionicons name="flag-outline" size={24} color="#F00511" />
-                  <Text className="text-base text-[#F00511]">Report Post</Text>
+                  onPress={handleReportPost}
+                  disabled={isReporting}
+                  className={`mt-2 flex-row items-center space-x-3 rounded-xl p-3 ${
+                    colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50'
+                  }`}>
+                  <Ionicons
+                    name={isReported(post.id) ? 'checkmark-circle' : 'flag-outline'}
+                    size={24}
+                    color={isReported(post.id) ? '#10B981' : '#F00511'}
+                  />
+                  <Text
+                    className={`text-base ${
+                      colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'
+                    }`}>
+                    {isReported(post.id) ? 'Already Reported' : 'Report Post'}
+                  </Text>
                 </TouchableOpacity>
               </>
             )}

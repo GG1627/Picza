@@ -95,37 +95,47 @@ export function usePosts(
       }
       // 'all' filter doesn't need any additional conditions
 
-      // Apply sorting
-      if (sortBy === 'recent') {
-        // For recent, sort by created_at in descending order (newest first)
-        query = query.order('created_at', { ascending: false });
-      } else {
-        // For trending, we'll fetch all posts and sort them using our algorithm
-        // We'll still order by created_at initially to ensure consistent pagination
-        query = query.order('created_at', { ascending: false });
-      }
-
-      // Apply pagination
-      const start = (page - 1) * pageSize;
-      const end = start + pageSize - 1;
-      query = query.range(start, end);
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      // Transform the data to include the comment count
-      const transformedData = data.map((post) => ({
-        ...post,
-        comments_count: post.comments?.[0]?.count || 0,
-      }));
-
-      // If sorting by trending, apply our trending algorithm
+      // For trending, we need to fetch ALL posts first, then sort, then paginate
       if (sortBy === 'trending') {
-        return getTrendingPosts(transformedData);
-      }
+        // Fetch all posts without pagination for trending
+        const { data, error } = await query.order('created_at', { ascending: false });
 
-      return transformedData;
+        if (error) throw error;
+
+        // Transform the data to include the comment count
+        const transformedData = data.map((post) => ({
+          ...post,
+          comments_count: post.comments?.[0]?.count || 0,
+        }));
+
+        // Apply trending algorithm to ALL posts
+        const trendingPosts = await getTrendingPosts(transformedData);
+
+        // Apply pagination after sorting
+        const start = (page - 1) * pageSize;
+        const end = start + pageSize;
+        return trendingPosts.slice(start, end);
+      } else {
+        // For recent, use normal pagination
+        query = query.order('created_at', { ascending: false });
+
+        // Apply pagination
+        const start = (page - 1) * pageSize;
+        const end = start + pageSize - 1;
+        query = query.range(start, end);
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        // Transform the data to include the comment count
+        const transformedData = data.map((post) => ({
+          ...post,
+          comments_count: post.comments?.[0]?.count || 0,
+        }));
+
+        return transformedData;
+      }
     },
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 30 * 60 * 1000, // Keep data in cache for 30 minutes

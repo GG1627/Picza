@@ -15,6 +15,7 @@ import {
   Image,
   Easing,
   PanResponder,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -85,14 +86,20 @@ const CommentsModal = memo(
     const pan = useRef(new Animated.ValueXY()).current;
     const scrollViewRef = useRef<ScrollView>(null);
     const isAnimating = useRef(false);
+    const isClosing = useRef(false);
 
     const panResponder = useRef(
       PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponder: () => !isAnimating.current && !isClosing.current,
         onMoveShouldSetPanResponder: (_, gestureState) => {
-          return Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+          if (isAnimating.current || isClosing.current) return false;
+          return Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && gestureState.dy > 0;
+        },
+        onPanResponderGrant: () => {
+          pan.setValue({ x: 0, y: 0 });
         },
         onPanResponderMove: (_, gestureState) => {
+          if (isAnimating.current || isClosing.current) return;
           if (gestureState.dy > 0) {
             pan.y.setValue(gestureState.dy);
             const progress = Math.min(gestureState.dy / SCREEN_HEIGHT, 1);
@@ -100,31 +107,57 @@ const CommentsModal = memo(
           }
         },
         onPanResponderRelease: (_, gestureState) => {
-          if (isAnimating.current) return;
-          isAnimating.current = true;
+          if (isAnimating.current || isClosing.current) return;
 
           const shouldClose = gestureState.dy > SWIPE_THRESHOLD;
 
-          Animated.parallel([
-            Animated.spring(pan, {
-              toValue: shouldClose ? { x: 0, y: SCREEN_HEIGHT } : { x: 0, y: 0 },
-              useNativeDriver: true,
-              velocity: gestureState.vy,
-              tension: 40,
-              friction: 7,
-            }),
-            Animated.timing(backdropAnimation, {
-              toValue: shouldClose ? 0 : 1,
-              duration: 200,
-              useNativeDriver: true,
-            }),
-          ]).start(() => {
-            if (shouldClose) {
+          if (shouldClose) {
+            isClosing.current = true;
+            isAnimating.current = true;
+
+            Animated.parallel([
+              Animated.timing(pan, {
+                toValue: { x: 0, y: SCREEN_HEIGHT },
+                duration: 250,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.cubic),
+              }),
+              Animated.timing(backdropAnimation, {
+                toValue: 0,
+                duration: 250,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.cubic),
+              }),
+            ]).start(() => {
               setModalVisible(false);
               onClose();
-            }
-            isAnimating.current = false;
-          });
+              // Reset flags immediately after modal closes
+              isAnimating.current = false;
+              isClosing.current = false;
+            });
+          } else {
+            isAnimating.current = true;
+
+            Animated.parallel([
+              Animated.spring(pan, {
+                toValue: { x: 0, y: 0 },
+                useNativeDriver: true,
+                tension: 100,
+                friction: 8,
+              }),
+              Animated.timing(backdropAnimation, {
+                toValue: 1,
+                duration: 200,
+                useNativeDriver: true,
+              }),
+            ]).start(() => {
+              isAnimating.current = false;
+            });
+          }
+        },
+        onPanResponderTerminate: () => {
+          isAnimating.current = false;
+          isClosing.current = false;
         },
       })
     ).current;
@@ -205,6 +238,17 @@ const CommentsModal = memo(
       pan.setValue({ x: 0, y: 0 });
     }, [visible]);
 
+    // Cleanup effect to reset flags when modal becomes invisible
+    useEffect(() => {
+      if (!visible) {
+        // Reset flags when modal is not visible
+        setTimeout(() => {
+          isAnimating.current = false;
+          isClosing.current = false;
+        }, 100);
+      }
+    }, [visible]);
+
     const fetchComments = async () => {
       if (!post) return;
       setIsLoading(true);
@@ -246,20 +290,17 @@ const CommentsModal = memo(
       if (!newComment.trim() || !post || !user) return;
 
       try {
-        const { error } = await supabase.from('comments').insert([
-          {
-            post_id: post.id,
-            user_id: user.id,
-            content: newComment.trim(),
-          },
-        ]);
+        // Call the feed's handleAddComment function to update the comment count
+        onAddComment(newComment.trim());
 
-        if (error) throw error;
-
-        // Refresh comments
-        await fetchComments();
+        // Clear the input and dismiss keyboard
         setNewComment('');
         Keyboard.dismiss();
+
+        // Refresh comments to show the new comment
+        await fetchComments();
+
+        // Scroll to the bottom to show the new comment
         setTimeout(() => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
@@ -269,24 +310,30 @@ const CommentsModal = memo(
     };
 
     const handleClose = () => {
-      if (isAnimating.current) return;
+      if (isAnimating.current || isClosing.current) return;
+
+      isClosing.current = true;
       isAnimating.current = true;
 
       Animated.parallel([
         Animated.timing(modalAnimation, {
           toValue: 0,
-          duration: 200,
+          duration: 250,
           useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
         }),
         Animated.timing(backdropAnimation, {
           toValue: 0,
-          duration: 200,
+          duration: 250,
           useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
         }),
       ]).start(() => {
         setModalVisible(false);
         onClose();
+        // Reset flags immediately after modal closes
         isAnimating.current = false;
+        isClosing.current = false;
       });
     };
 
@@ -348,7 +395,7 @@ const CommentsModal = memo(
             style={[
               StyleSheet.absoluteFill,
               {
-                backgroundColor: 'rgba(0,0,0,0)',
+                backgroundColor: 'rgba(0,0,0,0.7)',
                 opacity: backdropOpacity,
               },
             ]}>
@@ -429,26 +476,26 @@ const CommentsModal = memo(
                       animate={{ opacity: 1, translateX: 0 }}
                       transition={{ type: 'timing', duration: 500, delay: index * 100 }}
                       style={styles.commentContainer}>
-                      <View style={styles.commentHeader}>
-                        <Pressable
-                          onPress={() => handleProfilePress(comment.user_id)}
-                          className="flex-row items-center">
-                          <Image
-                            source={
-                              comment.profiles?.avatar_url
-                                ? { uri: comment.profiles.avatar_url }
-                                : require('../assets/default-avatar.png')
-                            }
-                            style={styles.avatar}
-                          />
-                          <View style={styles.commentInfo}>
-                            <Text
-                              style={[
-                                styles.username,
-                                { color: colorScheme === 'dark' ? '#E0E0E0' : '#07020D' },
-                              ]}>
-                              {comment.profiles?.username}
-                            </Text>
+                      <View style={styles.commentRow}>
+                        <Image
+                          source={
+                            comment.profiles?.avatar_url
+                              ? { uri: comment.profiles.avatar_url }
+                              : require('../assets/default-avatar.png')
+                          }
+                          style={styles.avatar}
+                        />
+                        <View style={styles.commentContent}>
+                          <View style={styles.commentHeader}>
+                            <Pressable onPress={() => handleProfilePress(comment.user_id)}>
+                              <Text
+                                style={[
+                                  styles.username,
+                                  { color: colorScheme === 'dark' ? '#E0E0E0' : '#07020D' },
+                                ]}>
+                                {comment.profiles?.username}
+                              </Text>
+                            </Pressable>
                             <Text
                               style={[
                                 styles.timestamp,
@@ -457,22 +504,14 @@ const CommentsModal = memo(
                               {getTimeElapsed(comment.created_at)}
                             </Text>
                           </View>
-                        </Pressable>
-                      </View>
-                      <View
-                        style={[
-                          styles.commentBubble,
-                          {
-                            backgroundColor: 'transparent',
-                          },
-                        ]}>
-                        <Text
-                          style={[
-                            styles.commentText,
-                            { color: colorScheme === 'dark' ? '#E0E0E0' : '#07020D' },
-                          ]}>
-                          {comment.content}
-                        </Text>
+                          <Text
+                            style={[
+                              styles.commentText,
+                              { color: colorScheme === 'dark' ? '#E0E0E0' : '#07020D' },
+                            ]}>
+                            {comment.content}
+                          </Text>
+                        </View>
                       </View>
                     </MotiView>
                   ))
@@ -582,9 +621,10 @@ const styles = StyleSheet.create({
   },
   dragHandleContainer: {
     width: '100%',
-    height: 20,
+    height: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingTop: 4,
   },
   dragHandle: {
     width: 40,
@@ -592,7 +632,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   header: {
-    padding: 16,
+    padding: 12,
   },
   headerContent: {
     flexDirection: 'row',
@@ -604,15 +644,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   postPreview: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     overflow: 'hidden',
-    marginLeft: 12,
+    marginLeft: 8,
   },
   previewImage: {
     width: '100%',
@@ -633,36 +673,37 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   commentContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
     paddingHorizontal: 4,
+  },
+  commentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 12,
+  },
+  commentContent: {
+    flex: 1,
   },
   commentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 8,
-  },
-  commentInfo: {
-    flex: 1,
+    marginBottom: 2,
   },
   username: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
+    marginRight: 8,
   },
   timestamp: {
-    fontSize: 12,
-  },
-  commentBubble: {
-    padding: 12,
-    maxWidth: '85%',
+    fontSize: 13,
   },
   commentText: {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 20,
   },
   emptyContainer: {

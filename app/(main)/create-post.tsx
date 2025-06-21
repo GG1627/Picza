@@ -175,10 +175,10 @@ export default function CreatePostScreen() {
             <Ionicons
               name="close-circle-outline"
               size={24}
-              color={colorScheme === 'dark' ? '#ff9f6b' : '#f77f5e'}
+              color={colorScheme === 'dark' ? '#f00511' : '#f00511'}
             />
             <Text
-              className={`ml-1 font-medium ${colorScheme === 'dark' ? 'text-[#ff9f6b]' : 'text-[#f77f5e]'}`}>
+              className={`ml-1 font-medium ${colorScheme === 'dark' ? 'text-[#f00511]' : 'text-[#f00511]'}`}>
               Clear
             </Text>
           </TouchableOpacity>
@@ -198,8 +198,8 @@ export default function CreatePostScreen() {
                 ? 'bg-[#282828]'
                 : 'bg-[#f9f9f9]'
               : colorScheme === 'dark'
-                ? 'bg-[#ff9f6b]'
-                : 'bg-[#f77f5e]'
+                ? 'bg-[#0f9900]'
+                : 'bg-[#0f9900]'
           }`}>
           {createPost.isPending ? (
             <ActivityIndicator color="white" />

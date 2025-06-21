@@ -26,7 +26,7 @@ export const getCompetitionTag = (
 
   if (!wins)
     return {
-      tag: '🍕 Foodie Freshman',
+      tag: 'Foodie Freshman',
       color: '#9ca3af',
       bgColor: '#2e2e2e',
       borderColor: '#9ca3af',
@@ -34,41 +34,41 @@ export const getCompetitionTag = (
 
   if (wins >= 50)
     return {
-      tag: '👑 Culinary Legend',
+      tag: 'Culinary Legend',
       color: '#FFD700',
       bgColor: '#2e2a1f',
       borderColor: '#FFD700',
     };
   if (wins >= 20)
     return {
-      tag: '🌟 Master Chef',
+      tag: 'Master Chef',
       color: '#FF69B4',
       bgColor: '#2e1f2a',
       borderColor: '#FF69B4',
     };
   if (wins >= 10)
     return {
-      tag: '🔥 Food Champion',
+      tag: 'Food Champion',
       color: '#FF4500',
       bgColor: '#2e1f1f',
       borderColor: '#FF4500',
     };
   if (wins >= 5)
     return {
-      tag: '⭐ Rising Star',
+      tag: 'Rising Star',
       color: '#FF8C00',
       bgColor: '#2e251f',
       borderColor: '#FF8C00',
     };
   if (wins >= 2)
     return {
-      tag: '🌱 Promising Cook',
+      tag: 'Promising Cook',
       color: '#32CD32',
       bgColor: '#1f2e1f',
       borderColor: '#32CD32',
     };
   return {
-    tag: '🍳 Kitchen Newbie',
+    tag: 'Kitchen Newbie',
     color: '#87CEEB',
     bgColor: '#1f2a2e',
     borderColor: '#87CEEB',

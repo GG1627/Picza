@@ -232,6 +232,7 @@ const DynamicPostsList = memo(() => {
   const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
   const [isReturningFromProfile, setIsReturningFromProfile] = useState(false);
   const [hasInitialData, setHasInitialData] = useState(false);
+  const [commentCounts, setCommentCounts] = useState<{ [key: string]: number }>({});
   const { colorScheme } = useColorScheme();
   const pageSize = 10;
 
@@ -251,6 +252,21 @@ const DynamicPostsList = memo(() => {
   } = usePostLikes(user?.id);
 
   const { deletingPostId, handleDeletePost } = usePostDeletion();
+
+  // Initialize comment counts from posts
+  const initializeCommentCounts = useCallback((posts: Post[]) => {
+    const initialCounts = posts.reduce(
+      (acc, post) => {
+        acc[post.id] = post.comments_count || 0;
+        return acc;
+      },
+      {} as { [key: string]: number }
+    );
+    setCommentCounts(initialCounts);
+  }, []);
+
+  // Optimize React Query cache for better performance
+  const queryClient = useQueryClient();
 
   // Set up global callbacks - this will override the ones set by StaticFilterButtons
   useEffect(() => {
@@ -286,7 +302,6 @@ const DynamicPostsList = memo(() => {
   // Ensure initial data is loaded when schoolData is available
   useEffect(() => {
     if (schoolData && !hasInitialData && !isLoading) {
-      console.log('Loading initial data with schoolData:', schoolData.id);
       setPage(1);
       setAllPosts([]);
       setHasMore(true);
@@ -294,53 +309,28 @@ const DynamicPostsList = memo(() => {
     }
   }, [schoolData, hasInitialData, isLoading, refetch]);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('Posts data changed:', {
-      postsLength: posts?.length || 0,
-      isLoading,
-      activeFilter,
-      sortBy,
-      schoolDataId: schoolData?.id,
-      page,
-      hasInitialData,
-    });
-  }, [posts, isLoading, activeFilter, sortBy, schoolData, page, hasInitialData]);
-
   // Update posts when data changes
   useEffect(() => {
-    console.log('Posts effect triggered:', {
-      posts: posts?.length || 0,
-      page,
-      allPostsLength: allPosts.length,
-      hasInitialData,
-    });
-
     if (posts) {
       if (page === 1) {
-        console.log('Setting initial posts:', posts.length);
         setAllPosts(posts as Post[]);
         setHasInitialData(true);
         initializeLikes(posts as Post[]);
+        initializeCommentCounts(posts as Post[]);
       } else {
         const newPosts = (posts as Post[]).filter(
           (newPost) => !allPosts.some((existingPost) => existingPost.id === newPost.id)
         );
         const combinedPosts = [...allPosts, ...newPosts];
-        if (sortBy === 'trending') {
-          combinedPosts.sort((a, b) => b.likes_count - a.likes_count);
-        } else {
-          combinedPosts.sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-        }
-        console.log('Adding more posts:', newPosts.length, 'Total:', combinedPosts.length);
+        // Don't re-sort here - the trending algorithm already sorted the posts
         setAllPosts(combinedPosts);
+        initializeLikes(combinedPosts);
+        initializeCommentCounts(combinedPosts);
       }
       setHasMore((posts as Post[]).length === pageSize);
       setIsLoadingMore(false);
     }
-  }, [posts, page, sortBy, initializeLikes]);
+  }, [posts, page, initializeLikes, initializeCommentCounts]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || isLoading || isLoadingMore) return;
@@ -386,6 +376,13 @@ const DynamicPostsList = memo(() => {
 
         if (error) throw error;
 
+        // Update local comment counts
+        setCommentCounts((prev) => ({
+          ...prev,
+          [selectedPostForComments.id]: (prev[selectedPostForComments.id] || 0) + 1,
+        }));
+
+        // Also update posts state for consistency
         setAllPosts((prevPosts) =>
           prevPosts.map((post) =>
             post.id === selectedPostForComments.id
@@ -410,17 +407,47 @@ const DynamicPostsList = memo(() => {
     setIsReturningFromProfile(true);
   }, []);
 
+  // Sync comment counts when returning to feed
+  const syncCommentCounts = useCallback(async () => {
+    if (allPosts.length === 0) return;
+
+    try {
+      const postIds = allPosts.map((post) => post.id);
+      const { data, error } = await supabase
+        .from('comments')
+        .select('post_id')
+        .in('post_id', postIds);
+
+      if (error) throw error;
+
+      // Count comments per post
+      const commentCountMap = data.reduce(
+        (acc, comment) => {
+          acc[comment.post_id] = (acc[comment.post_id] || 0) + 1;
+          return acc;
+        },
+        {} as { [key: string]: number }
+      );
+
+      // Update local comment counts
+      setCommentCounts(commentCountMap);
+    } catch (error) {
+      console.error('Error syncing comment counts:', error);
+    }
+  }, [allPosts]);
+
   useFocusEffect(
     useCallback(() => {
-      console.log('Screen focused, checking if we need to load data');
       if (!hasInitialData && schoolData) {
-        console.log('Loading data on focus with schoolData:', schoolData.id);
         setPage(1);
         setAllPosts([]);
         setHasMore(true);
         refetch();
+      } else if (hasInitialData) {
+        // Sync comment counts when returning to feed
+        syncCommentCounts();
       }
-    }, [refetch, hasInitialData, schoolData])
+    }, [refetch, hasInitialData, schoolData, syncCommentCounts])
   );
 
   const { width: screenWidth } = Dimensions.get('window');
@@ -431,9 +458,9 @@ const DynamicPostsList = memo(() => {
 
   const renderItem = useCallback(
     ({ item: post, index }: { item: Post; index: number }) => {
-      console.log('Rendering post:', { postId: post.id, index, isGridView });
       const isOwnPost = post.user_id === user?.id;
       const isDeleting = deletingPostId === post.id;
+      const currentCommentCount = commentCounts[post.id] || post.comments_count || 0;
 
       if (isGridView) {
         return (
@@ -445,7 +472,7 @@ const DynamicPostsList = memo(() => {
               marginRight: index % 2 === 0 ? columnGap / 2 : horizontalPadding,
             }}>
             <Post
-              post={post}
+              post={{ ...post, comments_count: currentCommentCount }}
               isGridView={true}
               isDeleting={isDeleting}
               likedPosts={likedPosts}
@@ -465,7 +492,7 @@ const DynamicPostsList = memo(() => {
 
       return (
         <Post
-          post={post}
+          post={{ ...post, comments_count: currentCommentCount }}
           isGridView={false}
           isDeleting={isDeleting}
           likedPosts={likedPosts}
@@ -490,6 +517,7 @@ const DynamicPostsList = memo(() => {
       likedPosts,
       postLikes,
       postHeartAnimations,
+      commentCounts,
       user?.id,
       handleLike,
       handleShowComments,
@@ -538,7 +566,15 @@ const DynamicPostsList = memo(() => {
   );
 
   const refreshControl = useMemo(
-    () => <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />,
+    () => (
+      <RefreshControl
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        progressViewOffset={60}
+        progressBackgroundColor="transparent"
+        colors={['#f77f5e']}
+      />
+    ),
     [refreshing, handleRefresh]
   );
 
@@ -564,17 +600,11 @@ const DynamicPostsList = memo(() => {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center">
+      <View className="flex-1 items-center justify-center" style={{ paddingTop: 120 }}>
         <ActivityIndicator size="large" color="#f77f5e" />
       </View>
     );
   }
-
-  console.log('Rendering FlatList with:', {
-    allPostsLength: allPosts.length,
-    isLoading,
-    isGridView,
-  });
 
   return (
     <>
