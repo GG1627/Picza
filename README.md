@@ -199,6 +199,34 @@ Need help with Picza? We're here to support you!
 - **General Support**: Within 48 hours
 - **Feature Requests**: Within 1 week
 
+## Privacy Policy for Picza
+
+**Last Updated:** January 2025
+
+This Privacy Policy describes how Picza collects, uses, and handles your information when you use our mobile application.
+
+**Information We Collect**
+
+- **Account Information:** When you create an account, we collect your full name, username, and email address.
+- **User Content:** We collect the photos and text captions you post to the app, including images for your profile and posts in the feed and competitions.
+- **User ID:** We collect a unique User ID assigned by our authentication provider (Supabase) to link your content to your account.
+- **School Information:** We determine your university community based on your email domain to provide a campus-centric experience.
+
+**How We Use Your Information**
+
+- To provide and maintain the app's functionality.
+- To display your profile information (username, full name, avatar) to other users.
+- To display the content you post (photos, captions) to the community.
+- To manage your participation in competitions.
+
+**Data Storage**
+
+Your data, including account information and user content, is securely stored using Supabase's backend services.
+
+**Contact Us**
+
+If you have any questions about this Privacy Policy, you can contact us at: [gael.garcia@ufl.edu](mailto:gael.garcia@ufl.edu)
+
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
