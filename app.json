@@ -19,7 +19,7 @@
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "io.picza.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false

@@ -56,6 +56,7 @@ export default function UserProfileScreen() {
   const [friendStatus, setFriendStatus] = useState<
     'none' | 'pending_sent' | 'pending_received' | 'friends'
   >('none');
+  const [friendsCount, setFriendsCount] = useState(0);
   const router = useRouter();
   const { colorScheme } = useColorScheme();
   const { user } = useAuth();
@@ -75,6 +76,12 @@ export default function UserProfileScreen() {
       checkFriendStatus();
     }
   }, [userId, user?.id]);
+
+  useEffect(() => {
+    if (userId) {
+      fetchFriendsCount();
+    }
+  }, [userId]);
 
   useEffect(() => {
     if (!loading) {
@@ -174,6 +181,7 @@ export default function UserProfileScreen() {
     setRefreshing(true);
     try {
       await fetchProfile();
+      await fetchFriendsCount();
     } catch (error) {
       console.error('Error refreshing profile:', error);
     } finally {
@@ -250,6 +258,37 @@ export default function UserProfileScreen() {
             <Ionicons name="person-add-outline" size={24} color="white" />
           </Pressable>
         );
+    }
+  };
+
+  const fetchFriendsCount = async () => {
+    if (!userId) return;
+
+    try {
+      // Get accepted friend relationships in both directions
+      const { data: friendRelationships, error } = await supabase
+        .from('friends')
+        .select('*')
+        .or(
+          `and(user_id.eq.${userId},status.eq.accepted),and(friend_id.eq.${userId},status.eq.accepted)`
+        );
+
+      if (error) {
+        console.error('Error fetching friend relationships:', error);
+        return;
+      }
+
+      // Count unique friends (deduplicate based on the other user's ID)
+      const uniqueFriends = new Set();
+      (friendRelationships || []).forEach((relationship) => {
+        const friendId =
+          relationship.user_id === userId ? relationship.friend_id : relationship.user_id;
+        uniqueFriends.add(friendId);
+      });
+
+      setFriendsCount(uniqueFriends.size);
+    } catch (error) {
+      console.error('Error fetching friends count:', error);
     }
   };
 
@@ -456,7 +495,7 @@ export default function UserProfileScreen() {
                     className={`ml-5 mr-5 text-xl font-bold ${
                       colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                     }`}>
-                    0
+                    {friendsCount}
                   </Text>
                   <Text
                     className={`ml-5 mr-5 text-sm ${

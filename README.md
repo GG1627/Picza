@@ -10,14 +10,6 @@ Picza is a revolutionary social platform that connects university students throu
 
 Think of us as Instagram meets Yelp, but specifically for your campus food adventures! 🎯
 
-## Vision
-
-To become the definitive social platform for university food culture, fostering community engagement and enhancing the campus dining experience through technology. We're not just building an app – we're creating a movement! 🚀
-
-## Mission
-
-To connect students through their shared love of food, making campus dining more social, discoverable, and enjoyable. Because let's face it, the best memories in college often happen over a great meal! 🍽️
-
 ## Core Features
 
 ### 🎯 Social Discovery
@@ -31,13 +23,13 @@ To connect students through their shared love of food, making campus dining more
 
 - **Intelligent Profile System**
   - Your foodie identity, your way
-  - Smart username management (because changing it every week is so 2023)
+  - Smart username management
   - School spirit meets foodie culture
-  - Professional image handling (no more blurry food pics!)
+  - Professional image handling
 - **Seamless Navigation**
-  - Smooth as butter navigation
-  - Beautiful transitions that'll make you go "ooh!"
-  - Context-aware UI that just gets you
+  - Smooth navigation experience
+  - Beautiful transitions
+  - Context-aware UI
 
 ### Design Excellence
 
@@ -45,12 +37,12 @@ To connect students through their shared love of food, making campus dining more
   - Dark mode for night owls
   - Light mode for early birds
   - Colors that pop like your favorite hot sauce
-  - Smooth transitions smoother than your morning coffee
+  - Smooth transitions
 - **Modern UI Components**
-  - Clean, minimalist design (no clutter, just flavor)
-  - Responsive layouts (works on everything from phones to tablets)
-  - Gesture-based interactions (swipe, tap, and taste!)
-  - Professional animations (because we're fancy like that)
+  - Clean, minimalist design
+  - Responsive layouts
+  - Gesture-based interactions
+  - Professional animations
 
 ## Technical Architecture
 
@@ -184,48 +176,28 @@ eas build --platform android
 - Rollback procedures
 - Performance monitoring
 
-## Business Model
+## Support
 
-### Target Market
+Need help with Picza? We're here to support you!
 
-- University students
-- Campus food vendors
-- University dining services
-- Food delivery services
+### Contact Information
 
-### Monetization Strategy
+- **Technical Support**: [gael.garcia@ufl.edu](mailto:gael.garcia@ufl.edu)
+- **General Inquiries**: [gael.garcia@ufl.edu](mailto:gael.garcia@ufl.edu)
+- **Bug Reports**: [gael.garcia@ufl.edu](mailto:gael.garcia@ufl.edu)
 
-- Premium features
-- Sponsored content
-- Vendor partnerships
-- Campus dining integration
+### Getting Help
 
-## Future Roadmap
+1. **Check our documentation** - Most questions can be answered here
+2. **Search existing issues** - Your problem might already have a solution
+3. **Create a new issue** - For bugs or feature requests
+4. **Email us directly** - For urgent matters or private concerns
 
-### Phase 1: Core Platform 🏗️
+### Response Times
 
-- [x] User authentication (keeping the bad vibes out)
-- [x] Profile management (your foodie identity)
-- [x] Content sharing (spread the foodie love)
-- [x] Social interactions (making friends over food)
-
-### Phase 2: Enhanced Features 🚀
-
-- [ ] Advanced search (find that hidden gem)
-- [ ] AI recommendations (your personal foodie assistant)
-- [ ] Vendor integration (connecting you with the best)
-- [ ] Analytics dashboard (for the data-hungry foodies)
-
-### Phase 3: Scale & Growth 🌟
-
-- [ ] Multi-university support (spreading the foodie love)
-- [ ] API marketplace (for the tech-savvy foodies)
-- [ ] Mobile SDK (because why not?)
-- [ ] Enterprise solutions (taking over the world, one meal at a time)
-
-## Join the Foodie Revolution! 🎉
-
-We're not just building an app – we're creating a community of food lovers, one post at a time. Whether you're a foodie, a developer, or just someone who loves good food, there's a place for you in the Picza family!
+- **Critical Issues**: Within 24 hours
+- **General Support**: Within 48 hours
+- **Feature Requests**: Within 1 week
 
 ## Contributing
 
@@ -234,12 +206,6 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 ## License
 
 Proprietary - All rights reserved
-
-## Contact
-
-- **Business Inquiries**: [business@picza.com] (Let's make something delicious together!)
-- **Technical Support**: [support@picza.com] (We've got your back!)
-- **Partnership Opportunities**: [partners@picza.com] (Let's cook up something amazing!)
 
 ## Acknowledgments
 

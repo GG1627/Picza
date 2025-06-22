@@ -28,6 +28,7 @@ import MeshGradient from '../../components/MeshGradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../lib/auth';
 import { useSavedPosts } from '../../lib/hooks/useSavedPosts';
+import { useFriends } from '../../lib/hooks/useFriends';
 
 type Post = {
   id: string;
@@ -75,6 +76,7 @@ export default function ProfileScreen() {
   const { colorScheme, toggleColorScheme, isDarkColorScheme } = useColorScheme();
   const { user } = useAuth();
   const { savedPosts, savedPostsLoading } = useSavedPosts(user?.id || '');
+  const { friends } = useFriends(user?.id || '');
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
   const translateY = React.useRef(new Animated.Value(0)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
@@ -685,7 +687,7 @@ export default function ProfileScreen() {
                       <Pressable onPress={() => router.push('/friends')} className="items-center">
                         <Text
                           className={`ml-5 mr-5 text-xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
-                          0
+                          {friends.length}
                         </Text>
                         <Text
                           className={`ml-5 mr-5 text-sm ${colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'}`}>
