@@ -21,6 +21,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "io.picza.app",
+      "buildNumber": "2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
