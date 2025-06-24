@@ -11,7 +11,6 @@ import {
   ScrollView,
   Keyboard,
   Animated,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,7 +19,6 @@ import { useColorScheme } from '../../lib/useColorScheme';
 import { useCreatePost } from '../../lib/hooks/useQueries';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
-import { validateFoodImage } from '../../lib/azureVision';
 
 export default function CreatePostScreen() {
   const router = useRouter();
@@ -29,11 +27,6 @@ export default function CreatePostScreen() {
   const [caption, setCaption] = useState('');
   const [ingredients, setIngredients] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
-  const [isValidatingFood, setIsValidatingFood] = useState(false);
-  const [foodValidationResult, setFoodValidationResult] = useState<{
-    isValid: boolean;
-    message: string;
-  } | null>(null);
   const createPost = useCreatePost();
   const { colorScheme } = useColorScheme();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -60,14 +53,19 @@ export default function CreatePostScreen() {
   }, []);
 
   const measureInputPosition = (ref: any, setter: (position: number) => void) => {
-    if (ref.current) {
-      ref.current.measure(
-        (x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
-          setter(pageY);
+    if (ref.current && scrollViewRef.current) {
+      ref.current.measureLayout(
+        scrollViewRef.current,
+        (x: number, y: number) => {
+          setter(y);
+        },
+        (error: any) => {
+          console.warn('measureLayout failed:', error);
         }
       );
     }
   };
+
 
   const dishNameRef = useRef(null);
   const captionRef = useRef(null);
@@ -81,7 +79,8 @@ export default function CreatePostScreen() {
     setCaption('');
     setIngredients('');
     setIsSuccess(false);
-    setFoodValidationResult(null);
+    scrollViewRef.current?.scrollTo({ y: 0});
+    Keyboard.dismiss();    
   };
 
   const pickImage = async () => {
@@ -93,69 +92,11 @@ export default function CreatePostScreen() {
     });
 
     if (!result.canceled) {
-      const selectedImage = result.assets[0].uri;
-      setImage(selectedImage);
-
-      // Reset previous validation result
-      setFoodValidationResult(null);
-
-      // Validate if the image contains food
-      setIsValidatingFood(true);
-      try {
-        const validation = await validateFoodImage(selectedImage);
-        setFoodValidationResult(validation);
-
-        if (!validation.isValid) {
-          Alert.alert(
-            'No Food Detected',
-            'Please select an image that contains food. Only food images are allowed.',
-            [
-              {
-                text: 'OK',
-                style: 'default',
-                onPress: () => setImage(null),
-              },
-            ]
-          );
-        }
-      } catch (error) {
-        console.error('Error validating food image:', error);
-        setFoodValidationResult({
-          isValid: false,
-          message: 'Unable to validate image. Please try again with a different image.',
-        });
-        Alert.alert(
-          'Validation Error',
-          'Unable to validate your image. Please try again with a different food image.',
-          [
-            {
-              text: 'OK',
-              style: 'default',
-              onPress: () => setImage(null),
-            },
-          ]
-        );
-      } finally {
-        setIsValidatingFood(false);
-      }
+      setImage(result.assets[0].uri);
     }
   };
 
   const handleCreatePost = async () => {
-    if (!image) return;
-
-    // Only allow posting if food is detected
-    if (!foodValidationResult || !foodValidationResult.isValid) {
-      Alert.alert('No Food Detected', 'Please select an image that contains food before posting.', [
-        { text: 'OK', style: 'default' },
-      ]);
-      return;
-    }
-
-    await createPostAction();
-  };
-
-  const createPostAction = async () => {
     if (!image) return;
 
     try {
@@ -191,7 +132,7 @@ export default function CreatePostScreen() {
 
     // Split by multiple possible delimiters (comma, semicolon, or newline)
     const ingredientsArray = ingredients
-      .split(/[,;\n]/)
+      .split(/[,;\n' ']/)
       // Remove empty strings and trim whitespace
       .map((ingredient) => ingredient.trim())
       .filter((ingredient) => ingredient.length > 0)
@@ -230,7 +171,7 @@ export default function CreatePostScreen() {
   };
 
   return (
-    <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#E8E9EB]'}`}>
+    <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
       {/* Header */}
       <View
         className={`flex-row items-center justify-between border-b p-4 ${
@@ -241,10 +182,10 @@ export default function CreatePostScreen() {
             <Ionicons
               name="close-circle-outline"
               size={24}
-              color={colorScheme === 'dark' ? '#f00511' : '#f00511'}
+              color={colorScheme === 'dark' ? '#F00511' : '#F00511'}
             />
             <Text
-              className={`ml-1 font-medium ${colorScheme === 'dark' ? 'text-[#f00511]' : 'text-[#f00511]'}`}>
+              className={`ml-1 font-medium ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
               Clear
             </Text>
           </TouchableOpacity>
@@ -257,26 +198,34 @@ export default function CreatePostScreen() {
         </Text>
         <TouchableOpacity
           onPress={handleCreatePost}
-          disabled={!image || createPost.isPending || !foodValidationResult?.isValid}
+          disabled={!image || createPost.isPending}
           className={`rounded-2xl px-6 py-2 ${
-            !image || createPost.isPending || !foodValidationResult?.isValid
+            !image || createPost.isPending
               ? colorScheme === 'dark'
                 ? 'bg-[#282828]'
                 : 'bg-[#f9f9f9]'
-              : 'bg-green-500'
+              : colorScheme === 'dark'
+                ? 'border-2 border-[#259365] bg-[#26342e]'
+                : 'border-2 border-[#259365] bg-[#c7e5d9]'
           }`}>
           {createPost.isPending ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color={colorScheme === 'dark' ? 'white' : '#259365'} />
           ) : isSuccess ? (
-            <Ionicons name="checkmark" size={20} color="white" />
+            <Ionicons
+              name="checkmark"
+              size={20}
+              color={colorScheme === 'dark' ? 'white' : '#259365'}
+            />
           ) : (
             <Text
               className={`font-medium ${
-                !image || createPost.isPending || !foodValidationResult?.isValid
+                !image || createPost.isPending
                   ? colorScheme === 'dark'
                     ? 'text-[#9ca3af]'
                     : 'text-[#877B66]'
-                  : 'text-white'
+                  : colorScheme === 'dark'
+                    ? 'text-[#259365]'
+                    : 'text-[#259365]'
               }`}>
               Post
             </Text>
@@ -287,44 +236,19 @@ export default function CreatePostScreen() {
       {/* Content */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        style={{flex:1}}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0}>
         <ScrollView
           ref={scrollViewRef}
-          className="flex-1"
+          style={{flex:1}}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
           keyboardDismissMode="on-drag">
           <View className="flex-1 p-4">
             {image ? (
               <View className="mb-4 aspect-square w-full overflow-hidden rounded-2xl">
                 <Image source={{ uri: image }} className="h-full w-full" resizeMode="cover" />
-
-                {/* Food validation status */}
-                {isValidatingFood && (
-                  <View className="absolute inset-0 items-center justify-center bg-black/50">
-                    <View className="rounded-lg bg-white/90 p-4">
-                      <ActivityIndicator size="large" color="#0f9900" />
-                      <Text className="mt-2 text-center font-medium text-gray-800">
-                        Checking if image contains food...
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                {foodValidationResult && !isValidatingFood && (
-                  <View className="absolute bottom-2 left-2 right-2">
-                    <View
-                      className={`rounded-lg p-2 ${
-                        foodValidationResult.isValid ? 'bg-green-500/90' : 'bg-red-500/90'
-                      }`}>
-                      <Text className="text-center text-sm font-medium text-white">
-                        {foodValidationResult.isValid ? '✅ Food detected!' : '❌ No food detected'}
-                      </Text>
-                    </View>
-                  </View>
-                )}
               </View>
             ) : (
               <TouchableOpacity
@@ -334,20 +258,15 @@ export default function CreatePostScreen() {
                 }`}>
                 <View
                   className={`rounded-full p-4 ${
-                    colorScheme === 'dark' ? 'bg-[#ff9f6b]/10' : 'bg-[#f77f5e]/10'
+                    colorScheme === 'dark' ? 'bg-[#f77f5e]/10' : 'bg-[#f77f5e]/10'
                   }`}>
-                  <Ionicons
-                    name="camera"
-                    size={40}
-                    color={colorScheme === 'dark' ? '#ff9f6b' : '#f77f5e'}
-                  />
+                  <Ionicons name="camera" size={40} color="#f77f5e" />
                 </View>
                 <Text
                   className={`mt-2 text-base font-medium ${
                     colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                   }`}>
-                  Select a food image
-                  <Text className="text-red-500">*</Text>
+                  Select an image
                 </Text>
                 <Text
                   className={`mt-1 text-sm ${
@@ -382,7 +301,6 @@ export default function CreatePostScreen() {
                   style={{ textAlignVertical: 'center' }}
                   onFocus={() => {
                     measureInputPosition(dishNameRef, (position) => {
-                      setInputPositions((prev) => ({ ...prev, dishName: position }));
                       scrollViewRef.current?.scrollTo({ y: position - 100, animated: true });
                     });
                   }}
@@ -412,7 +330,6 @@ export default function CreatePostScreen() {
                   style={{ textAlignVertical: 'center' }}
                   onFocus={() => {
                     measureInputPosition(captionRef, (position) => {
-                      setInputPositions((prev) => ({ ...prev, caption: position }));
                       scrollViewRef.current?.scrollTo({ y: position - 100, animated: true });
                     });
                   }}
@@ -449,7 +366,6 @@ export default function CreatePostScreen() {
                   }}
                   onFocus={() => {
                     measureInputPosition(ingredientsRef, (position) => {
-                      setInputPositions((prev) => ({ ...prev, ingredients: position }));
                       scrollViewRef.current?.scrollTo({ y: position - 100, animated: true });
                     });
                   }}
