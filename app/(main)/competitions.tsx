@@ -25,6 +25,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Octicons } from '@expo/vector-icons';
 import InfoModal from '~/components/InfoModal';
 import { ScrollView } from 'react-native-gesture-handler';
+import { Dimensions } from 'react-native';
+
+const { width: screenWidth } = Dimensions.get('window');
+const fontSize = Math.min(screenWidth * 0.12, 60); // 8% of screen width, max 64px
+const competitionTitleFontSize = Math.min(screenWidth * 0.14, 60); // 8% of screen width, max 64px
 
 type Winner = {
   username: string;
@@ -427,29 +432,36 @@ export default function CompetitionsScreen() {
 
   return (
     <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#E8E9EB]'}`}>
-        <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1}}
-          className="pd-20"
-          showsVerticalScrollIndicator={false}
-        >
-        
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        className="pd-20"
+        showsVerticalScrollIndicator={false}>
         {/* Title Section */}
         <View className="mb-4 mt-16 px-4 pt-2">
-          <View className="flex-row items-center">
+          {/* Info button positioned outside */}
+          <TouchableOpacity
+            onPress={() => setIsInfoModalVisible(true)}
+            className="absolute right-4 top-16 z-10">
+            <Octicons
+              name="info"
+              size={24}
+              color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+            />
+          </TouchableOpacity>
+
+          {/* Centered text container */}
+          <View className="flex-col items-center justify-center">
             <Text
-              className={`text-center font-jua text-[3.2rem] ${colorScheme === 'dark' ? 'text-white' : 'text-[#07020D]'}`}>
-              JOIN A COOKING COMPETITION!
+              style={{ fontSize: fontSize }}
+              className={`max-w-full text-center font-jua ${colorScheme === 'dark' ? 'text-white' : 'text-[#07020D]'}`}>
+              JOIN A COOKING
             </Text>
-            <TouchableOpacity
-              onPress={() => setIsInfoModalVisible(true)}
-              className="absolute right-0 mt-10">
-              <Octicons
-                name="info"
-                size={24}
-                color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
-              />
-            </TouchableOpacity>
+            <Text
+              style={{ fontSize: fontSize }}
+              className={`max-w-full text-center font-jua ${colorScheme === 'dark' ? 'text-white' : 'text-[#07020D]'}`}>
+              COMPETITION!
+            </Text>
           </View>
         </View>
 
@@ -581,7 +593,11 @@ export default function CompetitionsScreen() {
 
                 {/* Bottom - Timer */}
                 <View className="absolute bottom-0 left-0 mb-1 ml-3 flex-row items-center">
-                  <MaterialCommunityIcons name="clock-time-four-outline" size={28} color="#131a2c" />
+                  <MaterialCommunityIcons
+                    name="clock-time-four-outline"
+                    size={28}
+                    color="#131a2c"
+                  />
                   <Text className="ml-[-0.4rem] font-nunito text-[1.6rem] font-extrabold text-[#131a2c]">
                     {/* {getPhaseMessage(competitionsStatus.morning.phase)} */}
                     {` ${formatTimeRemaining(competitionsStatus.morning.timeRemaining)}`}
@@ -591,7 +607,11 @@ export default function CompetitionsScreen() {
             ) : (
               <>
                 <View className="absolute bottom-0 left-0 mb-1 ml-3 flex-row items-center">
-                  <MaterialCommunityIcons name="clock-time-four-outline" size={28} color="#131a2c" />
+                  <MaterialCommunityIcons
+                    name="clock-time-four-outline"
+                    size={28}
+                    color="#131a2c"
+                  />
                   <Text className="ml-[-0.4rem] font-nunito text-[1.6rem] font-extrabold text-[#131a2c]">
                     {/* {getPhaseMessage(competitionsStatus.morning.phase)} */}
                     {competitionsStatus.morning.phase === 'registration' ||
@@ -603,13 +623,15 @@ export default function CompetitionsScreen() {
                 </View>
                 <View className="absolute left-3 mt-5 flex-col">
                   <Text
-                    className={`font-nunito text-[3.8rem] font-extrabold ${colorScheme === 'dark' ? 'text-[#efe1c3]' : 'text-[#efe1c3]'}`}>
+                    style={{ fontSize: competitionTitleFontSize }}
+                    className={`font-nunito font-extrabold ${colorScheme === 'dark' ? 'text-[#efe1c3]' : 'text-[#efe1c3]'}`}>
                     {competitionsStatus.morning.name
                       ? competitionsStatus.morning.name.split(' ')[0]
                       : 'No active'}
                   </Text>
                   <Text
-                    className={`mt-[-2rem] font-nunito text-[3.8rem] font-extrabold ${colorScheme === 'dark' ? 'text-[#efe1c3]' : 'text-[#efe1c3]'}`}>
+                    style={{ fontSize: competitionTitleFontSize }}
+                    className={`mt-[-2rem] font-nunito font-extrabold ${colorScheme === 'dark' ? 'text-[#efe1c3]' : 'text-[#efe1c3]'}`}>
                     {competitionsStatus.morning.name
                       ? competitionsStatus.morning.name.split(' ')[1]
                       : 'competition'}
@@ -723,7 +745,11 @@ export default function CompetitionsScreen() {
 
                 {/* Bottom - Timer */}
                 <View className="absolute bottom-0 left-0 mb-1 ml-3 flex-row items-center">
-                  <MaterialCommunityIcons name="clock-time-four-outline" size={28} color="#5680e8" />
+                  <MaterialCommunityIcons
+                    name="clock-time-four-outline"
+                    size={28}
+                    color="#5680e8"
+                  />
                   <Text className="ml-[-0.4rem] font-nunito text-[1.6rem] font-extrabold text-[#5680e8]">
                     {/* {getPhaseMessage(competitionsStatus.noon.phase)} */}
                     {` ${formatTimeRemaining(competitionsStatus.noon.timeRemaining)}`}
@@ -733,7 +759,11 @@ export default function CompetitionsScreen() {
             ) : (
               <>
                 <View className="absolute bottom-0 left-0 mb-1 ml-3 flex-row items-center">
-                  <MaterialCommunityIcons name="clock-time-four-outline" size={28} color="#5680e8" />
+                  <MaterialCommunityIcons
+                    name="clock-time-four-outline"
+                    size={28}
+                    color="#5680e8"
+                  />
                   <Text className="ml-[-0.4rem] font-nunito text-[1.6rem] font-extrabold text-[#5680e8]">
                     {/* {getPhaseMessage(competitionsStatus.noon.phase)} */}
                     {competitionsStatus.noon.phase === 'registration' ||
@@ -745,13 +775,15 @@ export default function CompetitionsScreen() {
                 </View>
                 <View className="absolute left-3 mt-5 flex-col">
                   <Text
-                    className={`font-nunito text-[3.8rem] font-extrabold ${colorScheme === 'dark' ? 'text-[#e98700]' : 'text-[#e98700]'}`}>
+                    style={{ fontSize: competitionTitleFontSize }}
+                    className={`font-nunito font-extrabold ${colorScheme === 'dark' ? 'text-[#e98700]' : 'text-[#e98700]'}`}>
                     {competitionsStatus.noon.name
                       ? competitionsStatus.noon.name.split(' ')[0]
                       : 'No active'}
                   </Text>
                   <Text
-                    className={`mt-[-2rem] font-nunito text-[3.8rem] font-extrabold ${colorScheme === 'dark' ? 'text-[#e98700]' : 'text-[#e98700]'}`}>
+                    style={{ fontSize: competitionTitleFontSize }}
+                    className={`mt-[-2rem] font-nunito font-extrabold ${colorScheme === 'dark' ? 'text-[#e98700]' : 'text-[#e98700]'}`}>
                     {competitionsStatus.noon.name
                       ? competitionsStatus.noon.name.split(' ')[1]
                       : 'competition'}
@@ -865,7 +897,11 @@ export default function CompetitionsScreen() {
 
                 {/* Bottom - Timer */}
                 <View className="absolute bottom-0 left-0 mb-1 ml-3 flex-row items-center">
-                  <MaterialCommunityIcons name="clock-time-four-outline" size={28} color="#eb9f99" />
+                  <MaterialCommunityIcons
+                    name="clock-time-four-outline"
+                    size={28}
+                    color="#eb9f99"
+                  />
                   <Text className="ml-[-0.4rem] font-nunito text-[1.6rem] font-extrabold text-[#eb9f99]">
                     {/* {getPhaseMessage(competitionsStatus.night.phase)} */}
                     {` ${formatTimeRemaining(competitionsStatus.night.timeRemaining)}`}
@@ -875,7 +911,11 @@ export default function CompetitionsScreen() {
             ) : (
               <>
                 <View className="absolute bottom-0 left-0 mb-1 ml-3 flex-row items-center">
-                  <MaterialCommunityIcons name="clock-time-four-outline" size={28} color="#eb9f99" />
+                  <MaterialCommunityIcons
+                    name="clock-time-four-outline"
+                    size={28}
+                    color="#eb9f99"
+                  />
                   <Text className="ml-[-0.4rem] font-nunito text-[1.6rem] font-extrabold text-[#eb9f99]">
                     {/* {getPhaseMessage(competitionsStatus.night.phase)} */}
                     {competitionsStatus.night.phase === 'registration' ||
@@ -887,13 +927,15 @@ export default function CompetitionsScreen() {
                 </View>
                 <View className="absolute left-3 mt-5 flex-col">
                   <Text
-                    className={`font-nunito text-[3.8rem] font-extrabold ${colorScheme === 'dark' ? 'text-[#ad51a3]' : 'text-[#ad51a3]'}`}>
+                    style={{ fontSize: competitionTitleFontSize }}
+                    className={`font-nunito font-extrabold ${colorScheme === 'dark' ? 'text-[#ad51a3]' : 'text-[#ad51a3]'}`}>
                     {competitionsStatus.night.name
                       ? competitionsStatus.night.name.split(' ')[0]
                       : 'No active'}
                   </Text>
                   <Text
-                    className={`mt-[-2rem] font-nunito text-[3.8rem] font-extrabold ${colorScheme === 'dark' ? 'text-[#ad51a3]' : 'text-[#ad51a3]'}`}>
+                    style={{ fontSize: competitionTitleFontSize }}
+                    className={`mt-[-2rem] font-nunito font-extrabold ${colorScheme === 'dark' ? 'text-[#ad51a3]' : 'text-[#ad51a3]'}`}>
                     {competitionsStatus.night.name
                       ? competitionsStatus.night.name.split(' ')[1]
                       : 'competition'}
@@ -915,7 +957,11 @@ export default function CompetitionsScreen() {
             onPress={() => setSelectedImage(null)}
             className="flex-1 items-center justify-center bg-black/90">
             {selectedImage && (
-              <Image source={{ uri: selectedImage }} className="h-3/4 w-full" resizeMode="contain" />
+              <Image
+                source={{ uri: selectedImage }}
+                className="h-3/4 w-full"
+                resizeMode="contain"
+              />
             )}
           </TouchableOpacity>
         </Modal>
