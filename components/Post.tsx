@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -17,10 +17,6 @@ import GradientText from './GradientText';
 import { Animated } from 'react-native';
 import { useSavedPosts } from '../lib/hooks/useSavedPosts';
 import { useAuth } from '../lib/auth';
-import { supabase } from '../lib/supabase';
-
-// Cache for saved posts to avoid repeated database calls
-const savedPostsCache = new Map<string, boolean>();
 
 interface PostProps {
   post: {
@@ -77,51 +73,25 @@ export default function Post({
   const { colorScheme } = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
-  const { savePost, unsavePost, isSaving, isUnsaving } = useSavedPosts(user?.id || '');
-  const [isSaved, setIsSaved] = useState(false);
+  const {
+    savePostWithOptimisticUpdate,
+    unsavePostWithOptimisticUpdate,
+    isSaving,
+    isUnsaving,
+    isPostSaved,
+  } = useSavedPosts(user?.id || '');
 
-  // Check if post is saved on mount
-  useEffect(() => {
-    const checkSavedStatus = async () => {
-      if (user?.id) {
-        const cacheKey = `${user.id}-${post.id}`;
-
-        // Check cache first
-        if (savedPostsCache.has(cacheKey)) {
-          setIsSaved(savedPostsCache.get(cacheKey)!);
-          return;
-        }
-
-        // If not in cache, check database
-        const { data } = await supabase
-          .from('saved_posts')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('post_id', post.id)
-          .single();
-
-        const saved = !!data;
-        setIsSaved(saved);
-        savedPostsCache.set(cacheKey, saved);
-      }
-    };
-    checkSavedStatus();
-  }, [post.id, user?.id]);
+  // Use the cached saved status directly
+  const isSaved = isPostSaved(post.id);
 
   const handleSaveToggle = () => {
     if (!user?.id) return;
 
-    const cacheKey = `${user.id}-${post.id}`;
-
-    // Optimistic update - immediately update UI and cache
+    // Use optimistic updates for instant UI feedback
     if (isSaved) {
-      setIsSaved(false);
-      savedPostsCache.set(cacheKey, false);
-      unsavePost(post.id);
+      unsavePostWithOptimisticUpdate(post.id);
     } else {
-      setIsSaved(true);
-      savedPostsCache.set(cacheKey, true);
-      savePost(post.id);
+      savePostWithOptimisticUpdate(post.id);
     }
   };
 

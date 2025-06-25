@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from '../lib/useColorScheme';
 import { usePostReports } from '../lib/hooks/usePostReports';
 import { useAuth } from '../lib/auth';
+import { useSavedPosts } from '../lib/hooks/useSavedPosts';
 
 interface OptionsModalProps {
   visible: boolean;
@@ -26,6 +27,16 @@ export default function OptionsModal({
   const { colorScheme } = useColorScheme();
   const { user } = useAuth();
   const { reportPost, isReported, isReporting } = usePostReports();
+  const {
+    savePostWithOptimisticUpdate,
+    unsavePostWithOptimisticUpdate,
+    isSaving,
+    isUnsaving,
+    isPostSaved,
+  } = useSavedPosts(user?.id || '');
+
+  // Use the cached saved status directly
+  const isSaved = post ? isPostSaved(post.id) : false;
 
   if (!post) return null;
 
@@ -50,6 +61,17 @@ export default function OptionsModal({
         },
       ]
     );
+  };
+
+  const handleSaveToggle = () => {
+    if (!user?.id) return;
+
+    // Use optimistic updates for instant UI feedback
+    if (isSaved) {
+      unsavePostWithOptimisticUpdate(post.id);
+    } else {
+      savePostWithOptimisticUpdate(post.id);
+    }
   };
 
   return (
@@ -113,17 +135,22 @@ export default function OptionsModal({
                 <TouchableOpacity
                   onPress={() => {
                     onClose();
-                    Alert.alert('Coming Soon', 'Save functionality will be available soon!');
+                    handleSaveToggle();
                   }}
+                  disabled={isSaving || isUnsaving}
                   className={`flex-row items-center space-x-3 rounded-xl p-3 ${
                     colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50'
                   }`}>
-                  <Ionicons name="bookmark-outline" size={24} color="#5070fd" />
+                  <Ionicons
+                    name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                    size={24}
+                    color={isSaved ? '#3B82F6' : '#5070fd'}
+                  />
                   <Text
                     className={`text-base ${
                       colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                     }`}>
-                    Save Post
+                    {isSaved ? 'Unsave Post' : 'Save Post'}
                   </Text>
                 </TouchableOpacity>
 

@@ -151,6 +151,15 @@ export const useSavedPosts = (userId: string) => {
     },
   });
 
+  // Check if post is saved using cache
+  const isPostSaved = useCallback(
+    (postId: string): boolean => {
+      if (!savedPosts) return false;
+      return savedPosts.some((savedPost) => savedPost.post_id === postId);
+    },
+    [savedPosts]
+  );
+
   // Check if post is saved
   const checkIfSaved = useCallback(
     async (postId: string): Promise<boolean> => {
@@ -171,6 +180,51 @@ export const useSavedPosts = (userId: string) => {
     [userId]
   );
 
+  // Save post with optimistic update
+  const savePostWithOptimisticUpdate = useCallback(
+    (postId: string) => {
+      // Optimistically update the cache
+      queryClient.setQueryData(['saved-posts', userId], (oldData: SavedPost[] | undefined) => {
+        if (!oldData) return oldData;
+
+        // Check if post is already saved
+        const alreadySaved = oldData.some((savedPost) => savedPost.post_id === postId);
+        if (alreadySaved) return oldData;
+
+        // Add the post to saved posts (we'll need to fetch the post data)
+        // For now, we'll create a minimal saved post object
+        const optimisticSavedPost: SavedPost = {
+          id: `temp-${Date.now()}`,
+          user_id: userId,
+          post_id: postId,
+          created_at: new Date().toISOString(),
+          posts: null as any, // This will be filled when the query refetches
+        };
+
+        return [optimisticSavedPost, ...oldData];
+      });
+
+      // Call the actual mutation
+      savePostMutation.mutate(postId);
+    },
+    [userId, queryClient, savePostMutation]
+  );
+
+  // Unsave post with optimistic update
+  const unsavePostWithOptimisticUpdate = useCallback(
+    (postId: string) => {
+      // Optimistically update the cache
+      queryClient.setQueryData(['saved-posts', userId], (oldData: SavedPost[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.filter((savedPost) => savedPost.post_id !== postId);
+      });
+
+      // Call the actual mutation
+      unsavePostMutation.mutate(postId);
+    },
+    [userId, queryClient, unsavePostMutation]
+  );
+
   return {
     // Data
     savedPosts: savedPosts || [],
@@ -181,6 +235,8 @@ export const useSavedPosts = (userId: string) => {
     // Mutations
     savePost: savePostMutation.mutate,
     unsavePost: unsavePostMutation.mutate,
+    savePostWithOptimisticUpdate,
+    unsavePostWithOptimisticUpdate,
 
     // Loading states for mutations
     isSaving: savePostMutation.isPending,
@@ -188,5 +244,6 @@ export const useSavedPosts = (userId: string) => {
 
     // Utility
     checkIfSaved,
+    isPostSaved,
   };
 };
