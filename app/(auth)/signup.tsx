@@ -297,7 +297,7 @@ export default function SignUp() {
                 <Text
                   className="text-blue-500"
                   onPress={() =>
-                    openBrowser('https://github.com/GG1627/Picza/blob/caitlin/TERMS_OF_SERVICE.md')
+                    openBrowser('https://github.com/GG1627/Picza/blob/main/TERMS_OF_SERVICE.md')
                   }>
                   Terms of Service{' '}
                 </Text>
@@ -305,7 +305,7 @@ export default function SignUp() {
                 <Text
                   className="text-blue-500"
                   onPress={() =>
-                    openBrowser('https://github.com/GG1627/Picza/blob/caitlin/PRIVACY_POLICY.md')
+                    openBrowser('https://github.com/GG1627/Picza/blob/main/PRIVACY_POLICY.md')
                   }>
                   Privacy Policy
                 </Text>
