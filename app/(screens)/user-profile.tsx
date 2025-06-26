@@ -19,6 +19,7 @@ import React from 'react';
 import { getCompetitionTag } from '../../lib/competitionTags';
 import { useAuth } from '../../lib/auth';
 import { useFriends } from '../../lib/hooks/useFriends';
+import { useUserBlocking } from '../../lib/hooks/useUserBlocking';
 
 type Post = {
   id: string;
@@ -61,6 +62,9 @@ export default function UserProfileScreen() {
   const { colorScheme } = useColorScheme();
   const { user } = useAuth();
   const { sendRequest, isSending } = useFriends(user?.id || '');
+  const { blockUser, unblockUser, isUserBlocked, isBlocking, isUnblocking } = useUserBlocking(
+    user?.id || ''
+  );
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const loadingScale = React.useRef(new Animated.Value(1)).current;
   const loadingOpacity = React.useRef(new Animated.Value(1)).current;
@@ -231,22 +235,22 @@ export default function UserProfileScreen() {
     switch (friendStatus) {
       case 'friends':
         return (
-          <View className="rounded-full bg-green-500 p-2">
-            <Ionicons name="checkmark-circle" size={24} color="white" />
+          <View className="rounded-full bg-white/10 p-2">
+            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
           </View>
         );
       case 'pending_sent':
         return (
-          <View className="rounded-full bg-gray-300 p-2">
-            <Ionicons name="time" size={24} color="white" />
+          <View className="rounded-full bg-white/10 p-2">
+            <Ionicons name="time" size={24} color="#F59E0B" />
           </View>
         );
       case 'pending_received':
         return (
           <Pressable
             onPress={() => router.push('/friends')}
-            className="rounded-full bg-blue-500 p-2">
-            <Ionicons name="person-add" size={24} color="white" />
+            className="rounded-full bg-white/10 p-2">
+            <Ionicons name="person-add" size={24} color="#3B82F6" />
           </Pressable>
         );
       default:
@@ -254,11 +258,48 @@ export default function UserProfileScreen() {
           <Pressable
             onPress={handleFriendRequest}
             disabled={isSending}
-            className={`rounded-full bg-blue-500 p-2 ${isSending ? 'opacity-50' : ''}`}>
-            <Ionicons name="person-add-outline" size={24} color="white" />
+            className={`rounded-full bg-white/10 p-2 ${isSending ? 'opacity-50' : ''}`}>
+            <Ionicons name="person-add-outline" size={24} color="#3B82F6" />
           </Pressable>
         );
     }
+  };
+
+  const renderBlockButton = () => {
+    if (!user?.id || user.id === userId) return null;
+
+    const isBlocked = isUserBlocked(userId as string);
+    const isLoading = isBlocking || isUnblocking;
+
+    return (
+      <Pressable
+        onPress={() => {
+          if (isBlocked) {
+            unblockUser(userId as string);
+          } else {
+            Alert.alert(
+              'Block User',
+              `Are you sure you want to block @${profile?.username}? You won't see their posts or comments anymore.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Block',
+                  style: 'destructive',
+                  onPress: () => blockUser(userId as string),
+                },
+              ]
+            );
+          }
+        }}
+        disabled={isLoading}
+        className={`rounded-full bg-white/10 p-2 ${isLoading ? 'opacity-50' : ''}`}>
+        <Ionicons
+          name={isBlocked ? 'lock-open' : 'ban'}
+          size={24}
+          color={isBlocked ? '#10B981' : '#EF4444'}
+        />
+      </Pressable>
+    );
   };
 
   const fetchFriendsCount = async () => {
@@ -309,6 +350,82 @@ export default function UserProfileScreen() {
     );
   }
 
+  // Check if user is blocked
+  const isBlocked = user?.id && userId && isUserBlocked(userId as string);
+
+  // Show blocked user message
+  if (isBlocked) {
+    return (
+      <View className="flex-1">
+        <Animated.View
+          style={{
+            flex: 1,
+            opacity: fadeAnim,
+          }}
+          className={`${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
+          {/* Header */}
+          <View className="mt-16 flex-row items-center justify-between px-6">
+            <Pressable
+              onPress={() => router.back()}
+              className={`rounded-full ${
+                colorScheme === 'dark' ? 'bg-none' : 'bg-none'
+              } p-2 shadow-sm`}>
+              <Ionicons
+                name="arrow-back"
+                size={24}
+                color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+              />
+            </Pressable>
+            <View className="flex-row items-center space-x-2">{renderBlockButton()}</View>
+          </View>
+
+          {/* Blocked User Message */}
+          <View className="flex-1 items-center justify-center px-6">
+            <View className="items-center space-y-4">
+              <View
+                className={`h-32 w-32 items-center justify-center rounded-full border-2 ${
+                  colorScheme === 'dark'
+                    ? 'border-gray-600 bg-gray-800'
+                    : 'border-gray-400 bg-gray-200'
+                }`}>
+                <Ionicons
+                  name="person-remove"
+                  size={48}
+                  color={colorScheme === 'dark' ? '#666' : '#999'}
+                />
+              </View>
+
+              <Text
+                className={`text-xl font-bold ${
+                  colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                User Blocked
+              </Text>
+
+              <Text
+                className={`text-center text-base ${
+                  colorScheme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                }`}>
+                You have blocked this user. Their content is hidden from your feed.
+              </Text>
+
+              <Pressable
+                onPress={() => unblockUser(userId as string)}
+                disabled={isUnblocking}
+                className={`rounded-full px-6 py-3 ${isUnblocking ? 'opacity-50' : ''} ${
+                  colorScheme === 'dark' ? 'bg-blue-600' : 'bg-blue-500'
+                }`}>
+                <Text className="font-semibold text-white">
+                  {isUnblocking ? 'Unblocking...' : 'Unblock User'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </Animated.View>
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1">
       <Animated.View
@@ -330,7 +447,10 @@ export default function UserProfileScreen() {
               color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
             />
           </Pressable>
-          {renderFriendButton()}
+          <View className="flex-row items-center space-x-2">
+            {renderFriendButton()}
+            {renderBlockButton()}
+          </View>
         </View>
 
         <ScrollView
@@ -381,12 +501,6 @@ export default function UserProfileScreen() {
               </View>
 
               <View className="mt-4 items-center">
-                {/* <Text
-                  className={`text-2xl font-bold ${
-                    colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                  }`}>
-                  {profile?.full_name}
-                </Text> */}
                 <Text
                   className={`text-2xl font-bold ${
                     colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'

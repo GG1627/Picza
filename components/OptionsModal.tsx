@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from '../lib/useColorScheme';
 import { usePostReports } from '../lib/hooks/usePostReports';
 import { useAuth } from '../lib/auth';
+import { useSavedPosts } from '../lib/hooks/useSavedPosts';
+import { useUserBlocking } from '../lib/hooks/useUserBlocking';
 
 interface OptionsModalProps {
   visible: boolean;
@@ -11,6 +13,10 @@ interface OptionsModalProps {
   post: {
     id: string;
     user_id: string;
+    profiles?: {
+      id: string;
+      username: string;
+    } | null;
   } | null;
   onDeletePost: (postId: string) => void;
   isOwnPost: boolean;
@@ -26,6 +32,20 @@ export default function OptionsModal({
   const { colorScheme } = useColorScheme();
   const { user } = useAuth();
   const { reportPost, isReported, isReporting } = usePostReports();
+  const {
+    savePostWithOptimisticUpdate,
+    unsavePostWithOptimisticUpdate,
+    isSaving,
+    isUnsaving,
+    isPostSaved,
+  } = useSavedPosts(user?.id || '');
+  const { blockUser, unblockUser, isUserBlocked, isBlocking, isUnblocking } = useUserBlocking(
+    user?.id || ''
+  );
+
+  // Use the cached saved status directly
+  const isSaved = post ? isPostSaved(post.id) : false;
+  const isBlocked = post && post.profiles ? isUserBlocked(post.profiles.id) : false;
 
   if (!post) return null;
 
@@ -50,6 +70,42 @@ export default function OptionsModal({
         },
       ]
     );
+  };
+
+  const handleBlockUser = () => {
+    if (!post.profiles) return;
+
+    if (isBlocked) {
+      unblockUser(post.profiles.id);
+      onClose();
+    } else {
+      Alert.alert(
+        'Block User',
+        `Are you sure you want to block @${post.profiles.username}? You won't see their posts or comments anymore.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Block',
+            style: 'destructive',
+            onPress: () => {
+              blockUser(post.profiles!.id);
+              onClose();
+            },
+          },
+        ]
+      );
+    }
+  };
+
+  const handleSaveToggle = () => {
+    if (!user?.id) return;
+
+    // Use optimistic updates for instant UI feedback
+    if (isSaved) {
+      unsavePostWithOptimisticUpdate(post.id);
+    } else {
+      savePostWithOptimisticUpdate(post.id);
+    }
   };
 
   return (
@@ -113,17 +169,41 @@ export default function OptionsModal({
                 <TouchableOpacity
                   onPress={() => {
                     onClose();
-                    Alert.alert('Coming Soon', 'Save functionality will be available soon!');
+                    handleSaveToggle();
                   }}
+                  disabled={isSaving || isUnsaving}
                   className={`flex-row items-center space-x-3 rounded-xl p-3 ${
                     colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50'
                   }`}>
-                  <Ionicons name="bookmark-outline" size={24} color="#5070fd" />
+                  <Ionicons
+                    name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                    size={24}
+                    color={isSaved ? '#3B82F6' : '#5070fd'}
+                  />
                   <Text
                     className={`text-base ${
                       colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
                     }`}>
-                    Save Post
+                    {isSaved ? 'Unsave Post' : 'Save Post'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleBlockUser}
+                  disabled={isBlocking || isUnblocking}
+                  className={`mt-2 flex-row items-center space-x-3 rounded-xl p-3 ${
+                    colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50'
+                  }`}>
+                  <Ionicons
+                    name={isBlocked ? 'lock-open' : 'ban'}
+                    size={24}
+                    color={isBlocked ? '#10B981' : '#EF4444'}
+                  />
+                  <Text
+                    className={`text-base ${
+                      colorScheme === 'dark' ? 'text-[#EF4444]' : 'text-[#EF4444]'
+                    }`}>
+                    {isBlocked ? 'Unblock User' : 'Block User'}
                   </Text>
                 </TouchableOpacity>
 

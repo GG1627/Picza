@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 import { Alert } from 'react-native';
+import { useUserBlocking } from './useUserBlocking';
+import { useAuth } from '../auth';
 
 // Types
 export type SavedPost = {
@@ -18,6 +20,7 @@ export type SavedPost = {
     dish_name: string | null;
     ingredients: string | null;
     comments_count: number;
+    user_id: string;
     profiles: {
       id: string;
       username: string;
@@ -35,6 +38,8 @@ export type SavedPost = {
 // Custom Hook
 export const useSavedPosts = (userId: string) => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { filterBlockedUsers } = useUserBlocking(user?.id || '');
 
   // Get saved posts
   const { data: savedPosts, isLoading: savedPostsLoading } = useQuery({
@@ -56,6 +61,7 @@ export const useSavedPosts = (userId: string) => {
             dish_name,
             ingredients,
             comments_count,
+            user_id,
             profiles:user_id (
               id,
               username,
@@ -78,8 +84,12 @@ export const useSavedPosts = (userId: string) => {
 
       // Filter out any posts that might have been deleted
       const validSavedPosts = (data || []).filter((savedPost) => savedPost.posts !== null);
-      console.log('Saved posts:', validSavedPosts);
-      return validSavedPosts as SavedPost[];
+
+      // Filter out posts from blocked users
+      const filteredSavedPosts = filterBlockedUsers(validSavedPosts);
+
+      console.log('Saved posts:', filteredSavedPosts);
+      return filteredSavedPosts as SavedPost[];
     },
     enabled: !!userId,
   });
@@ -151,6 +161,15 @@ export const useSavedPosts = (userId: string) => {
     },
   });
 
+  // Check if post is saved using cache
+  const isPostSaved = useCallback(
+    (postId: string): boolean => {
+      if (!savedPosts) return false;
+      return savedPosts.some((savedPost) => savedPost.post_id === postId);
+    },
+    [savedPosts]
+  );
+
   // Check if post is saved
   const checkIfSaved = useCallback(
     async (postId: string): Promise<boolean> => {
@@ -171,6 +190,51 @@ export const useSavedPosts = (userId: string) => {
     [userId]
   );
 
+  // Save post with optimistic update
+  const savePostWithOptimisticUpdate = useCallback(
+    (postId: string) => {
+      // Optimistically update the cache
+      queryClient.setQueryData(['saved-posts', userId], (oldData: SavedPost[] | undefined) => {
+        if (!oldData) return oldData;
+
+        // Check if post is already saved
+        const alreadySaved = oldData.some((savedPost) => savedPost.post_id === postId);
+        if (alreadySaved) return oldData;
+
+        // Add the post to saved posts (we'll need to fetch the post data)
+        // For now, we'll create a minimal saved post object
+        const optimisticSavedPost: SavedPost = {
+          id: `temp-${Date.now()}`,
+          user_id: userId,
+          post_id: postId,
+          created_at: new Date().toISOString(),
+          posts: null as any, // This will be filled when the query refetches
+        };
+
+        return [optimisticSavedPost, ...oldData];
+      });
+
+      // Call the actual mutation
+      savePostMutation.mutate(postId);
+    },
+    [userId, queryClient, savePostMutation]
+  );
+
+  // Unsave post with optimistic update
+  const unsavePostWithOptimisticUpdate = useCallback(
+    (postId: string) => {
+      // Optimistically update the cache
+      queryClient.setQueryData(['saved-posts', userId], (oldData: SavedPost[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.filter((savedPost) => savedPost.post_id !== postId);
+      });
+
+      // Call the actual mutation
+      unsavePostMutation.mutate(postId);
+    },
+    [userId, queryClient, unsavePostMutation]
+  );
+
   return {
     // Data
     savedPosts: savedPosts || [],
@@ -181,6 +245,8 @@ export const useSavedPosts = (userId: string) => {
     // Mutations
     savePost: savePostMutation.mutate,
     unsavePost: unsavePostMutation.mutate,
+    savePostWithOptimisticUpdate,
+    unsavePostWithOptimisticUpdate,
 
     // Loading states for mutations
     isSaving: savePostMutation.isPending,
@@ -188,5 +254,6 @@ export const useSavedPosts = (userId: string) => {
 
     // Utility
     checkIfSaved,
+    isPostSaved,
   };
 };

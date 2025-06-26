@@ -60,10 +60,14 @@ export default function CreatePostScreen() {
   }, []);
 
   const measureInputPosition = (ref: any, setter: (position: number) => void) => {
-    if (ref.current) {
-      ref.current.measure(
-        (x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
-          setter(pageY);
+    if (ref.current && scrollViewRef.current) {
+      ref.current.measureLayout(
+        scrollViewRef.current,
+        (x: number, y: number) => {
+          setter(y);
+        },
+        (error: any) => {
+          console.warn('measureLayout failed:', error);
         }
       );
     }
@@ -82,6 +86,8 @@ export default function CreatePostScreen() {
     setIngredients('');
     setIsSuccess(false);
     setFoodValidationResult(null);
+    scrollViewRef.current?.scrollTo({ y: 0 });
+    Keyboard.dismiss();
   };
 
   const pickImage = async () => {
@@ -152,12 +158,6 @@ export default function CreatePostScreen() {
       return;
     }
 
-    await createPostAction();
-  };
-
-  const createPostAction = async () => {
-    if (!image) return;
-
     try {
       const formattedIngredients = formatIngredients(ingredients);
 
@@ -191,7 +191,7 @@ export default function CreatePostScreen() {
 
     // Split by multiple possible delimiters (comma, semicolon, or newline)
     const ingredientsArray = ingredients
-      .split(/[,;\n]/)
+      .split(/[,;\n' ']/)
       // Remove empty strings and trim whitespace
       .map((ingredient) => ingredient.trim())
       .filter((ingredient) => ingredient.length > 0)
@@ -230,7 +230,7 @@ export default function CreatePostScreen() {
   };
 
   return (
-    <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#E8E9EB]'}`}>
+    <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
       {/* Header */}
       <View
         className={`flex-row items-center justify-between border-b p-4 ${
@@ -241,10 +241,10 @@ export default function CreatePostScreen() {
             <Ionicons
               name="close-circle-outline"
               size={24}
-              color={colorScheme === 'dark' ? '#f00511' : '#f00511'}
+              color={colorScheme === 'dark' ? '#F00511' : '#F00511'}
             />
             <Text
-              className={`ml-1 font-medium ${colorScheme === 'dark' ? 'text-[#f00511]' : 'text-[#f00511]'}`}>
+              className={`ml-1 font-medium ${colorScheme === 'dark' ? 'text-[#F00511]' : 'text-[#F00511]'}`}>
               Clear
             </Text>
           </TouchableOpacity>
@@ -263,12 +263,18 @@ export default function CreatePostScreen() {
               ? colorScheme === 'dark'
                 ? 'bg-[#282828]'
                 : 'bg-[#f9f9f9]'
-              : 'bg-green-500'
+              : colorScheme === 'dark'
+                ? 'border-2 border-[#259365] bg-[#26342e]'
+                : 'border-2 border-[#259365] bg-[#c7e5d9]'
           }`}>
           {createPost.isPending ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color={colorScheme === 'dark' ? 'white' : '#259365'} />
           ) : isSuccess ? (
-            <Ionicons name="checkmark" size={20} color="white" />
+            <Ionicons
+              name="checkmark"
+              size={20}
+              color={colorScheme === 'dark' ? 'white' : '#259365'}
+            />
           ) : (
             <Text
               className={`font-medium ${
@@ -276,7 +282,9 @@ export default function CreatePostScreen() {
                   ? colorScheme === 'dark'
                     ? 'text-[#9ca3af]'
                     : 'text-[#877B66]'
-                  : 'text-white'
+                  : colorScheme === 'dark'
+                    ? 'text-[#259365]'
+                    : 'text-[#259365]'
               }`}>
               Post
             </Text>
@@ -287,14 +295,14 @@ export default function CreatePostScreen() {
       {/* Content */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0}>
         <ScrollView
           ref={scrollViewRef}
-          className="flex-1"
+          style={{ flex: 1 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
           keyboardDismissMode="on-drag">
           <View className="flex-1 p-4">
             {image ? (
@@ -334,13 +342,9 @@ export default function CreatePostScreen() {
                 }`}>
                 <View
                   className={`rounded-full p-4 ${
-                    colorScheme === 'dark' ? 'bg-[#ff9f6b]/10' : 'bg-[#f77f5e]/10'
+                    colorScheme === 'dark' ? 'bg-[#f77f5e]/10' : 'bg-[#f77f5e]/10'
                   }`}>
-                  <Ionicons
-                    name="camera"
-                    size={40}
-                    color={colorScheme === 'dark' ? '#ff9f6b' : '#f77f5e'}
-                  />
+                  <Ionicons name="camera" size={40} color="#f77f5e" />
                 </View>
                 <Text
                   className={`mt-2 text-base font-medium ${
@@ -382,7 +386,6 @@ export default function CreatePostScreen() {
                   style={{ textAlignVertical: 'center' }}
                   onFocus={() => {
                     measureInputPosition(dishNameRef, (position) => {
-                      setInputPositions((prev) => ({ ...prev, dishName: position }));
                       scrollViewRef.current?.scrollTo({ y: position - 100, animated: true });
                     });
                   }}
@@ -412,7 +415,6 @@ export default function CreatePostScreen() {
                   style={{ textAlignVertical: 'center' }}
                   onFocus={() => {
                     measureInputPosition(captionRef, (position) => {
-                      setInputPositions((prev) => ({ ...prev, caption: position }));
                       scrollViewRef.current?.scrollTo({ y: position - 100, animated: true });
                     });
                   }}
@@ -449,7 +451,6 @@ export default function CreatePostScreen() {
                   }}
                   onFocus={() => {
                     measureInputPosition(ingredientsRef, (position) => {
-                      setInputPositions((prev) => ({ ...prev, ingredients: position }));
                       scrollViewRef.current?.scrollTo({ y: position - 100, animated: true });
                     });
                   }}
