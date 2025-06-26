@@ -3,6 +3,8 @@ import { supabase } from '../supabase';
 import * as base64 from 'base64-js';
 import { uploadToCloudinary } from '../cloudinary';
 import { getTrendingPosts } from '../trendingAlgorithm';
+import { useUserBlocking } from './useUserBlocking';
+import { useAuth } from '../auth';
 
 // Types
 type Post = {
@@ -14,6 +16,7 @@ type Post = {
   dish_name: string | null;
   ingredients: string | null;
   comments_count?: number;
+  user_id: string;
   profiles: {
     id: string;
     username: string;
@@ -72,6 +75,9 @@ export function usePosts(
   pageSize = 10,
   sortBy: 'trending' | 'recent' = 'trending'
 ) {
+  const { user } = useAuth();
+  const { filterBlockedUsers } = useUserBlocking(user?.id || '');
+
   return useQuery({
     queryKey: ['posts', schoolId, filter, page, pageSize, sortBy],
     queryFn: async () => {
@@ -199,8 +205,11 @@ export function usePosts(
           comments_count: post.comments?.[0]?.count || 0,
         }));
 
-        // Apply trending algorithm to ALL posts
-        const trendingPosts = await getTrendingPosts(transformedData);
+        // Filter out blocked users' posts
+        const filteredData = filterBlockedUsers(transformedData);
+
+        // Apply trending algorithm to filtered posts
+        const trendingPosts = await getTrendingPosts(filteredData);
 
         // Apply pagination after sorting
         const start = (page - 1) * pageSize;
@@ -225,7 +234,10 @@ export function usePosts(
           comments_count: post.comments?.[0]?.count || 0,
         }));
 
-        return transformedData;
+        // Filter out blocked users' posts
+        const filteredData = filterBlockedUsers(transformedData);
+
+        return filteredData;
       }
     },
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes

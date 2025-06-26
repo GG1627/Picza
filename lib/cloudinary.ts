@@ -1,8 +1,8 @@
 import * as Crypto from 'expo-crypto';
 
-const CLOUD_NAME = 'dwt4c99su';
-const API_KEY = '355173449245645';
-const API_SECRET = 'MWKuC5xcERe8H5AEBSYWuSBRL3g';
+const CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || '';
+const API_KEY = process.env.EXPO_PUBLIC_CLOUDINARY_API_KEY || '';
+const API_SECRET = process.env.EXPO_PUBLIC_CLOUDINARY_API_SECRET || '';
 
 type UploadType = 'avatar' | 'post';
 
@@ -12,6 +12,10 @@ const RETRY_DELAY = 1000; // 1 second
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const uploadToCloudinary = async (base64Image: string, type: UploadType = 'post') => {
+  if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
+    throw new Error('Cloudinary configuration is missing');
+  }
+
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -63,6 +67,10 @@ export const uploadToCloudinary = async (base64Image: string, type: UploadType =
 };
 
 export const deleteFromCloudinary = async (imageUrl: string): Promise<boolean> => {
+  if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
+    throw new Error('Cloudinary configuration is missing');
+  }
+
   try {
     // Extract public_id from the URL
     const urlParts = imageUrl.split('/');

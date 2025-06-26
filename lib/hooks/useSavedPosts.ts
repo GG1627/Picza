@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 import { Alert } from 'react-native';
+import { useUserBlocking } from './useUserBlocking';
+import { useAuth } from '../auth';
 
 // Types
 export type SavedPost = {
@@ -18,6 +20,7 @@ export type SavedPost = {
     dish_name: string | null;
     ingredients: string | null;
     comments_count: number;
+    user_id: string;
     profiles: {
       id: string;
       username: string;
@@ -35,6 +38,8 @@ export type SavedPost = {
 // Custom Hook
 export const useSavedPosts = (userId: string) => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { filterBlockedUsers } = useUserBlocking(user?.id || '');
 
   // Get saved posts
   const { data: savedPosts, isLoading: savedPostsLoading } = useQuery({
@@ -56,6 +61,7 @@ export const useSavedPosts = (userId: string) => {
             dish_name,
             ingredients,
             comments_count,
+            user_id,
             profiles:user_id (
               id,
               username,
@@ -78,8 +84,12 @@ export const useSavedPosts = (userId: string) => {
 
       // Filter out any posts that might have been deleted
       const validSavedPosts = (data || []).filter((savedPost) => savedPost.posts !== null);
-      console.log('Saved posts:', validSavedPosts);
-      return validSavedPosts as SavedPost[];
+
+      // Filter out posts from blocked users
+      const filteredSavedPosts = filterBlockedUsers(validSavedPosts);
+
+      console.log('Saved posts:', filteredSavedPosts);
+      return filteredSavedPosts as SavedPost[];
     },
     enabled: !!userId,
   });

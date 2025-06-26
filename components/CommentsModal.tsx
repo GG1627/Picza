@@ -23,6 +23,7 @@ import { MotiView } from 'moti';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useRouter } from 'expo-router';
+import { useUserBlocking } from '../lib/hooks/useUserBlocking';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MODAL_HEIGHT = SCREEN_HEIGHT * 0.65;
@@ -75,6 +76,7 @@ const CommentsModal = memo(
     const [comments, setComments] = useState<Comment[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const { user } = useAuth();
+    const { filterBlockedUsers } = useUserBlocking(user?.id || '');
     const [modalVisible, setModalVisible] = useState(false);
     const [shouldRender, setShouldRender] = useState(false);
     const router = useRouter();
@@ -278,7 +280,10 @@ const CommentsModal = memo(
             profiles: profilesData?.find((profile) => profile.id === comment.user_id) || null,
           })) || [];
 
-        setComments(commentsWithProfiles);
+        // Filter out comments from blocked users
+        const filteredComments = filterBlockedUsers(commentsWithProfiles);
+
+        setComments(filteredComments);
       } catch (error) {
         console.error('Error fetching comments:', error);
       } finally {

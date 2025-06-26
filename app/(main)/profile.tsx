@@ -911,7 +911,7 @@ export default function ProfileScreen() {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: '',
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
               opacity: opacityAnim,
             }}
           />
@@ -929,15 +929,16 @@ export default function ProfileScreen() {
             }}
             className="mt-20 flex-1">
             <View
-              className={`flex-1 rounded-t-[30px] ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#E8E9EB]'} p-6`}>
-              <View className="mb-6 flex-row items-center justify-between">
+              className={`flex-1 rounded-t-[30px] ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-white'} p-6`}>
+              {/* Header */}
+              <View className="mb-8 flex-row items-center justify-between">
                 <Text
-                  className={`text-xl font-semibold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
+                  className={`text-2xl font-bold ${colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'}`}>
                   Settings
                 </Text>
                 <Pressable
                   onPress={closeSettings}
-                  className={`rounded-full ${colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-[#E8E9EB]'} p-2`}>
+                  className={`rounded-full p-2 ${colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-gray-100'}`}>
                   <Ionicons
                     name="close"
                     size={24}
@@ -946,24 +947,42 @@ export default function ProfileScreen() {
                 </Pressable>
               </View>
 
-              <View className="flex-1 space-y-3">
+              <View className="flex-1 space-y-1">
                 {/* Theme Toggle */}
                 <Pressable
                   onPress={toggleColorScheme}
-                  className={`flex-row items-center space-x-3 rounded-t-3xl border ${
-                    colorScheme === 'dark' ? 'bg-[#282828]' : 'border-[#b1b9c8] bg-[#E8E9EB]'
-                  } p-4`}>
+                  className={`flex-row items-center justify-between rounded-2xl p-4 ${
+                    colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50'
+                  }`}>
+                  <View className="flex-row items-center space-x-4">
+                    <View
+                      className={`rounded-full p-2 ${colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-white'}`}>
+                      <Ionicons
+                        name={isDarkColorScheme ? 'sunny' : 'moon'}
+                        size={20}
+                        color={colorScheme === 'dark' ? '#fbbf24' : '#6366f1'}
+                      />
+                    </View>
+                    <View>
+                      <Text
+                        className={`text-base font-semibold ${
+                          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                        }`}>
+                        {isDarkColorScheme ? 'Light Mode' : 'Dark Mode'}
+                      </Text>
+                      <Text
+                        className={`text-sm ${
+                          colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        }`}>
+                        Switch appearance
+                      </Text>
+                    </View>
+                  </View>
                   <Ionicons
-                    name={isDarkColorScheme ? 'sunny-outline' : 'moon-outline'}
-                    size={24}
-                    color={colorScheme === 'dark' ? '#E0E0E0' : '#07020D'}
+                    name="chevron-forward"
+                    size={20}
+                    color={colorScheme === 'dark' ? '#666' : '#999'}
                   />
-                  <Text
-                    className={`text-base font-medium ${
-                      colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
-                    }`}>
-                    {isDarkColorScheme ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                  </Text>
                 </Pressable>
 
                 {/* Edit Profile Button */}
@@ -972,41 +991,140 @@ export default function ProfileScreen() {
                     setIsEditing(!isEditing);
                     closeSettings();
                   }}
-                  className={`flex-row items-center space-x-3 border border-t-0 ${
-                    colorScheme === 'dark' ? 'bg-[#282828]' : 'border-[#b1b9c8] bg-[#E8E9EB]'
-                  } p-4`}>
+                  className={`flex-row items-center justify-between rounded-2xl p-4 ${
+                    colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50'
+                  }`}>
+                  <View className="flex-row items-center space-x-4">
+                    <View
+                      className={`rounded-full p-2 ${colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-white'}`}>
+                      <Ionicons name="create" size={20} color="#f77f5e" />
+                    </View>
+                    <View>
+                      <Text
+                        className={`text-base font-semibold ${
+                          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                        }`}>
+                        {isEditing ? 'Cancel Editing' : 'Edit Profile'}
+                      </Text>
+                      <Text
+                        className={`text-sm ${
+                          colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        }`}>
+                        Change your profile info
+                      </Text>
+                    </View>
+                  </View>
                   <Ionicons
-                    name="create-outline"
-                    size={24}
-                    color={colorScheme === 'dark' ? '#f77f5e' : '#f77f5e'}
+                    name="chevron-forward"
+                    size={20}
+                    color={colorScheme === 'dark' ? '#666' : '#999'}
                   />
-                  <Text
-                    className={`text-base font-medium ${
-                      colorScheme === 'dark' ? 'text-[#f77f5e]' : 'text-[#f77f5e]'
-                    }`}>
-                    {isEditing ? 'Cancel Editing' : 'Edit Profile'}
-                  </Text>
                 </Pressable>
 
+                {/* Blocked Users */}
+                <Pressable
+                  onPress={() => {
+                    closeSettings();
+                    router.push('/blockedUsers');
+                  }}
+                  className={`flex-row items-center justify-between rounded-2xl p-4 ${
+                    colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50'
+                  }`}>
+                  <View className="flex-row items-center space-x-4">
+                    <View
+                      className={`rounded-full p-2 ${colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-white'}`}>
+                      <Ionicons name="ban" size={20} color="#EF4444" />
+                    </View>
+                    <View>
+                      <Text
+                        className={`text-base font-semibold ${
+                          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                        }`}>
+                        Blocked Users
+                      </Text>
+                      <Text
+                        className={`text-sm ${
+                          colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        }`}>
+                        Manage blocked accounts
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={colorScheme === 'dark' ? '#666' : '#999'}
+                  />
+                </Pressable>
+
+                {/* Divider */}
+                <View className="my-4 h-px bg-gray-200 dark:bg-gray-700" />
+
+                {/* Log Out */}
                 <Pressable
                   onPress={handleLogout}
-                  className={`flex-row items-center space-x-3 border border-t-0 ${
-                    colorScheme === 'dark' ? 'bg-[#282828]' : 'border-[#b1b9c8] bg-[#E8E9EB]'
-                  } p-4`}>
-                  <Ionicons name="log-out-outline" size={24} color="#BA3B46" />
-                  <Text className="text-base font-medium text-[#BA3B46]">Log Out</Text>
+                  className={`flex-row items-center justify-between rounded-2xl p-4 ${
+                    colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50'
+                  }`}>
+                  <View className="flex-row items-center space-x-4">
+                    <View
+                      className={`rounded-full p-2 ${colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-white'}`}>
+                      <Ionicons name="log-out" size={20} color="#BA3B46" />
+                    </View>
+                    <View>
+                      <Text
+                        className={`text-base font-semibold ${
+                          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                        }`}>
+                        Log Out
+                      </Text>
+                      <Text
+                        className={`text-sm ${
+                          colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        }`}>
+                        Sign out of your account
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={colorScheme === 'dark' ? '#666' : '#999'}
+                  />
                 </Pressable>
 
+                {/* Delete Account */}
                 <Pressable
                   onPress={handleDeleteAccount}
                   disabled={deleting}
-                  className={`flex-row items-center space-x-3 border border-t-0 ${
-                    colorScheme === 'dark' ? 'bg-[#282828]' : 'border-[#b1b9c8] bg-[#E8E9EB]'
-                  } p-4 ${deleting ? 'opacity-50' : ''}`}>
-                  <Ionicons name="trash-outline" size={24} color="#BA3B46" />
-                  <Text className="text-base font-medium text-[#BA3B46]">
-                    {deleting ? 'Deleting Account...' : 'Delete Account'}
-                  </Text>
+                  className={`flex-row items-center justify-between rounded-2xl p-4 ${
+                    colorScheme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50'
+                  } ${deleting ? 'opacity-50' : ''}`}>
+                  <View className="flex-row items-center space-x-4">
+                    <View
+                      className={`rounded-full p-2 ${colorScheme === 'dark' ? 'bg-[#282828]' : 'bg-white'}`}>
+                      <Ionicons name="trash" size={20} color="#BA3B46" />
+                    </View>
+                    <View>
+                      <Text
+                        className={`text-base font-semibold ${
+                          colorScheme === 'dark' ? 'text-[#E0E0E0]' : 'text-[#07020D]'
+                        }`}>
+                        {deleting ? 'Deleting Account...' : 'Delete Account'}
+                      </Text>
+                      <Text
+                        className={`text-sm ${
+                          colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        }`}>
+                        Permanently delete your account
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={colorScheme === 'dark' ? '#666' : '#999'}
+                  />
                 </Pressable>
               </View>
             </View>

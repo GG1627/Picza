@@ -18,6 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from '../../lib/useColorScheme';
 import Octicons from '@expo/vector-icons/Octicons';
 import MeshGradient from '../../components/MeshGradient';
+import { Checkbox } from 'expo-checkbox';
+import * as WebBrowser from 'expo-web-browser';
 
 export default function SignUp() {
   const router = useRouter();
@@ -27,6 +29,7 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agree, setAgree] = useState(false);
   const { colorScheme, colors } = useColorScheme();
 
   async function getSchoolFromEmail(email: string) {
@@ -146,6 +149,15 @@ export default function SignUp() {
       setLoading(false);
     }
   }
+
+  const openBrowser = async (url: string) => {
+    try {
+      await WebBrowser.openBrowserAsync(url);
+    } catch (error) {
+      console.error('Error opening browser:', error);
+      Alert.alert('Error', 'An error occurred while opening the browser.');
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -273,12 +285,40 @@ export default function SignUp() {
               </View>
             </View>
 
+            <View className="mt-3 flex-row items-center justify-center">
+              <Checkbox
+                value={agree}
+                onValueChange={setAgree}
+                color={agree ? (colorScheme === 'dark' ? '#ff9f6b' : '#000000') : undefined}
+                style={{ marginRight: 12 }}
+              />
+              <Text className={`${colorScheme === 'dark' ? 'text-white' : 'text-black'}`}>
+                I agree to the{' '}
+                <Text
+                  className="text-blue-500"
+                  onPress={() =>
+                    openBrowser('https://github.com/GG1627/Picza/blob/caitlin/TERMS_OF_SERVICE.md')
+                  }>
+                  Terms of Service{' '}
+                </Text>
+                and{' '}
+                <Text
+                  className="text-blue-500"
+                  onPress={() =>
+                    openBrowser('https://github.com/GG1627/Picza/blob/caitlin/PRIVACY_POLICY.md')
+                  }>
+                  Privacy Policy
+                </Text>
+              </Text>
+            </View>
+
             {/* Button Section */}
             <View className="space-y-4 pt-4">
               <Pressable
                 className={`w-full rounded-2xl ${colorScheme === 'dark' ? 'bg-[#ff9f6b]' : 'bg-[#f77f5e]'} py-4 shadow-sm`}
+                style={{ opacity: !agree ? 0.5 : 1 }}
                 onPress={signUpWithEmail}
-                disabled={loading}>
+                disabled={loading || !agree}>
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
