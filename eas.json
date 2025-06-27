@@ -10,7 +10,17 @@
     "preview": {
       "distribution": "internal"
     },
-    "production": {}
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "EXPO_PUBLIC_SUPABASE_URL",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+        "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME",
+        "EXPO_PUBLIC_CLOUDINARY_API_KEY": "EXPO_PUBLIC_CLOUDINARY_API_KEY",
+        "CLOUDINARY_API_SECRET": "CLOUDINARY_API_SECRET",
+        "AZURE_VISION_KEY": "AZURE_VISION_KEY",
+        "AZURE_VISION_ENDPOINT": "AZURE_VISION_ENDPOINT"
+      }
+    }
   },
   "submit": {
     "production": {}
