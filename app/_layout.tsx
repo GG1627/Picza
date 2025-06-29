@@ -43,10 +43,65 @@ export default function RootLayout() {
       // Parse the URL to extract parameters
       const parsedUrl = Linking.parse(url);
 
-      // Check if this is a password reset link
-      if (url.includes('new-password') || url.includes('access_token')) {
-        console.log('Password reset link detected');
+      // Check if this is an email verification link FIRST (before password reset)
+      if (url.includes('email-verified')) {
+        console.log('Email verification link detected');
 
+        // Extract tokens from URL for email verification
+        let accessToken = null;
+        let refreshToken = null;
+
+        // Try query parameters first
+        if (url.includes('?')) {
+          const urlParams = new URLSearchParams(url.split('?')[1] || '');
+          accessToken = urlParams.get('access_token');
+          refreshToken = urlParams.get('refresh_token');
+        }
+
+        // If not found in query params, try hash fragment
+        if (!accessToken && !refreshToken && url.includes('#')) {
+          const hashFragment = url.split('#')[1] || '';
+          const hashParams = new URLSearchParams(hashFragment);
+          accessToken = hashParams.get('access_token');
+          refreshToken = hashParams.get('refresh_token');
+        }
+
+        console.log('Email verification tokens:', {
+          accessToken: !!accessToken,
+          refreshToken: !!refreshToken,
+        });
+
+        if (accessToken && refreshToken) {
+          console.log('Setting session for email verification');
+          // Set the session and navigate to email verified screen
+          supabase.auth
+            .setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            })
+            .then(({ data, error }) => {
+              if (error) {
+                console.error('Error setting session for email verification:', error);
+                router.replace('/(auth)/email-verified' as any);
+              } else if (data.session) {
+                console.log('Email verification session set successfully');
+                router.replace('/(auth)/email-verified' as any);
+              } else {
+                router.replace('/(auth)/email-verified' as any);
+              }
+            });
+        } else {
+          console.log('No tokens found in email verification URL, navigating anyway');
+          router.replace('/(auth)/email-verified' as any);
+        }
+        return; // Exit early to prevent password reset logic from running
+      }
+
+      // Check if this is a password reset link (more specific conditions)
+      if (
+        url.includes('new-password') ||
+        (url.includes('access_token') && !url.includes('email-verified'))
+      ) {
         // Check for errors in the URL
         if (url.includes('error=')) {
           console.log('Error detected in reset link');
@@ -141,12 +196,6 @@ export default function RootLayout() {
           console.log('No tokens found in URL, navigating anyway');
           router.replace('/(auth)/new-password' as any);
         }
-      }
-
-      // Check if this is an email verification link
-      if (url.includes('email-verified')) {
-        console.log('Email verification link detected');
-        router.replace('/(auth)/email-verified' as any);
       }
     };
 
