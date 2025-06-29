@@ -7,6 +7,8 @@ export default function AuthLayout() {
       <Stack.Screen name="signup" options={SIGNUP_OPTIONS} />
       <Stack.Screen name="reset-password" options={RESET_PASSWORD_OPTIONS} />
       <Stack.Screen name="create-profile" options={CREATE_PROFILE_OPTIONS} />
+      <Stack.Screen name="new-password" options={NEW_PASSWORD_OPTIONS} />
+      <Stack.Screen name="email-verified" options={EMAIL_VERIFIED_OPTIONS} />
       {/* Add more screens here if needed */}
     </Stack>
   );
@@ -37,5 +39,17 @@ const CREATE_PROFILE_OPTIONS = {
 const RESET_PASSWORD_OPTIONS = {
   headerShown: false,
   title: 'Reset Password',
+  animation: 'slide_from_right',
+} as const;
+
+const NEW_PASSWORD_OPTIONS = {
+  headerShown: false,
+  title: 'New Password',
+  animation: 'slide_from_right',
+} as const;
+
+const EMAIL_VERIFIED_OPTIONS = {
+  headerShown: false,
+  title: 'Email Verified',
   animation: 'slide_from_right',
 } as const;

@@ -41,7 +41,7 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'picza://reset-password',
+        redirectTo: 'picza://new-password',
       });
 
       if (error) {

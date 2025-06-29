@@ -3,7 +3,7 @@
     "name": "Picza",
     "slug": "picza",
     "version": "1.0.2",
-    "scheme": "exp",
+    "scheme": "picza",
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -26,25 +26,6 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "associatedDomains": ["applinks:picza.app"]
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.anonymous.myexpoappy",
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "picza"
-            }
-          ],
-          "category": ["BROWSABLE", "DEFAULT"]
-        }
-      ]
     },
     "extra": {
       "router": {},

@@ -45,7 +45,7 @@
     "expo-checkbox": "^4.1.4",
     "expo-constants": "~17.1.4",
     "expo-crypto": "~14.1.4",
-    "expo-dev-client": "~5.1.7",
+    "expo-dev-client": "~5.2.2",
     "expo-font": "~13.3.1",
     "expo-image": "~2.1.7",
     "expo-image-manipulator": "~13.1.7",

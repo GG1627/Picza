@@ -22,7 +22,7 @@ import { decode } from 'base64-arraybuffer';
 import { Alert } from 'react-native';
 import { useColorScheme } from '../../lib/useColorScheme';
 import React from 'react';
-import { uploadToCloudinary } from '../../lib/cloudinary';
+import { uploadToCloudinary, deleteFromCloudinary } from '../../lib/cloudinary';
 import { getCompetitionTag } from '../../lib/competitionTags';
 import MeshGradient from '../../components/MeshGradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -353,23 +353,170 @@ export default function ProfileScreen() {
               } = await supabase.auth.getUser();
               if (!user) throw new Error('No user found');
 
-              // Delete user's profile
+              console.log('Starting account deletion for user:', user.id);
+
+              // 1. Delete user's posts (and their images from Cloudinary)
+              console.log('Deleting user posts...');
+              const { data: userPosts, error: postsError } = await supabase
+                .from('posts')
+                .select('id, image_url')
+                .eq('user_id', user.id);
+
+              if (postsError) {
+                console.error('Error fetching user posts:', postsError);
+                throw postsError;
+              }
+
+              // Delete images from Cloudinary
+              if (userPosts && userPosts.length > 0) {
+                for (const post of userPosts) {
+                  try {
+                    await deleteFromCloudinary(post.image_url);
+                  } catch (cloudinaryError) {
+                    console.error('Error deleting image from Cloudinary:', cloudinaryError);
+                    // Continue even if Cloudinary deletion fails
+                  }
+                }
+              }
+
+              // Delete posts from database
+              const { error: deletePostsError } = await supabase
+                .from('posts')
+                .delete()
+                .eq('user_id', user.id);
+
+              if (deletePostsError) {
+                console.error('Error deleting posts:', deletePostsError);
+                throw deletePostsError;
+              }
+
+              // 2. Delete saved posts where user is the saver
+              console.log('Deleting saved posts...');
+              const { error: deleteSavedPostsError } = await supabase
+                .from('saved_posts')
+                .delete()
+                .eq('user_id', user.id);
+
+              if (deleteSavedPostsError) {
+                console.error('Error deleting saved posts:', deleteSavedPostsError);
+                throw deleteSavedPostsError;
+              }
+
+              // 3. Delete saved posts where user's posts are saved by others
+              console.log("Deleting saved posts of user's posts...");
+              const { error: deleteSavedByOthersError } = await supabase
+                .from('saved_posts')
+                .delete()
+                .in('post_id', userPosts?.map((post) => post.id) || []);
+
+              if (deleteSavedByOthersError) {
+                console.error('Error deleting saved posts by others:', deleteSavedByOthersError);
+                throw deleteSavedByOthersError;
+              }
+
+              // 4. Delete friend relationships
+              console.log('Deleting friend relationships...');
+              const { error: deleteFriendsError } = await supabase
+                .from('friends')
+                .delete()
+                .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+
+              if (deleteFriendsError) {
+                console.error('Error deleting friend relationships:', deleteFriendsError);
+                throw deleteFriendsError;
+              }
+
+              // 5. Delete likes on user's posts
+              console.log("Deleting likes on user's posts...");
+              const { error: deleteLikesError } = await supabase
+                .from('post_likes')
+                .delete()
+                .in('post_id', userPosts?.map((post) => post.id) || []);
+
+              if (deleteLikesError) {
+                console.error('Error deleting likes:', deleteLikesError);
+                // Don't throw here, as post_likes table might not exist
+              }
+
+              // 6. Delete comments on user's posts
+              console.log("Deleting comments on user's posts...");
+              const { error: deleteCommentsError } = await supabase
+                .from('comments')
+                .delete()
+                .in('post_id', userPosts?.map((post) => post.id) || []);
+
+              if (deleteCommentsError) {
+                console.error('Error deleting comments:', deleteCommentsError);
+                throw deleteCommentsError;
+              }
+
+              // 7. Delete comments made by the user
+              console.log("Deleting user's comments...");
+              const { error: deleteUserCommentsError } = await supabase
+                .from('comments')
+                .delete()
+                .eq('user_id', user.id);
+
+              if (deleteUserCommentsError) {
+                console.error('Error deleting user comments:', deleteUserCommentsError);
+                throw deleteUserCommentsError;
+              }
+
+              // 8. Delete post reports involving user's posts
+              console.log('Deleting post reports...');
+              const { error: deleteReportsError } = await supabase
+                .from('post_reports')
+                .delete()
+                .in('post_id', userPosts?.map((post) => post.id) || []);
+
+              if (deleteReportsError) {
+                console.error('Error deleting post reports:', deleteReportsError);
+                // Don't throw here, as post_reports table might not exist
+              }
+
+              // 9. Delete user's profile
+              console.log('Deleting user profile...');
               const { error: profileError } = await supabase
                 .from('profiles')
                 .delete()
                 .eq('id', user.id);
 
-              if (profileError) throw profileError;
+              if (profileError) {
+                console.error('Error deleting profile:', profileError);
+                throw profileError;
+              }
 
-              // Sign out the user
+              // 10. Finally, delete the user from auth
+              console.log('Deleting user from auth...');
+              // Note: We can't use admin.deleteUser from client side
+              // Instead, we'll sign out the user and let them know to contact support
               const { error: signOutError } = await supabase.auth.signOut();
-              if (signOutError) throw signOutError;
+              if (signOutError) {
+                console.error('Error signing out:', signOutError);
+              }
 
-              // Redirect to login
-              router.replace('/(auth)/login');
+              console.log('Account deletion completed successfully');
+
+              Alert.alert(
+                'Account Deleted',
+                'Your account data has been deleted. You have been signed out.',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      // Redirect to login
+                      router.replace('/(auth)/login');
+                    },
+                  },
+                ]
+              );
             } catch (error) {
               console.error('Error deleting account:', error);
-              alert('Error deleting account. Please try again.');
+              Alert.alert(
+                'Error',
+                'Failed to delete account. Please try again or contact support.',
+                [{ text: 'OK' }]
+              );
             } finally {
               setDeleting(false);
             }

@@ -174,7 +174,7 @@ export default function CreatePostScreen() {
       await queryClient.refetchQueries({ queryKey: ['posts'] });
 
       // Wait for the refetch to complete
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       resetForm();
       router.back();

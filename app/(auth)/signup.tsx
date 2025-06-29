@@ -109,6 +109,7 @@ export default function SignUp() {
             email: email,
             password: password,
           },
+          emailRedirectTo: 'picza://email-verified',
         },
       });
 
