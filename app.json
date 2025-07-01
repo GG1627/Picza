@@ -2,7 +2,7 @@
   "expo": {
     "name": "Picza",
     "slug": "picza",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "scheme": "picza",
     "web": {
       "bundler": "metro",
@@ -21,7 +21,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "io.picza.app",
-      "buildNumber": "6",
+      "buildNumber": "7",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
