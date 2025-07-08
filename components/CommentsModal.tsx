@@ -255,34 +255,39 @@ const CommentsModal = memo(
       if (!post) return;
       setIsLoading(true);
       try {
-        // First, get all comments for the post
-        const { data: commentsData, error: commentsError } = await supabase
+        const { data: commentsData, error } = await supabase
           .from('comments')
-          .select('*')
+          .select(
+            `
+        id,
+        post_id,
+        user_id,
+        content,
+        created_at,
+        profiles:user_id (
+          id,
+          username,
+          avatar_url
+        )
+      `
+          )
           .eq('post_id', post.id)
           .order('created_at', { ascending: true });
 
-        if (commentsError) throw commentsError;
+        if (error) throw error;
 
-        // Then, get all the user profiles for these comments
-        const userIds = commentsData?.map((comment) => comment.user_id) || [];
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, username, avatar_url')
-          .in('id', userIds);
-
-        if (profilesError) throw profilesError;
-
-        // Combine the data
-        const commentsWithProfiles =
-          commentsData?.map((comment) => ({
+        // Transform the data to match expected structure (single profile object, not array)
+        const transformedComments =
+          commentsData?.map((comment: any) => ({
             ...comment,
-            profiles: profilesData?.find((profile) => profile.id === comment.user_id) || null,
+            profiles:
+              Array.isArray(comment.profiles) && comment.profiles.length > 0
+                ? comment.profiles[0]
+                : comment.profiles,
           })) || [];
 
         // Filter out comments from blocked users
-        const filteredComments = filterBlockedUsers(commentsWithProfiles);
-
+        const filteredComments = filterBlockedUsers(transformedComments);
         setComments(filteredComments);
       } catch (error) {
         console.error('Error fetching comments:', error);
