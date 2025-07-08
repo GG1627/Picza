@@ -2,7 +2,6 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Animated, Alert } from 'react-native';
 import { supabase } from '../supabase';
 import { useQueryClient } from '@tanstack/react-query';
-import { updateSinglePostTrendingScore } from '../trendingAlgorithm';
 
 // Animation constants
 const ANIMATION_CONFIG = {
@@ -58,16 +57,38 @@ export const usePostLikes = (userId: string | undefined) => {
     }
   }, [userId]);
 
-  const initializeLikes = useCallback((posts: any[]) => {
-    const initialLikes = posts.reduce(
-      (acc, post) => {
-        acc[post.id] = post.likes_count;
-        return acc;
-      },
-      {} as { [key: string]: number }
-    );
-    setPostLikes(initialLikes);
-  }, []);
+  const initializeLikes = useCallback(
+    (posts: any[]) => {
+      const initialLikes = posts.reduce(
+        (acc, post) => {
+          // Only initialize if the post isn't currently being liked (no pending operation)
+          // This preserves optimistic updates
+          if (!pendingLikes.current.has(post.id)) {
+            // If user has liked this post, make sure count is at least 1 higher than DB
+            // to account for potential database propagation delays
+            if (likedPosts.has(post.id)) {
+              const dbCount = Math.max(0, post.likes_count || 0);
+              // Ensure the count reflects the like (at minimum)
+              acc[post.id] = Math.max(dbCount, 1);
+            } else {
+              const count = Math.max(0, post.likes_count || 0);
+              // User hasn't liked this post, use database value
+              acc[post.id] = count;
+            }
+          }
+          return acc;
+        },
+        {} as { [key: string]: number }
+      );
+
+      // Merge with existing state instead of replacing it
+      setPostLikes((prev) => ({
+        ...prev,
+        ...initialLikes,
+      }));
+    },
+    [likedPosts]
+  ); // REMOVED postLikes from dependencies to break circular dependency
 
   const handleLike = useCallback(
     async (postId: string) => {
@@ -93,11 +114,18 @@ export const usePostLikes = (userId: string | undefined) => {
         try {
           const isLiked = likedPosts.has(postId);
           const currentLikes = postLikes[postId] || 0;
+          const newLikeCount = Math.max(0, isLiked ? currentLikes - 1 : currentLikes + 1);
 
           // Immediate optimistic update for instant feedback
           animateHeart(postId);
 
-          // Optimistically update both states immediately
+          // Update local state immediately for better UX
+          setPostLikes((prev) => ({
+            ...prev,
+            [postId]: newLikeCount,
+          }));
+
+          // Update liked state
           setLikedPosts((prev) => {
             const newSet = new Set(prev);
             if (isLiked) {
@@ -108,43 +136,48 @@ export const usePostLikes = (userId: string | undefined) => {
             return newSet;
           });
 
-          setPostLikes((prev) => ({
-            ...prev,
-            [postId]: isLiked ? currentLikes - 1 : currentLikes + 1,
-          }));
-
-          // Update database
+          // Update database - fetch current count and update atomically
           if (isLiked) {
-            const [unlikeResult, updateResult] = await Promise.all([
+            // Unlike post
+            const [unlikeResult] = await Promise.all([
               supabase.from('post_likes').delete().eq('user_id', userId).eq('post_id', postId),
-              supabase
-                .from('posts')
-                .update({ likes_count: currentLikes - 1 })
-                .eq('id', postId),
             ]);
 
             if (unlikeResult.error) throw unlikeResult.error;
-            if (updateResult.error) throw updateResult.error;
+
+            // Update likes count atomically using database-level decrement
+            const { error: updateError } = await supabase.rpc('decrement_likes_count', {
+              post_id: postId,
+            });
+
+            if (updateError) throw updateError;
           } else {
-            const [likeResult, updateResult] = await Promise.all([
+            // Like post
+            const [likeResult] = await Promise.all([
               supabase.from('post_likes').insert([{ user_id: userId, post_id: postId }]),
-              supabase
-                .from('posts')
-                .update({ likes_count: currentLikes + 1 })
-                .eq('id', postId),
             ]);
 
             if (likeResult.error) throw likeResult.error;
-            if (updateResult.error) throw updateResult.error;
+
+            // Update likes count atomically using database-level increment
+            const { error: updateError } = await supabase.rpc('increment_likes_count', {
+              post_id: postId,
+            });
+
+            if (updateError) throw updateError;
           }
 
-          // Invalidate cache after successful update
-          queryClient.invalidateQueries({ queryKey: ['posts'] });
+          // Invalidate posts cache so other users see the updated counts
+          // Use a small delay to allow database propagation
+          setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['posts'] });
+          }, 100);
 
-          // Update trending score for this post (don't await to avoid blocking UI)
-          updateSinglePostTrendingScore(postId).catch((error: unknown) => {
-            console.warn('Failed to update trending score after like:', error);
-          });
+          // Don't invalidate cache immediately - let the optimistic update handle UI
+          // The cron job will update trending scores every 30 minutes
+
+          // Note: Individual trending score updates are now handled by the cron job
+          // to prevent constant feed reordering
 
           // Set cooldown period (500ms) to prevent rapid toggling
           cooldownTimers.current[postId] = setTimeout(() => {
@@ -164,9 +197,10 @@ export const usePostLikes = (userId: string | undefined) => {
 
           setPostLikes((prev) => ({
             ...prev,
-            [postId]: likedPosts.has(postId)
-              ? (postLikes[postId] || 0) + 1
-              : (postLikes[postId] || 0) - 1,
+            [postId]: Math.max(
+              0,
+              likedPosts.has(postId) ? (postLikes[postId] || 0) + 1 : (postLikes[postId] || 0) - 1
+            ),
           }));
 
           console.error('Error liking post:', error);
@@ -193,6 +227,23 @@ export const usePostLikes = (userId: string | undefined) => {
     fetchLikedPosts();
   }, [fetchLikedPosts]);
 
+  // Reset state when user changes (account switching)
+  useEffect(() => {
+    if (userId) {
+      // Clear previous user's like counts when switching accounts
+      setPostLikes({});
+      // Clear any pending operations
+      pendingLikes.current.clear();
+      // Clear operation promises
+      Object.keys(operationPromises.current).forEach((key) => {
+        delete operationPromises.current[key];
+      });
+      // Clear cooldown timers
+      Object.values(cooldownTimers.current).forEach((timer) => clearTimeout(timer));
+      cooldownTimers.current = {};
+    }
+  }, [userId]);
+
   // Refresh liked posts when posts are invalidated (debounced)
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -203,7 +254,7 @@ export const usePostLikes = (userId: string | undefined) => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
           fetchLikedPosts();
-        }, 100);
+        }, 300); // Slightly longer delay for DB propagation
       }
     });
 

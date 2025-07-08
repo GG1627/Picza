@@ -44,7 +44,6 @@ import Post from '../../components/Post';
 import { ListEmptyComponent, ListFooterComponent } from '../../components/FeedListComponents';
 import { usePostLikes } from '../../lib/hooks/usePostLikes';
 import { usePostDeletion } from '../../lib/hooks/usePostDeletion';
-import { updateSinglePostTrendingScore } from '../../lib/trendingAlgorithm';
 
 // Declare global types for callbacks
 declare global {
@@ -389,11 +388,6 @@ const DynamicPostsList = memo(() => {
               : post
           )
         );
-
-        // Update trending score for this post (don't await to avoid blocking UI)
-        updateSinglePostTrendingScore(selectedPostForComments.id).catch((error: unknown) => {
-          console.warn('Failed to update trending score after comment:', error);
-        });
       } catch (error) {
         console.error('Error adding comment:', error);
         Alert.alert('Error', 'Failed to add comment. Please try again.');

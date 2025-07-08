@@ -185,7 +185,12 @@ const Post = memo(function Post({
             <View className="flex-row items-center space-x-3">
               <View className="flex-row items-center space-x-1">
                 <Ionicons name="heart" size={20} color="white" />
-                <Text className="text-xs text-white">{post.likes_count}</Text>
+                <Text className="text-xs text-white">
+                  {Math.max(
+                    0,
+                    postLikes[post.id] !== undefined ? postLikes[post.id] : post.likes_count
+                  )}
+                </Text>
               </View>
               <View className="flex-row items-center space-x-1">
                 <TouchableOpacity onPress={() => onShowComments(post)}>
@@ -307,7 +312,10 @@ const Post = memo(function Post({
                 </TouchableOpacity>
                 <View className="w-8">
                   <Text className="text-base font-semibold text-white">
-                    {postLikes[post.id] || 0}
+                    {Math.max(
+                      0,
+                      postLikes[post.id] !== undefined ? postLikes[post.id] : post.likes_count
+                    )}
                   </Text>
                 </View>
               </View>
