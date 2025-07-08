@@ -35,39 +35,16 @@ export type User = {
 export const useFriends = (userId: string) => {
   const queryClient = useQueryClient();
 
-  // Get all friends (accepted) - OPTIMIZED: No more N+1 queries!
+  // Get all friends (accepted) - OPTIMIZED: Batch queries instead of FK constraints
   const { data: friends, isLoading: friendsLoading } = useQuery({
     queryKey: ['friends', userId],
     queryFn: async () => {
       console.log('Fetching friends for user:', userId);
 
-      // OPTIMIZED: Use a single JOIN query instead of N+1 queries
+      // Step 1: Get friend relationships
       const { data: friendsData, error: friendError } = await supabase
         .from('friends')
-        .select(
-          `
-          id,
-          user_id,
-          friend_id,
-          status,
-          created_at,
-          updated_at,
-          user_profile:profiles!friends_user_id_fkey(
-            id,
-            username,
-            avatar_url,
-            full_name,
-            bio
-          ),
-          friend_profile:profiles!friends_friend_id_fkey(
-            id,
-            username,
-            avatar_url,
-            full_name,
-            bio
-          )
-        `
-        )
+        .select('id, user_id, friend_id, status, created_at, updated_at')
         .or(
           `and(user_id.eq.${userId},status.eq.accepted),and(friend_id.eq.${userId},status.eq.accepted)`
         );
@@ -77,17 +54,43 @@ export const useFriends = (userId: string) => {
         throw friendError;
       }
 
-      console.log('Friend relationships with profiles:', friendsData);
+      if (!friendsData || friendsData.length === 0) {
+        return [];
+      }
 
-      // Transform the data to use the correct profile based on which direction the relationship goes
-      const friendsWithProfiles = (friendsData || [])
+      // Step 2: Get all unique user IDs that need profiles
+      const allUserIds = new Set<string>();
+      friendsData.forEach((friendship) => {
+        allUserIds.add(friendship.user_id);
+        allUserIds.add(friendship.friend_id);
+      });
+
+      // Step 3: Batch fetch all profiles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url, full_name, bio')
+        .in('id', Array.from(allUserIds));
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
+
+      // Step 4: Create a lookup map for profiles
+      const profilesMap = new Map();
+      profilesData?.forEach((profile) => {
+        profilesMap.set(profile.id, profile);
+      });
+
+      // Step 5: Combine friend relationships with profiles
+      const friendsWithProfiles = friendsData
         .map((relationship) => {
           // Determine which profile to use as the friend's profile
           const isUserInitiator = relationship.user_id === userId;
-          // Supabase returns arrays for FK relationships, so take the first element
-          const friendProfile = isUserInitiator
-            ? relationship.friend_profile && relationship.friend_profile[0]
-            : relationship.user_profile && relationship.user_profile[0];
+          const friendId = isUserInitiator ? relationship.friend_id : relationship.user_id;
+          const friendProfile = profilesMap.get(friendId);
+
+          if (!friendProfile) return null;
 
           return {
             id: relationship.id,
@@ -99,46 +102,24 @@ export const useFriends = (userId: string) => {
             profiles: friendProfile,
           };
         })
-        .filter((friend) => friend.profiles); // Filter out any null profiles
+        .filter((friend) => friend !== null); // Filter out any null profiles
 
-      // Deduplicate friends based on profile ID to prevent duplicates
-      const uniqueFriends = friendsWithProfiles.filter(
-        (friend, index, self) =>
-          index === self.findIndex((f) => f.profiles?.id === friend.profiles?.id)
-      );
-
-      console.log('Friends with profiles (deduplicated):', uniqueFriends);
-      return uniqueFriends as Friend[];
+      console.log('Friends with profiles:', friendsWithProfiles);
+      return friendsWithProfiles as Friend[];
     },
     enabled: !!userId,
   });
 
-  // Get sent requests (pending) - OPTIMIZED: No more N+1 queries!
+  // Get sent requests (pending) - OPTIMIZED: Batch queries instead of FK constraints
   const { data: sentRequests, isLoading: sentLoading } = useQuery({
     queryKey: ['friends-sent', userId],
     queryFn: async () => {
       console.log('Fetching sent requests for user:', userId);
 
-      // OPTIMIZED: Use a single JOIN query instead of N+1 queries
+      // Step 1: Get sent friend requests
       const { data: friendRequests, error: friendError } = await supabase
         .from('friends')
-        .select(
-          `
-          id,
-          user_id,
-          friend_id,
-          status,
-          created_at,
-          updated_at,
-          friend_profile:profiles!friends_friend_id_fkey(
-            id,
-            username,
-            avatar_url,
-            full_name,
-            bio
-          )
-        `
-        )
+        .select('id, user_id, friend_id, status, created_at, updated_at')
         .eq('user_id', userId)
         .eq('status', 'pending');
 
@@ -147,20 +128,47 @@ export const useFriends = (userId: string) => {
         throw friendError;
       }
 
-      console.log('Friend requests with profiles:', friendRequests);
+      if (!friendRequests || friendRequests.length === 0) {
+        return [];
+      }
 
-      // Transform the data to match the expected format
-      const requestsWithProfiles = (friendRequests || [])
-        .map((request) => ({
-          id: request.id,
-          user_id: request.user_id,
-          friend_id: request.friend_id,
-          status: request.status,
-          created_at: request.created_at,
-          updated_at: request.updated_at,
-          profiles: request.friend_profile && request.friend_profile[0],
-        }))
-        .filter((request) => request.profiles); // Filter out any null profiles
+      // Step 2: Get all friend IDs that need profiles
+      const friendIds = friendRequests.map((request) => request.friend_id);
+
+      // Step 3: Batch fetch profiles for all friends
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url, full_name, bio')
+        .in('id', friendIds);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
+
+      // Step 4: Create a lookup map for profiles
+      const profilesMap = new Map();
+      profilesData?.forEach((profile) => {
+        profilesMap.set(profile.id, profile);
+      });
+
+      // Step 5: Combine requests with profiles
+      const requestsWithProfiles = friendRequests
+        .map((request) => {
+          const friendProfile = profilesMap.get(request.friend_id);
+          if (!friendProfile) return null;
+
+          return {
+            id: request.id,
+            user_id: request.user_id,
+            friend_id: request.friend_id,
+            status: request.status,
+            created_at: request.created_at,
+            updated_at: request.updated_at,
+            profiles: friendProfile,
+          };
+        })
+        .filter((request) => request !== null);
 
       console.log('Sent requests with profiles:', requestsWithProfiles);
       return requestsWithProfiles as Friend[];
@@ -168,32 +176,16 @@ export const useFriends = (userId: string) => {
     enabled: !!userId,
   });
 
-  // Get received requests (pending) - OPTIMIZED: No more N+1 queries!
+  // Get received requests (pending) - OPTIMIZED: Batch queries instead of FK constraints
   const { data: receivedRequests, isLoading: receivedLoading } = useQuery({
     queryKey: ['friends-received', userId],
     queryFn: async () => {
       console.log('Fetching received requests for user:', userId);
 
-      // OPTIMIZED: Use a single JOIN query instead of N+1 queries
+      // Step 1: Get received friend requests
       const { data: friendRequests, error: friendError } = await supabase
         .from('friends')
-        .select(
-          `
-          id,
-          user_id,
-          friend_id,
-          status,
-          created_at,
-          updated_at,
-          user_profile:profiles!friends_user_id_fkey(
-            id,
-            username,
-            avatar_url,
-            full_name,
-            bio
-          )
-        `
-        )
+        .select('id, user_id, friend_id, status, created_at, updated_at')
         .eq('friend_id', userId)
         .eq('status', 'pending');
 
@@ -202,20 +194,47 @@ export const useFriends = (userId: string) => {
         throw friendError;
       }
 
-      console.log('Received friend requests with profiles:', friendRequests);
+      if (!friendRequests || friendRequests.length === 0) {
+        return [];
+      }
 
-      // Transform the data to match the expected format
-      const requestsWithProfiles = (friendRequests || [])
-        .map((request) => ({
-          id: request.id,
-          user_id: request.user_id,
-          friend_id: request.friend_id,
-          status: request.status,
-          created_at: request.created_at,
-          updated_at: request.updated_at,
-          profiles: request.user_profile && request.user_profile[0],
-        }))
-        .filter((request) => request.profiles); // Filter out any null profiles
+      // Step 2: Get all user IDs that need profiles
+      const userIds = friendRequests.map((request) => request.user_id);
+
+      // Step 3: Batch fetch profiles for all users
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url, full_name, bio')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
+
+      // Step 4: Create a lookup map for profiles
+      const profilesMap = new Map();
+      profilesData?.forEach((profile) => {
+        profilesMap.set(profile.id, profile);
+      });
+
+      // Step 5: Combine requests with profiles
+      const requestsWithProfiles = friendRequests
+        .map((request) => {
+          const userProfile = profilesMap.get(request.user_id);
+          if (!userProfile) return null;
+
+          return {
+            id: request.id,
+            user_id: request.user_id,
+            friend_id: request.friend_id,
+            status: request.status,
+            created_at: request.created_at,
+            updated_at: request.updated_at,
+            profiles: userProfile,
+          };
+        })
+        .filter((request) => request !== null);
 
       console.log('Received requests with profiles:', requestsWithProfiles);
       return requestsWithProfiles as Friend[];

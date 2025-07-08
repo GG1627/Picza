@@ -20,7 +20,7 @@ import { useColorScheme } from '../../lib/useColorScheme';
 import { useCreatePost } from '../../lib/hooks/useQueries';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
-import { validateFoodImage } from '../../lib/azureVision';
+import { validateFoodImage, getRemainingAttempts } from '../../lib/azureVision';
 import ImageOptimizer, { useImageOptimization } from '../../lib/imageOptimization';
 
 export default function CreatePostScreen() {
@@ -34,6 +34,7 @@ export default function CreatePostScreen() {
   const [foodValidationResult, setFoodValidationResult] = useState<{
     isValid: boolean;
     message: string;
+    remaining?: number;
   } | null>(null);
   const [optimizedImage, setOptimizedImage] = useState<string | null>(null);
   const [originalImageSize, setOriginalImageSize] = useState<{
@@ -41,6 +42,7 @@ export default function CreatePostScreen() {
     height: number;
   } | null>(null);
   const [compressionRatio, setCompressionRatio] = useState<number | null>(null);
+  const [remainingAttempts, setRemainingAttempts] = useState<number>(5);
   const createPost = useCreatePost();
   const { optimizeImage, isOptimizing, optimizationProgress } = useImageOptimization();
   const { colorScheme } = useColorScheme();
@@ -65,6 +67,20 @@ export default function CreatePostScreen() {
       keyboardWillShow.remove();
       keyboardWillHide.remove();
     };
+  }, []);
+
+  // Fetch initial remaining attempts when component mounts
+  useEffect(() => {
+    const fetchRemainingAttempts = async () => {
+      try {
+        const remaining = await getRemainingAttempts();
+        setRemainingAttempts(remaining);
+      } catch (error) {
+        console.error('Error fetching remaining attempts:', error);
+      }
+    };
+
+    fetchRemainingAttempts();
   }, []);
 
   const measureInputPosition = (ref: any, setter: (position: number) => void) => {
@@ -146,23 +162,29 @@ export default function CreatePostScreen() {
         const validation = await validateFoodImage(optimizedForVision.uri);
         setFoodValidationResult(validation);
 
+        // Update remaining attempts from validation result
+        if (validation.remaining !== undefined) {
+          setRemainingAttempts(validation.remaining);
+        }
+
         if (!validation.isValid) {
-          Alert.alert(
-            'No Food Detected',
-            'Please select an image that contains food. Only food images are allowed.',
-            [
-              {
-                text: 'OK',
-                style: 'default',
-                onPress: () => {
-                  setImage(null);
-                  setOptimizedImage(null);
-                  setOriginalImageSize(null);
-                  setCompressionRatio(null);
-                },
+          // Check if it's a rate limit error or food detection error
+          const isRateLimit = validation.message.includes('Daily limit');
+          const title = isRateLimit ? 'Daily Limit Reached' : 'No Food Detected';
+          const message = validation.message;
+
+          Alert.alert(title, message, [
+            {
+              text: 'OK',
+              style: 'default',
+              onPress: () => {
+                setImage(null);
+                setOptimizedImage(null);
+                setOriginalImageSize(null);
+                setCompressionRatio(null);
               },
-            ]
-          );
+            },
+          ]);
         }
       } catch (error) {
         console.error('Error processing image:', error);
@@ -347,7 +369,7 @@ export default function CreatePostScreen() {
                     ? 'text-[#259365]'
                     : 'text-[#259365]'
               }`}>
-              {isOptimizing ? 'Optimizing...' : isValidatingFood ? 'Validating...' : 'Post'}
+              {isOptimizing || isValidatingFood ? 'Processing...' : 'Post'}
             </Text>
           )}
         </TouchableOpacity>
@@ -370,24 +392,6 @@ export default function CreatePostScreen() {
               <View className="mb-4 aspect-square w-full overflow-hidden rounded-2xl">
                 <Image source={{ uri: image }} className="h-full w-full" resizeMode="cover" />
 
-                {/* Image optimization progress */}
-                {isOptimizing && (
-                  <View className="absolute inset-0 items-center justify-center bg-black/50">
-                    <View className="rounded-lg bg-white/90 p-4">
-                      <ActivityIndicator size="large" color="#f77f5e" />
-                      <Text className="mt-2 text-center font-medium text-gray-800">
-                        Optimizing image... {Math.round(optimizationProgress)}%
-                      </Text>
-                      <View className="mt-2 h-2 w-48 overflow-hidden rounded-full bg-gray-200">
-                        <View
-                          className="h-full bg-[#f77f5e] transition-all duration-300"
-                          style={{ width: `${optimizationProgress}%` }}
-                        />
-                      </View>
-                    </View>
-                  </View>
-                )}
-
                 {/* Food validation status */}
                 {isValidatingFood && !isOptimizing && (
                   <View className="absolute inset-0 items-center justify-center bg-black/50">
@@ -400,32 +404,21 @@ export default function CreatePostScreen() {
                   </View>
                 )}
 
-                {/* Optimization and validation results */}
-                {!isOptimizing && !isValidatingFood && (
-                  <View className="absolute bottom-2 left-2 right-2 space-y-1">
-                    {/* Compression info */}
-                    {compressionRatio && originalImageSize && (
-                      <View className="rounded-lg bg-blue-500/90 p-2">
-                        <Text className="text-center text-xs font-medium text-white">
-                          📦 Optimized: {Math.round((1 - compressionRatio) * 100)}% smaller (
-                          {originalImageSize.width}×{originalImageSize.height} → 1080×1080)
-                        </Text>
-                      </View>
-                    )}
-
-                    {/* Food validation result */}
-                    {foodValidationResult && (
-                      <View
-                        className={`rounded-lg p-2 ${
-                          foodValidationResult.isValid ? 'bg-green-500/90' : 'bg-red-500/90'
-                        }`}>
-                        <Text className="text-center text-sm font-medium text-white">
-                          {foodValidationResult.isValid
-                            ? '✅ Food detected!'
-                            : '❌ No food detected'}
-                        </Text>
-                      </View>
-                    )}
+                {/* Food validation result */}
+                {!isOptimizing && !isValidatingFood && foodValidationResult && (
+                  <View className="absolute bottom-2 left-2 right-2">
+                    <View
+                      className={`rounded-lg p-2 ${
+                        foodValidationResult.isValid ? 'bg-green-500/90' : 'bg-red-500/90'
+                      }`}>
+                      <Text className="text-center text-sm font-medium text-white">
+                        {foodValidationResult.isValid ? '✅ Food detected!' : '❌ No food detected'}
+                      </Text>
+                      <Text className="mt-1 text-center text-xs text-white/80">
+                        {remainingAttempts} validation{remainingAttempts !== 1 ? 's' : ''} remaining
+                        today
+                      </Text>
+                    </View>
                   </View>
                 )}
               </View>
@@ -453,6 +446,19 @@ export default function CreatePostScreen() {
                     colorScheme === 'dark' ? 'text-[#9ca3af]' : 'text-[#877B66]'
                   }`}>
                   Tap to choose from your gallery
+                </Text>
+                <Text
+                  className={`mt-2 text-xs ${
+                    remainingAttempts <= 1
+                      ? 'text-red-500'
+                      : remainingAttempts <= 2
+                        ? 'text-yellow-500'
+                        : colorScheme === 'dark'
+                          ? 'text-[#9ca3af]'
+                          : 'text-[#877B66]'
+                  }`}>
+                  {remainingAttempts} food validation{remainingAttempts !== 1 ? 's' : ''} remaining
+                  today
                 </Text>
               </TouchableOpacity>
             )}
