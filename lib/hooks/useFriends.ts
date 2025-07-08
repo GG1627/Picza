@@ -35,16 +35,39 @@ export type User = {
 export const useFriends = (userId: string) => {
   const queryClient = useQueryClient();
 
-  // Get all friends (accepted)
+  // Get all friends (accepted) - OPTIMIZED: No more N+1 queries!
   const { data: friends, isLoading: friendsLoading } = useQuery({
     queryKey: ['friends', userId],
     queryFn: async () => {
       console.log('Fetching friends for user:', userId);
 
-      // Get accepted friend relationships in both directions
-      const { data: friendRelationships, error: friendError } = await supabase
+      // OPTIMIZED: Use a single JOIN query instead of N+1 queries
+      const { data: friendsData, error: friendError } = await supabase
         .from('friends')
-        .select('*')
+        .select(
+          `
+          id,
+          user_id,
+          friend_id,
+          status,
+          created_at,
+          updated_at,
+          user_profile:profiles!friends_user_id_fkey(
+            id,
+            username,
+            avatar_url,
+            full_name,
+            bio
+          ),
+          friend_profile:profiles!friends_friend_id_fkey(
+            id,
+            username,
+            avatar_url,
+            full_name,
+            bio
+          )
+        `
+        )
         .or(
           `and(user_id.eq.${userId},status.eq.accepted),and(friend_id.eq.${userId},status.eq.accepted)`
         );
@@ -54,39 +77,34 @@ export const useFriends = (userId: string) => {
         throw friendError;
       }
 
-      console.log('Friend relationships:', friendRelationships);
+      console.log('Friend relationships with profiles:', friendsData);
 
-      // Then get the profiles for each friend
-      const friendsWithProfiles = await Promise.all(
-        (friendRelationships || []).map(async (relationship) => {
-          // Determine which ID is the friend's ID
-          const friendId =
-            relationship.user_id === userId ? relationship.friend_id : relationship.user_id;
-
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('id, username, avatar_url, full_name, bio')
-            .eq('id', friendId)
-            .single();
-
-          if (profileError) {
-            console.error('Error fetching profile for friend_id:', friendId, profileError);
-            return null;
-          }
+      // Transform the data to use the correct profile based on which direction the relationship goes
+      const friendsWithProfiles = (friendsData || [])
+        .map((relationship) => {
+          // Determine which profile to use as the friend's profile
+          const isUserInitiator = relationship.user_id === userId;
+          // Supabase returns arrays for FK relationships, so take the first element
+          const friendProfile = isUserInitiator
+            ? relationship.friend_profile && relationship.friend_profile[0]
+            : relationship.user_profile && relationship.user_profile[0];
 
           return {
-            ...relationship,
-            profiles: profile,
+            id: relationship.id,
+            user_id: relationship.user_id,
+            friend_id: relationship.friend_id,
+            status: relationship.status,
+            created_at: relationship.created_at,
+            updated_at: relationship.updated_at,
+            profiles: friendProfile,
           };
         })
-      );
-
-      const validFriends = friendsWithProfiles.filter(Boolean);
+        .filter((friend) => friend.profiles); // Filter out any null profiles
 
       // Deduplicate friends based on profile ID to prevent duplicates
-      const uniqueFriends = validFriends.filter(
+      const uniqueFriends = friendsWithProfiles.filter(
         (friend, index, self) =>
-          index === self.findIndex((f) => f.profiles.id === friend.profiles.id)
+          index === self.findIndex((f) => f.profiles?.id === friend.profiles?.id)
       );
 
       console.log('Friends with profiles (deduplicated):', uniqueFriends);
@@ -95,16 +113,32 @@ export const useFriends = (userId: string) => {
     enabled: !!userId,
   });
 
-  // Get sent requests (pending)
+  // Get sent requests (pending) - OPTIMIZED: No more N+1 queries!
   const { data: sentRequests, isLoading: sentLoading } = useQuery({
     queryKey: ['friends-sent', userId],
     queryFn: async () => {
       console.log('Fetching sent requests for user:', userId);
 
-      // First get the friend requests
+      // OPTIMIZED: Use a single JOIN query instead of N+1 queries
       const { data: friendRequests, error: friendError } = await supabase
         .from('friends')
-        .select('*')
+        .select(
+          `
+          id,
+          user_id,
+          friend_id,
+          status,
+          created_at,
+          updated_at,
+          friend_profile:profiles!friends_friend_id_fkey(
+            id,
+            username,
+            avatar_url,
+            full_name,
+            bio
+          )
+        `
+        )
         .eq('user_id', userId)
         .eq('status', 'pending');
 
@@ -113,46 +147,53 @@ export const useFriends = (userId: string) => {
         throw friendError;
       }
 
-      console.log('Friend requests:', friendRequests);
+      console.log('Friend requests with profiles:', friendRequests);
 
-      // Then get the profiles for each friend request
-      const requestsWithProfiles = await Promise.all(
-        (friendRequests || []).map(async (request) => {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('id, username, avatar_url, full_name, bio')
-            .eq('id', request.friend_id)
-            .single();
+      // Transform the data to match the expected format
+      const requestsWithProfiles = (friendRequests || [])
+        .map((request) => ({
+          id: request.id,
+          user_id: request.user_id,
+          friend_id: request.friend_id,
+          status: request.status,
+          created_at: request.created_at,
+          updated_at: request.updated_at,
+          profiles: request.friend_profile && request.friend_profile[0],
+        }))
+        .filter((request) => request.profiles); // Filter out any null profiles
 
-          if (profileError) {
-            console.error('Error fetching profile for friend_id:', request.friend_id, profileError);
-            return null;
-          }
-
-          return {
-            ...request,
-            profiles: profile,
-          };
-        })
-      );
-
-      const validRequests = requestsWithProfiles.filter(Boolean);
-      console.log('Sent requests with profiles:', validRequests);
-      return validRequests as Friend[];
+      console.log('Sent requests with profiles:', requestsWithProfiles);
+      return requestsWithProfiles as Friend[];
     },
     enabled: !!userId,
   });
 
-  // Get received requests (pending)
+  // Get received requests (pending) - OPTIMIZED: No more N+1 queries!
   const { data: receivedRequests, isLoading: receivedLoading } = useQuery({
     queryKey: ['friends-received', userId],
     queryFn: async () => {
       console.log('Fetching received requests for user:', userId);
 
-      // First get the received friend requests
+      // OPTIMIZED: Use a single JOIN query instead of N+1 queries
       const { data: friendRequests, error: friendError } = await supabase
         .from('friends')
-        .select('*')
+        .select(
+          `
+          id,
+          user_id,
+          friend_id,
+          status,
+          created_at,
+          updated_at,
+          user_profile:profiles!friends_user_id_fkey(
+            id,
+            username,
+            avatar_url,
+            full_name,
+            bio
+          )
+        `
+        )
         .eq('friend_id', userId)
         .eq('status', 'pending');
 
@@ -161,32 +202,23 @@ export const useFriends = (userId: string) => {
         throw friendError;
       }
 
-      console.log('Received friend requests:', friendRequests);
+      console.log('Received friend requests with profiles:', friendRequests);
 
-      // Then get the profiles for each friend request
-      const requestsWithProfiles = await Promise.all(
-        (friendRequests || []).map(async (request) => {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('id, username, avatar_url, full_name, bio')
-            .eq('id', request.user_id)
-            .single();
+      // Transform the data to match the expected format
+      const requestsWithProfiles = (friendRequests || [])
+        .map((request) => ({
+          id: request.id,
+          user_id: request.user_id,
+          friend_id: request.friend_id,
+          status: request.status,
+          created_at: request.created_at,
+          updated_at: request.updated_at,
+          profiles: request.user_profile && request.user_profile[0],
+        }))
+        .filter((request) => request.profiles); // Filter out any null profiles
 
-          if (profileError) {
-            console.error('Error fetching profile for user_id:', request.user_id, profileError);
-            return null;
-          }
-
-          return {
-            ...request,
-            profiles: profile,
-          };
-        })
-      );
-
-      const validRequests = requestsWithProfiles.filter(Boolean);
-      console.log('Received requests with profiles:', validRequests);
-      return validRequests as Friend[];
+      console.log('Received requests with profiles:', requestsWithProfiles);
+      return requestsWithProfiles as Friend[];
     },
     enabled: !!userId,
   });
@@ -393,7 +425,7 @@ export const useFriends = (userId: string) => {
     },
   });
 
-  // Search users
+  // Search users - OPTIMIZED: No more N+1 queries!
   const searchUsers = useCallback(
     async (username: string): Promise<User[]> => {
       if (!username.trim()) return [];
@@ -407,32 +439,48 @@ export const useFriends = (userId: string) => {
 
       if (error) throw error;
 
-      // Get friend status for each user
-      const usersWithStatus = await Promise.all(
-        (data || []).map(async (user) => {
-          const { data: friendData } = await supabase
-            .from('friends')
-            .select('*')
-            .or(
-              `and(user_id.eq.${userId},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${userId})`
-            )
-            .single();
+      if (!data || data.length === 0) return [];
 
-          let friendStatus: FriendStatus = 'none';
-          if (friendData) {
-            if (friendData.status === 'accepted') {
-              friendStatus = 'friends';
-            } else if (friendData.status === 'pending') {
-              friendStatus = friendData.user_id === userId ? 'pending_sent' : 'pending_received';
-            }
-          }
+      // OPTIMIZED: Get friend statuses for all users in a single batch query
+      const userIds = data.map((user) => user.id);
 
-          return {
-            ...user,
-            friend_status: friendStatus,
-          };
-        })
-      );
+      const { data: friendRelationships, error: friendError } = await supabase
+        .from('friends')
+        .select('user_id, friend_id, status')
+        .or(
+          `and(user_id.eq.${userId},friend_id.in.(${userIds.join(',')})),and(friend_id.eq.${userId},user_id.in.(${userIds.join(',')}))`
+        );
+
+      if (friendError) {
+        console.error('Error fetching friend relationships:', friendError);
+        // Return users without friend status if query fails
+        return data.map((user) => ({ ...user, friend_status: 'none' as FriendStatus }));
+      }
+
+      // Create a map of user ID to friend status for quick lookup
+      const friendStatusMap = new Map<string, FriendStatus>();
+
+      // Initialize all users as 'none'
+      userIds.forEach((id) => friendStatusMap.set(id, 'none'));
+
+      // Update with actual friend statuses
+      friendRelationships?.forEach((relationship) => {
+        const targetUserId =
+          relationship.user_id === userId ? relationship.friend_id : relationship.user_id;
+
+        if (relationship.status === 'accepted') {
+          friendStatusMap.set(targetUserId, 'friends');
+        } else if (relationship.status === 'pending') {
+          const status = relationship.user_id === userId ? 'pending_sent' : 'pending_received';
+          friendStatusMap.set(targetUserId, status);
+        }
+      });
+
+      // Combine user data with friend statuses
+      const usersWithStatus = data.map((user) => ({
+        ...user,
+        friend_status: friendStatusMap.get(user.id) || 'none',
+      }));
 
       return usersWithStatus;
     },

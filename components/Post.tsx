@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -55,7 +55,7 @@ interface PostProps {
   onReturningFromProfile: () => void;
 }
 
-export default function Post({
+const Post = memo(function Post({
   post,
   isGridView,
   isDeleting,
@@ -84,20 +84,10 @@ export default function Post({
   // Use the cached saved status directly
   const isSaved = isPostSaved(post.id);
 
-  const handleSaveToggle = () => {
-    if (!user?.id) return;
-
-    // Use optimistic updates for instant UI feedback
-    if (isSaved) {
-      unsavePostWithOptimisticUpdate(post.id);
-    } else {
-      savePostWithOptimisticUpdate(post.id);
-    }
-  };
-
-  const getTimeElapsed = (createdAt: string) => {
+  // Memoize expensive calculations
+  const timeElapsed = useMemo(() => {
     const now = new Date();
-    const postDate = new Date(createdAt);
+    const postDate = new Date(post.created_at);
     const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
 
     if (diffInSeconds < 60) return 'Just now';
@@ -113,31 +103,53 @@ export default function Post({
     if (diffInMonths < 12) return `${diffInMonths}mo ago`;
     const diffInYears = Math.floor(diffInDays / 365);
     return `${diffInYears}y ago`;
-  };
+  }, [post.created_at]);
 
-  const handleSendMessage = () => {
+  // Memoize tag calculation
+  const tagInfo = useMemo(() => {
+    const tag = post.profiles
+      ? getCompetitionTag(
+          post.profiles.competitions_won,
+          post.profiles.username,
+          {
+            tag: post.profiles.custom_tag,
+            color: post.profiles.custom_tag_color,
+          },
+          colorScheme
+        )
+      : null;
+
+    return {
+      tag,
+      tagBgColor: '#000000',
+      tagBorderColor: tag?.borderColor,
+    };
+  }, [post.profiles, colorScheme]);
+
+  // Memoize event handlers
+  const handleSaveToggle = useCallback(() => {
+    if (!user?.id) return;
+
+    // Use optimistic updates for instant UI feedback
+    if (isSaved) {
+      unsavePostWithOptimisticUpdate(post.id);
+    } else {
+      savePostWithOptimisticUpdate(post.id);
+    }
+  }, [user?.id, isSaved, post.id, unsavePostWithOptimisticUpdate, savePostWithOptimisticUpdate]);
+
+  const handleSendMessage = useCallback(() => {
     Alert.alert(
       'Coming Soon!',
       'The send feature is currently being implemented. Stay tuned for updates!',
       [{ text: 'OK', style: 'default' }]
     );
-  };
+  }, []);
 
-  const tag = post.profiles
-    ? getCompetitionTag(
-        post.profiles.competitions_won,
-        post.profiles.username,
-        {
-          tag: post.profiles.custom_tag,
-          color: post.profiles.custom_tag_color,
-        },
-        colorScheme
-      )
-    : null;
-
-  // For posts, we always use black background regardless of theme
-  const tagBgColor = '#000000';
-  const tagBorderColor = tag?.borderColor;
+  const handleProfilePress = useCallback(() => {
+    onReturningFromProfile();
+    router.push(`/user-profile?userId=${post.user_id}`);
+  }, [onReturningFromProfile, router, post.user_id]);
 
   if (isGridView) {
     return (
@@ -159,10 +171,7 @@ export default function Post({
           </View>
           <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between p-3">
             <Pressable
-              onPress={() => {
-                onReturningFromProfile();
-                router.push(`/user-profile?userId=${post.user_id}`);
-              }}
+              onPress={handleProfilePress}
               className="h-8 w-8 overflow-hidden rounded-full border-2 border-white">
               <Image
                 source={
@@ -220,12 +229,7 @@ export default function Post({
 
           {/* Header Overlay */}
           <View className="absolute left-0 right-0 top-0 flex-row items-center justify-between p-4">
-            <Pressable
-              onPress={() => {
-                onReturningFromProfile();
-                router.push(`/user-profile?userId=${post.user_id}`);
-              }}
-              className="flex-row items-center">
+            <Pressable onPress={handleProfilePress} className="flex-row items-center">
               <View
                 className={`h-12 w-12 overflow-hidden rounded-full border-2 ${
                   colorScheme === 'dark'
@@ -246,25 +250,19 @@ export default function Post({
                   <Text className="text-base font-bold text-white">
                     {post.profiles?.username || 'Unknown User'}
                   </Text>
-                  {post.profiles && tag && (
+                  {post.profiles && tagInfo.tag && (
                     <View
                       style={{
-                        backgroundColor: '#000000',
-                        borderColor: tagBorderColor,
+                        backgroundColor: tagInfo.tagBgColor,
+                        borderColor: tagInfo.tagBorderColor,
                       }}
                       className="ml-2 rounded-xl border px-2 py-0.5">
-                      <Text
-                        style={{
-                          color: tag.color,
-                        }}
-                        className="text-center text-xs font-semibold">
-                        {tag.tag}
-                      </Text>
+                      <Text className="text-xs font-bold text-white">{tagInfo.tag.tag}</Text>
                     </View>
                   )}
                 </View>
                 <View className="flex-row items-center">
-                  <Text className="text-xs text-gray-200">{getTimeElapsed(post.created_at)}</Text>
+                  <Text className="text-xs text-gray-200">{timeElapsed}</Text>
                   <Text className="mx-1 text-xs text-gray-200">•</Text>
                   <View className="flex-row items-center">
                     <Ionicons name="school" size={12} color="#ff9f6b" />
@@ -363,4 +361,6 @@ export default function Post({
       </View>
     </View>
   );
-}
+});
+
+export default Post;

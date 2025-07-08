@@ -78,7 +78,37 @@ export default function CompetitionScreen() {
     };
 
     fetchCompetitionStatus();
-    const timer = setInterval(async () => {
+
+    // Timer for countdown only (every second) - NO DATABASE CALLS
+    const countdownTimer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        const newTime = Math.max(0, prev - 1);
+
+        if (newTime === 0 && competitionId) {
+          clearInterval(countdownTimer);
+          Alert.alert(
+            'Submission Time Ended',
+            'The time to submit your entry has ended. Time to vote!',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  router.push({
+                    pathname: '/allVoting',
+                    params: { competitionId },
+                  });
+                },
+              },
+            ]
+          );
+        }
+
+        return newTime;
+      });
+    }, 1000);
+
+    // Separate timer for status checks (every 30 seconds) - DATABASE CALLS
+    const statusTimer = setInterval(async () => {
       const { data } = await supabase
         .from('competitions')
         .select('submit_end_time, id')
@@ -90,30 +120,12 @@ export default function CompetitionScreen() {
         const now = new Date();
         const remaining = Math.floor((submitEnd.getTime() - now.getTime()) / 1000);
         setTimeRemaining(remaining);
-
-        if (remaining <= 0) {
-          clearInterval(timer);
-          Alert.alert(
-            'Submission Time Ended',
-            'The time to submit your entry has ended. Time to vote!',
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  router.push({
-                    pathname: '/allVoting',
-                    params: { competitionId: data.id },
-                  });
-                },
-              },
-            ]
-          );
-        }
       }
-    }, 1000);
+    }, 30000); // Only check status every 30 seconds!
 
     return () => {
-      clearInterval(timer);
+      clearInterval(countdownTimer);
+      clearInterval(statusTimer);
     };
   }, []);
 

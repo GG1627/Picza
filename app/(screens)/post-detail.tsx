@@ -250,7 +250,7 @@ export default function PostDetailScreen() {
     return (
       <View
         className={`flex-1 items-center justify-center ${
-          colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#ffcf99]'
+          colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'
         }`}>
         <ActivityIndicator size="large" color="#f77f5e" />
       </View>
@@ -258,7 +258,7 @@ export default function PostDetailScreen() {
   }
 
   return (
-    <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#ffcf99]'}`}>
+    <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-[#121113]' : 'bg-[#e0e0e0]'}`}>
       <Stack.Screen
         options={{
           headerShown: false,

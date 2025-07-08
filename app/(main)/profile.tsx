@@ -24,6 +24,7 @@ import { useColorScheme } from '../../lib/useColorScheme';
 import React from 'react';
 import { uploadToCloudinary, deleteFromCloudinary } from '../../lib/cloudinary';
 import { getCompetitionTag } from '../../lib/competitionTags';
+import ImageOptimizer from '../../lib/imageOptimization';
 import MeshGradient from '../../components/MeshGradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../lib/auth';
@@ -208,16 +209,17 @@ export default function ProfileScreen() {
         mediaTypes: 'images',
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.5,
-        base64: true,
+        quality: 1, // Get full quality, we'll optimize it ourselves
       });
 
       if (!result.canceled) {
-        setNewImage(result.assets[0].uri);
+        // Optimize image for avatar upload
+        const optimized = await ImageOptimizer.optimizeForAvatar(result.assets[0].uri);
+        setNewImage(optimized.uri);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
-      alert('Error selecting image. Please try again.');
+      console.error('Error picking/optimizing image:', error);
+      alert('Error processing image. Please try again.');
     }
   };
 

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 import * as base64 from 'base64-js';
 import { uploadToCloudinary } from '../cloudinary';
-import { getTrendingPosts } from '../trendingAlgorithm';
+import { getTrendingPosts, calculateSinglePostTrendingScore } from '../trendingAlgorithm';
 import { useUserBlocking } from './useUserBlocking';
 import { useAuth } from '../auth';
 
@@ -16,6 +16,7 @@ type Post = {
   dish_name: string | null;
   ingredients: string | null;
   comments_count?: number;
+  trending_score?: number;
   user_id: string;
   profiles: {
     id: string;
@@ -47,6 +48,7 @@ type DatabasePost = {
   dish_name: string | null;
   ingredients: string | null;
   comments_count?: number;
+  trending_score?: number;
   profiles: {
     id: string;
     username: string;
@@ -192,10 +194,17 @@ export function usePosts(
         `);
       }
 
-      // For trending, we need to fetch ALL posts first, then sort, then paginate
+      // For trending, use pre-computed trending scores with pagination
       if (sortBy === 'trending') {
-        // Fetch all posts without pagination for trending
-        const { data, error } = await query.order('created_at', { ascending: false });
+        // Order by pre-computed trending_score and apply pagination directly
+        query = query.order('trending_score', { ascending: false });
+
+        // Apply pagination
+        const start = (page - 1) * pageSize;
+        const end = start + pageSize - 1;
+        query = query.range(start, end);
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -208,13 +217,7 @@ export function usePosts(
         // Filter out blocked users' posts
         const filteredData = filterBlockedUsers(transformedData);
 
-        // Apply trending algorithm to filtered posts
-        const trendingPosts = await getTrendingPosts(filteredData);
-
-        // Apply pagination after sorting
-        const start = (page - 1) * pageSize;
-        const end = start + pageSize;
-        return trendingPosts.slice(start, end);
+        return filteredData;
       } else {
         // For recent, use normal pagination
         query = query.order('created_at', { ascending: false });
@@ -302,7 +305,24 @@ export function useCreatePost() {
 
       const imageUrl = await uploadToCloudinary(base64Image.split(',')[1], 'post');
 
-      // Create post with Cloudinary image URL
+      // Calculate initial trending score for new post
+      const newPost = {
+        id: '', // Will be set by database
+        user_id: user.id,
+        image_url: imageUrl,
+        caption: caption,
+        created_at: new Date().toISOString(),
+        likes_count: 0,
+        dish_name: dish_name,
+        ingredients: ingredients,
+        comments_count: 0,
+        comments: null,
+        profiles: null,
+      };
+
+      const initialTrendingScore = calculateSinglePostTrendingScore(newPost);
+
+      // Create post with Cloudinary image URL and initial trending score
       const { error } = await supabase.from('posts').insert([
         {
           user_id: user.id,
@@ -311,6 +331,7 @@ export function useCreatePost() {
           ingredients: ingredients,
           image_url: imageUrl,
           likes_count: 0,
+          trending_score: initialTrendingScore,
         },
       ]);
 

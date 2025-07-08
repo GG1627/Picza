@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from '../../lib/useAuth';
+import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { generateRandomMorningLunchCompetitionName } from '~/lib/generateRandomName';
 import {
@@ -185,49 +185,78 @@ export default function CompetitionsScreen() {
       const status = await getAllCompetitionsStatus();
       setCompetitionsStatus(status);
 
-      // Automate next competition creation for all types
+      // Batch operations to reduce database calls
+      const operations = [];
+
+      // Automate next competition creation for all types (batch these)
       if (status.morning.phase === 'completed' && status.morning.timeRemaining === 0) {
-        await ensureNextCompetition('morning');
+        operations.push(ensureNextCompetition('morning'));
       }
       if (status.noon.phase === 'completed' && status.noon.timeRemaining === 0) {
-        await ensureNextCompetition('noon');
+        operations.push(ensureNextCompetition('noon'));
       }
       if (status.night.phase === 'completed' && status.night.timeRemaining === 0) {
-        await ensureNextCompetition('night');
+        operations.push(ensureNextCompetition('night'));
       }
 
-      // If morning competition is in registration or competing phase, fetch participant count
-      // If morning competition is completed, fetch the winner
+      // Execute all competition creation operations in parallel
+      if (operations.length > 0) {
+        await Promise.all(operations);
+      }
+
+      // Batch participant count fetches
+      const participantCountPromises = [];
+      const winnerFetchPromises = [];
+
+      // Morning competition
       if (status.morning.id) {
         if (status.morning.phase === 'registration' || status.morning.phase === 'competing') {
-          const count = await getParticipantCount(status.morning.id);
-          setMorningParticipants(count);
+          participantCountPromises.push(
+            getParticipantCount(status.morning.id).then((count) => ({ type: 'morning', count }))
+          );
         }
-        if (status.morning.phase == 'completed') {
-          fetchWinner(status.morning.id, 'morning');
+        if (status.morning.phase === 'completed') {
+          winnerFetchPromises.push(fetchWinner(status.morning.id, 'morning'));
         }
       }
 
-      //Same for noon competitions
+      // Noon competition
       if (status.noon.id) {
         if (status.noon.phase === 'registration' || status.noon.phase === 'competing') {
-          const count = await getParticipantCount(status.noon.id);
-          setNoonParticipants(count);
+          participantCountPromises.push(
+            getParticipantCount(status.noon.id).then((count) => ({ type: 'noon', count }))
+          );
         }
-        if (status.noon.phase == 'completed') {
-          fetchWinner(status.noon.id, 'noon');
+        if (status.noon.phase === 'completed') {
+          winnerFetchPromises.push(fetchWinner(status.noon.id, 'noon'));
         }
       }
 
-      // night competition
+      // Night competition
       if (status.night.id) {
         if (status.night.phase === 'registration' || status.night.phase === 'competing') {
-          const count = await getParticipantCount(status.night.id);
-          setNightParticipants(count);
+          participantCountPromises.push(
+            getParticipantCount(status.night.id).then((count) => ({ type: 'night', count }))
+          );
         }
-        if (status.night.phase == 'completed') {
-          fetchWinner(status.night.id, 'night');
+        if (status.night.phase === 'completed') {
+          winnerFetchPromises.push(fetchWinner(status.night.id, 'night'));
         }
+      }
+
+      // Execute all participant counts in parallel
+      if (participantCountPromises.length > 0) {
+        const participantCounts = await Promise.all(participantCountPromises);
+        participantCounts.forEach(({ type, count }) => {
+          if (type === 'morning') setMorningParticipants(count);
+          else if (type === 'noon') setNoonParticipants(count);
+          else if (type === 'night') setNightParticipants(count);
+        });
+      }
+
+      // Execute all winner fetches in parallel
+      if (winnerFetchPromises.length > 0) {
+        await Promise.all(winnerFetchPromises);
       }
     } catch (error) {
       console.error('Error fetching competition status:', error);
@@ -241,9 +270,8 @@ export default function CompetitionsScreen() {
     // Initial fetch
     fetchStatus();
 
-    // Set up interval for both status updates and countdown
-    const timer = setInterval(() => {
-      fetchStatus();
+    // Timer for countdown updates ONLY (every second) - NO DATABASE CALLS
+    const countdownTimer = setInterval(() => {
       setCompetitionsStatus((prev) => ({
         morning: {
           ...prev.morning,
@@ -260,7 +288,15 @@ export default function CompetitionsScreen() {
       }));
     }, 1000);
 
-    return () => clearInterval(timer);
+    // Separate timer for status checks (every 30 seconds) - DATABASE CALLS
+    const statusTimer = setInterval(() => {
+      fetchStatus();
+    }, 30000); // Only fetch status every 30 seconds instead of every second!
+
+    return () => {
+      clearInterval(countdownTimer);
+      clearInterval(statusTimer);
+    };
   }, []);
 
   // Get phase-specific message

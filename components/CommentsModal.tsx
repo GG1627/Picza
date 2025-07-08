@@ -255,35 +255,31 @@ const CommentsModal = memo(
       if (!post) return;
       setIsLoading(true);
       try {
+        // Get comments first
         const { data: commentsData, error } = await supabase
           .from('comments')
-          .select(
-            `
-        id,
-        post_id,
-        user_id,
-        content,
-        created_at,
-        profiles:user_id (
-          id,
-          username,
-          avatar_url
-        )
-      `
-          )
+          .select('id, post_id, user_id, content, created_at')
           .eq('post_id', post.id)
           .order('created_at', { ascending: true });
 
         if (error) throw error;
 
-        // Transform the data to match expected structure (single profile object, not array)
+        // Get unique user IDs
+        const userIds = [...new Set(commentsData?.map((comment) => comment.user_id) || [])];
+
+        // Get profiles for all users
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, username, avatar_url')
+          .in('id', userIds);
+
+        if (profilesError) throw profilesError;
+
+        // Combine comments with their profiles
         const transformedComments =
           commentsData?.map((comment: any) => ({
             ...comment,
-            profiles:
-              Array.isArray(comment.profiles) && comment.profiles.length > 0
-                ? comment.profiles[0]
-                : comment.profiles,
+            profiles: profilesData?.find((profile) => profile.id === comment.user_id) || null,
           })) || [];
 
         // Filter out comments from blocked users
@@ -299,23 +295,47 @@ const CommentsModal = memo(
     const handleAddComment = async () => {
       if (!newComment.trim() || !post || !user) return;
 
+      const commentText = newComment.trim();
+
+      // Clear the input and dismiss keyboard immediately for better UX
+      setNewComment('');
+      Keyboard.dismiss();
+
+      // Create optimistic comment for instant UI update
+      const optimisticComment: Comment = {
+        id: `temp-${Date.now()}`, // Temporary ID
+        post_id: post.id,
+        user_id: user.id,
+        content: commentText,
+        created_at: new Date().toISOString(),
+        profiles: {
+          username: user.user_metadata?.username || 'You',
+          avatar_url: user.user_metadata?.avatar_url || null,
+        },
+      };
+
+      // Add optimistic comment to the list immediately
+      setComments((prev) => [...prev, optimisticComment]);
+
+      // Scroll to show the new comment
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+
       try {
-        // Call the feed's handleAddComment function to update the comment count
-        onAddComment(newComment.trim());
+        // Call the feed's handleAddComment function to save to database
+        await onAddComment(commentText);
 
-        // Clear the input and dismiss keyboard
-        setNewComment('');
-        Keyboard.dismiss();
-
-        // Refresh comments to show the new comment
+        // Refresh comments to get the real comment with proper ID
         await fetchComments();
-
-        // Scroll to the bottom to show the new comment
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 100);
       } catch (error) {
         console.error('Error adding comment:', error);
+
+        // Remove the optimistic comment on error
+        setComments((prev) => prev.filter((comment) => comment.id !== optimisticComment.id));
+
+        // Show error message
+        Alert.alert('Error', 'Failed to add comment. Please try again.');
       }
     };
 

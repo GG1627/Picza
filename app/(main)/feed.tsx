@@ -44,6 +44,7 @@ import Post from '../../components/Post';
 import { ListEmptyComponent, ListFooterComponent } from '../../components/FeedListComponents';
 import { usePostLikes } from '../../lib/hooks/usePostLikes';
 import { usePostDeletion } from '../../lib/hooks/usePostDeletion';
+import { updateSinglePostTrendingScore } from '../../lib/trendingAlgorithm';
 
 // Declare global types for callbacks
 declare global {
@@ -388,6 +389,11 @@ const DynamicPostsList = memo(() => {
               : post
           )
         );
+
+        // Update trending score for this post (don't await to avoid blocking UI)
+        updateSinglePostTrendingScore(selectedPostForComments.id).catch((error: unknown) => {
+          console.warn('Failed to update trending score after comment:', error);
+        });
       } catch (error) {
         console.error('Error adding comment:', error);
         Alert.alert('Error', 'Failed to add comment. Please try again.');
@@ -405,35 +411,7 @@ const DynamicPostsList = memo(() => {
     setIsReturningFromProfile(true);
   }, []);
 
-  // Sync comment counts when returning to feed
-  const syncCommentCounts = useCallback(async () => {
-    if (allPosts.length === 0) return;
-
-    try {
-      const postIds = allPosts.map((post) => post.id);
-      const { data, error } = await supabase
-        .from('comments')
-        .select('post_id')
-        .in('post_id', postIds);
-
-      if (error) throw error;
-
-      // Count comments per post
-      const commentCountMap = data.reduce(
-        (acc, comment) => {
-          acc[comment.post_id] = (acc[comment.post_id] || 0) + 1;
-          return acc;
-        },
-        {} as { [key: string]: number }
-      );
-
-      // Update local comment counts
-      setCommentCounts(commentCountMap);
-    } catch (error) {
-      console.error('Error syncing comment counts:', error);
-    }
-  }, [allPosts]);
-
+  // OPTIMIZED: Removed expensive comment sync - comment counts are already included in posts query
   useFocusEffect(
     useCallback(() => {
       if (!hasInitialData && schoolData) {
@@ -441,11 +419,10 @@ const DynamicPostsList = memo(() => {
         setAllPosts([]);
         setHasMore(true);
         refetch();
-      } else if (hasInitialData) {
-        // Sync comment counts when returning to feed
-        syncCommentCounts();
       }
-    }, [refetch, hasInitialData, schoolData, syncCommentCounts])
+      // Comment counts are already accurate from the posts query and updated optimistically
+      // No need for expensive sync that fetches all comments for all posts
+    }, [refetch, hasInitialData, schoolData])
   );
 
   const { width: screenWidth } = Dimensions.get('window');

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Animated, Alert } from 'react-native';
 import { supabase } from '../supabase';
 import { useQueryClient } from '@tanstack/react-query';
+import { updateSinglePostTrendingScore } from '../trendingAlgorithm';
 
 // Animation constants
 const ANIMATION_CONFIG = {
@@ -139,6 +140,11 @@ export const usePostLikes = (userId: string | undefined) => {
 
           // Invalidate cache after successful update
           queryClient.invalidateQueries({ queryKey: ['posts'] });
+
+          // Update trending score for this post (don't await to avoid blocking UI)
+          updateSinglePostTrendingScore(postId).catch((error: unknown) => {
+            console.warn('Failed to update trending score after like:', error);
+          });
 
           // Set cooldown period (500ms) to prevent rapid toggling
           cooldownTimers.current[postId] = setTimeout(() => {

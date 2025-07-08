@@ -9,6 +9,7 @@ export interface Post {
   ingredients: string | null;
   comments: string[] | null;
   comments_count?: number;
+  trending_score?: number;
   profiles: {
     id: string;
     username: string;

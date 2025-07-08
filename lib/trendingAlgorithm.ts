@@ -330,3 +330,89 @@ export const getTrendingPosts = async (posts: Post[]): Promise<Post[]> => {
 export const getTrendingScoreBreakdown = (post: Post, currentTime: Date = new Date()) => {
   return calculateTrendingScore(post, currentTime);
 };
+
+/**
+ * Calculate trending score for a single post (used by background job)
+ * @param post Single post to calculate score for
+ * @param currentTime Optional current time for consistent scoring
+ * @returns Just the numeric trending score
+ */
+export const calculateSinglePostTrendingScore = (
+  post: Post,
+  currentTime: Date = new Date()
+): number => {
+  const result = calculateTrendingScore(post, currentTime);
+  return result.score;
+};
+
+/**
+ * Updates trending score for a single post in the database
+ * @param postId ID of the post to update
+ * @returns Promise that resolves when update is complete
+ */
+export const updateSinglePostTrendingScore = async (postId: string): Promise<void> => {
+  try {
+    // Import supabase here to avoid circular dependencies
+    const { supabase } = await import('./supabase');
+
+    // Fetch the post data first
+    const { data: post, error: fetchError } = await supabase
+      .from('posts')
+      .select(
+        `
+        id,
+        user_id,
+        image_url,
+        created_at,
+        likes_count,
+        dish_name,
+        caption,
+        ingredients,
+        comments:comments(count),
+        profiles (
+          id,
+          username,
+          avatar_url,
+          competitions_won,
+          custom_tag,
+          custom_tag_color,
+          schools (
+            name
+          )
+        )
+      `
+      )
+      .eq('id', postId)
+      .single();
+
+    if (fetchError) throw fetchError;
+    if (!post) throw new Error('Post not found');
+
+    // Calculate new trending score - create minimal object for calculation
+    const postForCalculation = {
+      id: post.id,
+      user_id: post.user_id,
+      image_url: post.image_url,
+      created_at: post.created_at,
+      likes_count: post.likes_count,
+      dish_name: post.dish_name,
+      caption: post.caption,
+      ingredients: post.ingredients,
+      comments_count: post.comments?.[0]?.count || 0,
+      profiles: post.profiles?.[0] || null,
+    } as unknown as Post;
+
+    const newTrendingScore = calculateSinglePostTrendingScore(postForCalculation);
+
+    // Update the trending score in the database
+    const { error: updateError } = await supabase
+      .from('posts')
+      .update({ trending_score: newTrendingScore })
+      .eq('id', postId);
+
+    if (updateError) throw updateError;
+  } catch (error) {
+    console.error('Error updating trending score for post:', postId, error);
+    throw error;
+  }
+};

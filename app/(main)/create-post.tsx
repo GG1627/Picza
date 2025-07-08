@@ -21,6 +21,7 @@ import { useCreatePost } from '../../lib/hooks/useQueries';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { validateFoodImage } from '../../lib/azureVision';
+import ImageOptimizer, { useImageOptimization } from '../../lib/imageOptimization';
 
 export default function CreatePostScreen() {
   const router = useRouter();
@@ -34,7 +35,14 @@ export default function CreatePostScreen() {
     isValid: boolean;
     message: string;
   } | null>(null);
+  const [optimizedImage, setOptimizedImage] = useState<string | null>(null);
+  const [originalImageSize, setOriginalImageSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [compressionRatio, setCompressionRatio] = useState<number | null>(null);
   const createPost = useCreatePost();
+  const { optimizeImage, isOptimizing, optimizationProgress } = useImageOptimization();
   const { colorScheme } = useColorScheme();
   const scrollViewRef = useRef<ScrollView>(null);
   const queryClient = useQueryClient();
@@ -81,6 +89,9 @@ export default function CreatePostScreen() {
 
   const resetForm = () => {
     setImage(null);
+    setOptimizedImage(null);
+    setOriginalImageSize(null);
+    setCompressionRatio(null);
     setDishName('');
     setCaption('');
     setIngredients('');
@@ -95,20 +106,44 @@ export default function CreatePostScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.5,
+      quality: 1, // Get full quality initially, we'll optimize it ourselves
     });
 
     if (!result.canceled) {
       const selectedImage = result.assets[0].uri;
       setImage(selectedImage);
 
-      // Reset previous validation result
+      // Reset previous states
       setFoodValidationResult(null);
+      setOptimizedImage(null);
+      setCompressionRatio(null);
 
-      // Validate if the image contains food
-      setIsValidatingFood(true);
       try {
-        const validation = await validateFoodImage(selectedImage);
+        // Step 1: Get original image info
+        const originalInfo = await ImageOptimizer.getImageInfo(selectedImage);
+        setOriginalImageSize(originalInfo);
+
+        // Step 2: Optimize image for post upload (high quality)
+        const optimizedForPost = await optimizeImage(
+          selectedImage,
+          ImageOptimizer.PRESETS.POST_UPLOAD
+        );
+        setOptimizedImage(optimizedForPost.uri);
+
+        // Calculate and show compression ratio
+        const ratio = ImageOptimizer.estimateCompressionRatio(
+          originalInfo.width,
+          originalInfo.height,
+          ImageOptimizer.PRESETS.POST_UPLOAD
+        );
+        setCompressionRatio(ratio);
+
+        // Step 3: Optimize smaller version for Azure Vision API (faster validation)
+        setIsValidatingFood(true);
+        const optimizedForVision = await ImageOptimizer.optimizeForAzureVision(selectedImage);
+
+        // Validate using the smaller, optimized image
+        const validation = await validateFoodImage(optimizedForVision.uri);
         setFoodValidationResult(validation);
 
         if (!validation.isValid) {
@@ -119,25 +154,35 @@ export default function CreatePostScreen() {
               {
                 text: 'OK',
                 style: 'default',
-                onPress: () => setImage(null),
+                onPress: () => {
+                  setImage(null);
+                  setOptimizedImage(null);
+                  setOriginalImageSize(null);
+                  setCompressionRatio(null);
+                },
               },
             ]
           );
         }
       } catch (error) {
-        console.error('Error validating food image:', error);
+        console.error('Error processing image:', error);
         setFoodValidationResult({
           isValid: false,
-          message: 'Unable to validate image. Please try again with a different image.',
+          message: 'Unable to process image. Please try again with a different image.',
         });
         Alert.alert(
-          'Validation Error',
-          'Unable to validate your image. Please try again with a different food image.',
+          'Processing Error',
+          'Unable to process your image. Please try again with a different food image.',
           [
             {
               text: 'OK',
               style: 'default',
-              onPress: () => setImage(null),
+              onPress: () => {
+                setImage(null);
+                setOptimizedImage(null);
+                setOriginalImageSize(null);
+                setCompressionRatio(null);
+              },
             },
           ]
         );
@@ -148,7 +193,9 @@ export default function CreatePostScreen() {
   };
 
   const handleCreatePost = async () => {
-    if (!image) return;
+    // Use optimized image if available, fall back to original
+    const imageToUpload = optimizedImage || image;
+    if (!imageToUpload) return;
 
     // Only allow posting if food is detected
     if (!foodValidationResult || !foodValidationResult.isValid) {
@@ -162,7 +209,7 @@ export default function CreatePostScreen() {
       const formattedIngredients = formatIngredients(ingredients);
 
       await createPost.mutateAsync({
-        image,
+        image: imageToUpload, // Use optimized image for faster upload
         dish_name: dishName,
         caption,
         ingredients: formattedIngredients,
@@ -257,9 +304,19 @@ export default function CreatePostScreen() {
         </Text>
         <TouchableOpacity
           onPress={handleCreatePost}
-          disabled={!image || createPost.isPending || !foodValidationResult?.isValid}
+          disabled={
+            !image ||
+            createPost.isPending ||
+            isOptimizing ||
+            isValidatingFood ||
+            !foodValidationResult?.isValid
+          }
           className={`rounded-2xl px-6 py-2 ${
-            !image || createPost.isPending || !foodValidationResult?.isValid
+            !image ||
+            createPost.isPending ||
+            isOptimizing ||
+            isValidatingFood ||
+            !foodValidationResult?.isValid
               ? colorScheme === 'dark'
                 ? 'bg-[#282828]'
                 : 'bg-[#f9f9f9]'
@@ -278,7 +335,11 @@ export default function CreatePostScreen() {
           ) : (
             <Text
               className={`font-medium ${
-                !image || createPost.isPending || !foodValidationResult?.isValid
+                !image ||
+                createPost.isPending ||
+                isOptimizing ||
+                isValidatingFood ||
+                !foodValidationResult?.isValid
                   ? colorScheme === 'dark'
                     ? 'text-[#9ca3af]'
                     : 'text-[#877B66]'
@@ -286,7 +347,7 @@ export default function CreatePostScreen() {
                     ? 'text-[#259365]'
                     : 'text-[#259365]'
               }`}>
-              Post
+              {isOptimizing ? 'Optimizing...' : isValidatingFood ? 'Validating...' : 'Post'}
             </Text>
           )}
         </TouchableOpacity>
@@ -309,28 +370,62 @@ export default function CreatePostScreen() {
               <View className="mb-4 aspect-square w-full overflow-hidden rounded-2xl">
                 <Image source={{ uri: image }} className="h-full w-full" resizeMode="cover" />
 
+                {/* Image optimization progress */}
+                {isOptimizing && (
+                  <View className="absolute inset-0 items-center justify-center bg-black/50">
+                    <View className="rounded-lg bg-white/90 p-4">
+                      <ActivityIndicator size="large" color="#f77f5e" />
+                      <Text className="mt-2 text-center font-medium text-gray-800">
+                        Optimizing image... {Math.round(optimizationProgress)}%
+                      </Text>
+                      <View className="mt-2 h-2 w-48 overflow-hidden rounded-full bg-gray-200">
+                        <View
+                          className="h-full bg-[#f77f5e] transition-all duration-300"
+                          style={{ width: `${optimizationProgress}%` }}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                )}
+
                 {/* Food validation status */}
-                {isValidatingFood && (
+                {isValidatingFood && !isOptimizing && (
                   <View className="absolute inset-0 items-center justify-center bg-black/50">
                     <View className="rounded-lg bg-white/90 p-4">
                       <ActivityIndicator size="large" color="#0f9900" />
                       <Text className="mt-2 text-center font-medium text-gray-800">
-                        Checking if image contains food...
+                        Validating food content...
                       </Text>
                     </View>
                   </View>
                 )}
 
-                {foodValidationResult && !isValidatingFood && (
-                  <View className="absolute bottom-2 left-2 right-2">
-                    <View
-                      className={`rounded-lg p-2 ${
-                        foodValidationResult.isValid ? 'bg-green-500/90' : 'bg-red-500/90'
-                      }`}>
-                      <Text className="text-center text-sm font-medium text-white">
-                        {foodValidationResult.isValid ? '✅ Food detected!' : '❌ No food detected'}
-                      </Text>
-                    </View>
+                {/* Optimization and validation results */}
+                {!isOptimizing && !isValidatingFood && (
+                  <View className="absolute bottom-2 left-2 right-2 space-y-1">
+                    {/* Compression info */}
+                    {compressionRatio && originalImageSize && (
+                      <View className="rounded-lg bg-blue-500/90 p-2">
+                        <Text className="text-center text-xs font-medium text-white">
+                          📦 Optimized: {Math.round((1 - compressionRatio) * 100)}% smaller (
+                          {originalImageSize.width}×{originalImageSize.height} → 1080×1080)
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Food validation result */}
+                    {foodValidationResult && (
+                      <View
+                        className={`rounded-lg p-2 ${
+                          foodValidationResult.isValid ? 'bg-green-500/90' : 'bg-red-500/90'
+                        }`}>
+                        <Text className="text-center text-sm font-medium text-white">
+                          {foodValidationResult.isValid
+                            ? '✅ Food detected!'
+                            : '❌ No food detected'}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 )}
               </View>

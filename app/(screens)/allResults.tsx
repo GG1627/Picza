@@ -70,32 +70,55 @@ export default function ResultsScreen() {
           return;
         }
 
-        // Get vote counts and usernames for each submission
-        const submissionsWithVotes = await Promise.all(
-          submissionsData.map(async (submission) => {
-            // Get vote count
-            const { count } = await supabase
-              .from('votes')
-              .select('*', { count: 'exact', head: true })
-              .eq('submission_id', submission.id);
+        // OPTIMIZED: Get vote counts and usernames in batch queries instead of N+1 queries
+        const submissionIds = submissionsData.map((s) => s.id);
+        const userIds = [...new Set(submissionsData.map((s) => s.user_id))]; // Remove duplicates
 
-            // Get username
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('username')
-              .eq('id', submission.user_id)
-              .single();
+        // Batch fetch vote counts for all submissions
+        const { data: votesData, error: votesError } = await supabase
+          .from('votes')
+          .select('submission_id')
+          .in('submission_id', submissionIds);
 
-            return {
-              id: submission.id,
-              image_url: submission.image_url,
-              user_id: submission.user_id,
-              username: profile?.username || 'Unknown',
-              vote_count: count || 0,
-              rank: 0, // Will be calculated after sorting
-            };
-          })
-        );
+        if (votesError) throw votesError;
+
+        // Batch fetch usernames for all users
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .in('id', userIds);
+
+        if (profilesError) throw profilesError;
+
+        // Count votes per submission
+        const voteCountMap =
+          votesData?.reduce(
+            (acc, vote) => {
+              acc[vote.submission_id] = (acc[vote.submission_id] || 0) + 1;
+              return acc;
+            },
+            {} as { [key: string]: number }
+          ) || {};
+
+        // Create username lookup map
+        const usernameMap =
+          profilesData?.reduce(
+            (acc, profile) => {
+              acc[profile.id] = profile.username;
+              return acc;
+            },
+            {} as { [key: string]: string }
+          ) || {};
+
+        // Combine all data efficiently
+        const submissionsWithVotes = submissionsData.map((submission) => ({
+          id: submission.id,
+          image_url: submission.image_url,
+          user_id: submission.user_id,
+          username: usernameMap[submission.user_id] || 'Unknown',
+          vote_count: voteCountMap[submission.id] || 0,
+          rank: 0, // Will be calculated after sorting
+        }));
 
         // Sort by vote count and assign ranks (handling ties)
         const sortedSubmissions = submissionsWithVotes.sort((a, b) => b.vote_count - a.vote_count);

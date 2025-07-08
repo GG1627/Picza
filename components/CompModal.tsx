@@ -89,8 +89,10 @@ export default function CompModal({
   useEffect(() => {
     if (isVisible) {
       checkParticipationStatus();
-      // Set up interval to check competition status
-      const timer = setInterval(checkCompetitionStatus, 1000);
+      // Initial check immediately
+      checkCompetitionStatus();
+      // Set up interval to check competition status every 30 seconds instead of every second
+      const timer = setInterval(checkCompetitionStatus, 30000);
       return () => clearInterval(timer);
     }
   }, [isVisible]);

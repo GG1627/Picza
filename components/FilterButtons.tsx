@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from '../lib/useColorScheme';
@@ -21,7 +21,7 @@ interface FilterButtonsProps {
   onViewSwitch: () => void;
 }
 
-export default function FilterButtons({
+const FilterButtons = memo(function FilterButtons({
   activeFilter,
   sortBy,
   isGridView,
@@ -174,4 +174,6 @@ export default function FilterButtons({
       </View>
     </View>
   );
-}
+});
+
+export default FilterButtons;
