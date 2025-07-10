@@ -344,7 +344,7 @@ export default function UserProfileScreen() {
             opacity: loadingOpacity,
             transform: [{ scale: loadingScale }],
           }}>
-          <ActivityIndicator size="large" color="#5070fd" />
+          <ActivityIndicator size="large" color="#f77f5e" />
         </Animated.View>
       </View>
     );
@@ -678,7 +678,7 @@ export default function UserProfileScreen() {
               )}
               {loading && page > 1 && (
                 <View className="w-full items-center py-4">
-                  <ActivityIndicator size="small" color="#5070fd" />
+                  <ActivityIndicator size="small" color="#f77f5e" />
                 </View>
               )}
             </View>
